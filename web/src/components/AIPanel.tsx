@@ -1,0 +1,201 @@
+import { useState } from "react";
+import { api } from "../api";
+import { useStore } from "../store";
+import { PillarCards } from "./Scoreboard";
+import type { Evaluation } from "../types";
+
+interface Props {
+  suitOverlay: boolean;
+  setSuitOverlay: (b: boolean) => void;
+}
+
+export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
+  const meta = useStore((s) => s.meta)!;
+  const selected = useStore((s) => s.selected);
+  const preview = useStore((s) => s.preview);
+  const setPreview = useStore((s) => s.setPreview);
+  const applyChanges = useStore((s) => s.applyChanges);
+  const notify = useStore((s) => s.notify);
+  const [area, setArea] = useState("cd:103");
+  const [mode, setMode] = useState("balanced");
+  const [budget, setBudget] = useState(5);
+  const [zoning, setZoning] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ changes: Record<string, string>; evaluation: Evaluation; ms: number } | null>(null);
+
+  const run = async () => {
+    setBusy(true);
+    try {
+      const sel = area === "selection" ? [...selected] : undefined;
+      const scope = area === "selection" ? "affected" : area;
+      const r = await api.suggest({
+        scope, mode, changes: useStore.getState().changes(), parcels: sel,
+        max_change_share: budget / 100, respect_zoning: zoning,
+      });
+      setResult(r);
+      setPreview({ label: "AI optimal plan", changes: r.changes, evaluation: r.evaluation });
+      notify(`AI suggests ${Object.keys(r.changes).length} changes`, "good");
+    } catch (e) {
+      notify(String(e), "bad");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const transitions = (() => {
+    if (!result) return [];
+    const base = useStore.getState().data!.baseUse;
+    const m = new Map<string, number>();
+    for (const [k, v] of Object.entries(result.changes)) {
+      const b = base[Number(k)];
+      const key = `${b >= 0 ? meta.land_uses[b].key : "unk"}→${v}`;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  })();
+  const lu = Object.fromEntries(meta.land_uses.map((u) => [u.key, u]));
+  const cv = meta.models.cv_summary;
+
+  return (
+    <div className="panel-pad">
+      <h3>Optimal land use</h3>
+      <p className="muted small">
+        The optimizer proposes the best use for every parcel. It combines the impact engine with a graph neural
+        network that learned which uses fit each block. Zoning, landmarks, parks, public facilities and existing
+        homes are protected.
+      </p>
+      <label className="field">
+        <span>Area</span>
+        <select value={area} onChange={(e) => setArea(e.target.value)}>
+          <option value="selection" disabled={!selected.size}>
+            Selected parcels ({selected.size})
+          </option>
+          {Object.entries(meta.levels).map(([cd, name]) => (
+            <option key={cd} value={`cd:${cd}`}>
+              {name}
+            </option>
+          ))}
+          <option value="city">Whole city</option>
+        </select>
+      </label>
+      <label className="field">
+        <span>Priorities</span>
+        <select value={mode} onChange={(e) => setMode(e.target.value)}>
+          <option value="balanced">Balanced: equal social, economic and environmental weight</option>
+          <option value="consensus">Consensus: only changes every stakeholder gains from</option>
+          {meta.stakeholders.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.icon} {s.name}'s priorities
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Change up to {budget}% of parcels</span>
+        <input type="range" min={1} max={15} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={zoning} onChange={(e) => setZoning(e.target.checked)} /> Respect current zoning
+      </label>
+      <button className="primary wide" onClick={run} disabled={busy}>
+        {busy ? "Optimizing…" : "✨ Find the optimal plan"}
+      </button>
+
+      {result && (
+        <div className="card mt">
+          <div className="eyebrow">AI plan · {Object.keys(result.changes).length} changes · {Math.round(result.ms)} ms</div>
+          <PillarCards ev={result.evaluation} />
+          <div className="transitions">
+            {transitions.map(([k, n]) => {
+              const [a, b] = k.split("→");
+              return (
+                <div key={k} className="trans">
+                  <span className="swatch" style={{ background: lu[a]?.color ?? "#555" }} />
+                  {lu[a]?.label.split(" ")[0] ?? "?"} → <span className="swatch" style={{ background: lu[b].color }} />
+                  {lu[b].label.split(" ")[0]} <b>×{n}</b>
+                </div>
+              );
+            })}
+          </div>
+          <div className="row gap">
+            <button
+              className="primary"
+              onClick={() => {
+                applyChanges(result.changes, true);
+                setPreview(undefined);
+                notify("AI plan applied. Keep editing, or undo.", "good");
+              }}
+            >
+              Apply plan
+            </button>
+            <button
+              onClick={() =>
+                preview ? setPreview(undefined) : setPreview({ label: "AI optimal plan", changes: result.changes })
+              }
+            >
+              {preview ? "Hide preview" : "Preview on map"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="card mt">
+        <label className="check">
+          <input type="checkbox" checked={suitOverlay} onChange={(e) => setSuitOverlay(e.target.checked)} />
+          Show the AI's best-fit land use for every parcel
+        </label>
+        <div className="muted small">Brighter colour means a more confident prediction.</div>
+      </div>
+
+      {cv && (
+        <div className="card mt model-card">
+          <div className="eyebrow">Model card: spatial cross-validation (5 folds, 600 m tiles)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Land-use fit</th>
+                <th>Accuracy</th>
+                <th>Log loss</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[["suit_gnn", "Graph neural net"], ["suit_lightgbm", "LightGBM + neighbours"], ["suit_zoning_majority", "Zoning majority"]].map(([k, l]) =>
+                cv[k] ? (
+                  <tr key={k}>
+                    <td>{l}</td>
+                    <td>{cv[k].accuracy.mean.toFixed(3)}</td>
+                    <td>{cv[k].log_loss.mean.toFixed(3)}</td>
+                  </tr>
+                ) : null,
+              )}
+            </tbody>
+          </table>
+          <table>
+            <thead>
+              <tr>
+                <th>Tax-base value</th>
+                <th>R²</th>
+                <th>MAE (log)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[["value_gnn", "Graph neural net"], ["value_lightgbm", "LightGBM"], ["value_median_use_cd", "Median by use & district"]].map(([k, l]) =>
+                cv[k] ? (
+                  <tr key={k}>
+                    <td>{l}</td>
+                    <td>{cv[k].r2.mean.toFixed(3)}</td>
+                    <td>{cv[k].mae_log.mean.toFixed(3)}</td>
+                  </tr>
+                ) : null,
+              )}
+            </tbody>
+          </table>
+          <div className="muted small">
+            Each whole test area is hidden from the model, as when replanning a district. The GNN beats the simple
+            baselines; tuned LightGBM is still slightly stronger.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
