@@ -550,6 +550,250 @@ def rezonings() -> dict:
     })
 
 
+# ----------------------------------------------------------------------------- 0. delta equations (R2)
+def delta_forms(sigma: float = 0.2, seed: int = 0) -> dict:
+    """Do baseline residuals change the recommendations? Each delta form, each district, with and without a
+    synthetic residual (log-normal noise, sd ``sigma``) applied to the observed floor-area components and homes."""
+    from planarena.indicators.engine import load_engine
+    from planarena.optimize.suggest import SuggestConfig, Suggester
+
+    def engine_for(form, noisy):
+        e = load_engine()
+        e.delta_form = form
+        if noisy:
+            rng = np.random.default_rng(seed)
+            f = np.exp(rng.normal(0, sigma, e.n))
+            for k in e.obs:
+                e.obs[k] = e.obs[k].copy() * f
+            e.obs_units = e.obs_units.copy() * f
+            e.baseline_state = e.parcel_state(e.base_use)
+            e._variant_cache = {}
+            e._base_acc = e.access(e.baseline_state)
+            e._city_base = e.aggregate(e.baseline_state, e._base_acc, np.ones(e.n, bool))
+        return e
+
+    cds = [f"cd:{c}" for c in range(101, 113)]
+    out, sets = {}, {}
+    for form in ("replacement", "difference", "hybrid"):
+        for noisy in (False, True):
+            e = engine_for(form, noisy)
+            sug = Suggester(e, None)
+            e.clip_events = 0
+            sug.per_use_values()
+            for cd in cds:
+                r = sug.suggest(SuggestConfig(scope=cd, w_fit=0.0))
+                sets[(form, noisy, cd)] = set(r["changed"].tolist())
+            out.setdefault(form, {})["clip_events_per_use_table" if not noisy else "clip_events_noisy"] = int(e.clip_events)
+    jac = lambda a, b: len(a & b) / max(len(a | b), 1)
+    for form in out:
+        js = [jac(sets[(form, False, cd)], sets[(form, True, cd)]) for cd in cds]
+        out[form]["jaccard_clean_vs_noisy_median"] = round(float(np.median(js)), 3)
+        out[form]["jaccard_clean_vs_noisy_min"] = round(float(np.min(js)), 3)
+        out[form]["changes_per_district_median"] = int(np.median([len(sets[(form, False, cd)]) for cd in cds]))
+    cross = {f"{a} vs {b}": round(float(np.median([jac(sets[(a, False, cd)], sets[(b, False, cd)]) for cd in cds])), 3)
+             for a, b in (("replacement", "hybrid"), ("difference", "hybrid"), ("replacement", "difference"))}
+    return _save("delta_forms", {
+        "test": "Optimizer recommendations (12 districts, default settings, GNN fit term off) under three delta forms, "
+                f"with and without a synthetic baseline residual (log-normal, sd {sigma}) on observed floor-area "
+                "components and homes. Jaccard = overlap of the recommended parcel sets (1 = identical).",
+        "forms": out, "agreement_between_forms_median_jaccard": cross,
+        "note": "Clip events: quantities floored at zero, which happen when a modelled old-use composition exceeds "
+                "what was observed (the difference form cannot represent complete conversions without flooring).",
+    })
+
+
+# ----------------------------------------------------------------------------- 2c. change prediction (R1)
+def _geo_match(d0: Path, d1: Path) -> np.ndarray:
+    """For every t0 lot, the index of the t1 lot containing its representative point (-1 if none)."""
+    import geopandas as gpd
+    import shapely
+
+    g0 = gpd.read_parquet(d0 / "parcels.geoparquet").geometry
+    g1 = gpd.read_parquet(d1 / "parcels.geoparquet").geometry
+    a, b = shapely.STRtree(g1.values).query(g0.representative_point().values, predicate="within")
+    j = np.full(len(g0), -1)
+    j[a] = b
+    return j
+
+
+def _metrics(pred: np.ndarray, obs: np.ndarray) -> dict:
+    ok = np.isfinite(pred) & np.isfinite(obs)
+    p, o = pred[ok], obs[ok]
+    if len(o) < 5:
+        return {"n": int(len(o))}
+    rank = lambda v: pd.Series(v).rank().to_numpy()
+    return {"n": int(len(o)), "mae": round(float(np.mean(np.abs(p - o))), 2),
+            "median_ae": round(float(np.median(np.abs(p - o))), 2),
+            "total_ratio": round(float(p.sum() / o.sum()), 3) if abs(o.sum()) > 1e-9 else None,
+            "pearson_r": round(float(np.corrcoef(p, o)[0, 1]), 3) if p.std() > 0 and o.std() > 0 else None,
+            "spearman": round(float(np.corrcoef(rank(p), rank(o))[0, 1]), 3) if p.std() > 0 and o.std() > 0 else None,
+            "sign_agreement": round(float(np.mean(np.sign(np.round(p, 6)) == np.sign(np.round(o, 6)))), 3)}
+
+
+def changes(min_sqft: float = 2000.0) -> dict:
+    """Prediction of change (R1): lots that changed use or floor area between MapPLUTO 15v1 and 25v3.1.
+
+    The 2015 engine gets the 2015 state plus the observed new use and floor area and predicts the change in homes,
+    jobs, assessed value and emissions. Observed changes: homes and value from MapPLUTO (value net of the district
+    trend of unchanged lots), jobs from LODES 2015 -> 2023 by 2020 census block (net of the trend of blocks without
+    changes), emissions from LL84 calendar 2015 -> 2024 metered energy x LL97 factors.
+    """
+    import pyogrio
+
+    from planarena.calibrate import LL97
+    from planarena.indicators.engine import load_engine
+    from planarena.models.common import spatial_folds
+    from planarena.models.transition import size_class
+
+    p0 = pd.read_parquet(P15 / "parcels.parquet")
+    p1 = pd.read_parquet(PROCESSED / "parcels.parquet")
+    j = _geo_match(P15, PROCESSED)
+    ok0 = (j >= 0) & (p0.use.to_numpy() >= 0)
+    grp = pd.DataFrame({"i0": np.nonzero(ok0)[0], "j1": j[ok0]})
+    agg = grp.groupby("j1").i0.apply(list)
+    fa0 = agg.map(lambda ii: float(p0.bldg_area.iloc[ii].sum()))
+    lot0 = agg.map(lambda ii: float(p0.lot_area.iloc[ii].sum()))
+    lots0_a, uses0_a = p0.lot_area.to_numpy(), p0.use.to_numpy()
+    use0 = agg.map(lambda ii: int(uses0_a[ii][np.argmax(lots0_a[ii])]))  # use of the largest original lot
+    ev = pd.DataFrame({"j1": agg.index, "i0": agg.values, "fa0": fa0.values, "lot0": lot0.values, "use0": use0.values})
+    ev["use1"] = p1.use.to_numpy()[ev.j1]
+    ev["fa1"] = p1.bldg_area.to_numpy()[ev.j1]
+    ev = ev[ev.use1 >= 0]
+    conv = ev.use1 != ev.use0
+    dens = (np.abs(ev.fa1 - ev.fa0) > 0.25 * np.maximum(ev.fa0, 1)) & (np.abs(ev.fa1 - ev.fa0) > min_sqft)
+    ev = ev[conv | dens].copy()
+    ev["kind"] = np.where(ev.use1 != ev.use0, "use change", "density only")
+    # Density-only events need evidence of construction: a building completed since 2015 on the lot. Others are
+    # mostly record changes in PLUTO (e.g. floor area missing in 2015). Inconsistent 2015 records are excluded.
+    h0 = ev.i0.map(lambda ii: float(p0.units_res.iloc[ii].sum())).to_numpy()
+    per = np.divide(ev.fa0.to_numpy(), h0, out=np.full(len(ev), 1000.0), where=h0 > 0)
+    consistent = (ev.fa0.to_numpy() >= 1000) | (h0 <= 0)
+    consistent &= (h0 <= 0) | ((per >= 250) & (per <= 5000))
+    built = p1.year_built.to_numpy()[ev.j1] >= 2015
+    dens_ev = (ev.kind == "density only").to_numpy()
+    audit = {"density_events_total": int(dens_ev.sum()),
+             "density_with_new_building": int((dens_ev & built).sum()),
+             "density_inconsistent_2015_record": int((dens_ev & ~consistent).sum()),
+             "density_without_construction_evidence": int((dens_ev & ~built).sum())}
+    ev = ev[~dens_ev | (built & consistent)].copy()
+    ev.loc[ev.kind == "density only", "kind"] = "density only (new building)"
+
+    # Observed changes
+    ev["d_homes"] = p1.units_res.to_numpy()[ev.j1] - ev.i0.map(lambda ii: float(p0.units_res.iloc[ii].sum()))
+    single = grp.groupby("j1").i0.transform("count") == 1
+    unchanged = grp[single.to_numpy()].copy()
+    unchanged = unchanged[~unchanged.j1.isin(ev.j1)]
+    v0u = p0.assess_tot.to_numpy()[unchanged.i0]
+    v1u = p1.assess_tot.to_numpy()[unchanged.j1]
+    cdu = p0.cd.to_numpy()[unchanged.i0]
+    okv = (v0u > 0) & (v1u > 0)
+    growth = pd.Series(v1u[okv] / v0u[okv]).groupby(cdu[okv]).median()
+    g_city = float(np.median(v1u[okv] / v0u[okv]))
+    ev["cd0"] = ev.i0.map(lambda ii: int(p0.cd.iloc[ii[0]]))
+    gf = ev.cd0.map(lambda c: growth.get(c, g_city))
+    ev["d_value"] = p1.assess_tot.to_numpy()[ev.j1] / gf - ev.i0.map(lambda ii: float(p0.assess_tot.iloc[ii].sum()))
+
+    def ll84(f, bbl_field="nyc_borough_block_and_lot"):
+        d = pd.DataFrame(json.loads(Path(f).read_text()))
+        for c in LL97:
+            d[c] = pd.to_numeric(d.get(c), errors="coerce")
+        d["bbl"] = pd.to_numeric(d[bbl_field].astype(str).str.split(";").str[0].str.strip(), errors="coerce")
+        d["t"] = sum(d[c].clip(lower=0).fillna(0) * v for c, v in LL97.items())
+        return d[d.t > 0].groupby("bbl").t.sum()
+    em0 = ll84(RAW / "ll84_2015" / "ll84_manhattan_2015_bbl.json")
+    em1 = ll84(DATA / "reference" / "ll84_manhattan_2024_bbl.json")
+    bbl0, bbl1 = p0.bbl.to_numpy(), p1.bbl.to_numpy()
+    def em_change(r):
+        b1 = int(bbl1[r.j1])
+        befores = [(int(bbl0[i]), float(p0.bldg_area.iloc[i])) for i in r.i0]
+        if b1 not in em1.index or not all(b in em0.index or fa <= 0 for b, fa in befores):
+            return np.nan
+        return float(em1[b1] - sum(em0.get(b, 0.0) for b, _ in befores))
+    ev["d_ghg"] = ev.apply(em_change, axis=1)
+
+    # Census blocks of the 2025 lots, for jobs
+    src = pyogrio.read_dataframe(PLUTO_CUR, columns=["BBL", "BCTCB2020"], read_geometry=False)
+    blk = dict(zip(pd.to_numeric(src.BBL, errors="coerce"), src.BCTCB2020.astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(11)))
+    ev["block"] = ["36061" + str(blk.get(int(bbl1[j]), "00000000000"))[1:] for j in ev.j1]
+    def wac(f):
+        with gzip.open(f, "rt") as fh:
+            w = pd.read_csv(fh, dtype={"w_geocode": str}, usecols=["w_geocode", "C000"])
+        return w[w.w_geocode.str.startswith("36061")].set_index("w_geocode").C000
+    w15, w23 = wac(RAW / "lodes8_ny_2015" / "ny_wac_S000_JT00_2015.csv.gz"), wac(RAW / "lodes8_ny_2023" / "ny_wac_S000_JT00_2023.csv.gz")
+    allb = w15.index.union(w23.index)
+    w15, w23 = w15.reindex(allb, fill_value=0), w23.reindex(allb, fill_value=0)
+    quiet = ~allb.isin(ev.block.unique())
+    jg = float(w23[quiet].sum() / w15[quiet].sum())
+
+    # Predictions per delta form
+    lodes15_total = int(w15.sum())
+    res = {}
+    lot0_arr, frac_cache = p0.lot_area.to_numpy(), None
+    for form in ("replacement", "difference", "hybrid"):
+        e = load_engine(P15)
+        e.delta_form = form
+        e.coef["jobs_sqft_per_worker"]["calibration_target_jobs"] = lodes15_total  # target known in 2015
+        e._calibrate_jobs()
+        e.baseline_state = e.parcel_state(e.base_use)
+        use = e.base_use.copy()
+        far = np.full(e.n, np.nan)
+        for r in ev.itertuples():
+            ii = np.array(r.i0)
+            use[ii] = r.use1
+            far[ii] = r.fa1 / max(r.lot0, 1.0)
+        st = e.parcel_state(use, far)
+        base = e.baseline_state
+        pred = {k: ev.i0.map(lambda ii, k=k: float((st[k][ii] - base[k][ii]).sum())).to_numpy()
+                for k in ("homes", "jobs", "value", "ghg")}
+        out = {}
+        for kind in ("all", "use change", "density only (new building)"):
+            m = np.ones(len(ev), bool) if kind == "all" else (ev.kind == kind).to_numpy()
+            out[kind] = {"homes": _metrics(pred["homes"][m], ev.d_homes.to_numpy()[m]),
+                         "assessed_value": _metrics(pred["value"][m], ev.d_value.to_numpy()[m]),
+                         "emissions": _metrics(pred["ghg"][m], ev.d_ghg.to_numpy()[m])}
+        bj = pd.Series(pred["jobs"]).groupby(ev.block.to_numpy()).sum()
+        obs_j = (w23.reindex(bj.index, fill_value=0) - jg * w15.reindex(bj.index, fill_value=0)).to_numpy()
+        out["all"]["jobs_by_block"] = _metrics(bj.to_numpy(), obs_j)
+        res[form] = out
+
+    # Baselines: no change, and the mean observed change of the same transition type and size class
+    # in other spatial folds (cross-fitted, so a lot never informs its own baseline).
+    folds = spatial_folds(p0.iloc[ev.i0.map(lambda ii: ii[0])].reset_index(drop=True), k=5)
+    key = (ev.use0.astype(str) + ">" + ev.use1.astype(str) + ":" + pd.Series(size_class(ev.fa0.to_numpy()), index=ev.index).astype(str)).to_numpy()
+    base_pred = {}
+    for col in ("d_homes", "d_value", "d_ghg"):
+        v = ev[col].to_numpy()
+        bp = np.full(len(ev), np.nan)
+        for f in range(5):
+            tr, te = folds != f, folds == f
+            means = pd.Series(v[tr]).groupby(key[tr]).mean()
+            overall = float(np.nanmean(v[tr]))
+            bp[te] = [means.get(k, overall) if np.isfinite(means.get(k, np.nan)) else overall for k in key[te]]
+        base_pred[col] = bp
+    zero = np.zeros(len(ev))
+    for name, preds in (("no change", {c: zero for c in base_pred}), ("transition-type mean (cross-fitted)", base_pred)):
+        out = {}
+        for kind in ("all", "use change", "density only (new building)"):
+            m = np.ones(len(ev), bool) if kind == "all" else (ev.kind == kind).to_numpy()
+            out[kind] = {"homes": _metrics(preds["d_homes"][m], ev.d_homes.to_numpy()[m]),
+                         "assessed_value": _metrics(preds["d_value"][m], ev.d_value.to_numpy()[m]),
+                         "emissions": _metrics(preds["d_ghg"][m], ev.d_ghg.to_numpy()[m])}
+        res[name] = out
+    return _save("change_prediction", {
+        "test": changes.__doc__.strip().replace("\n", " "),
+        "events": int(len(ev)), "use_change_events": int((ev.kind == "use change").sum()),
+        "density_only_events": int((ev.kind == "density only (new building)").sum()),
+        "density_event_audit": audit,
+        "emissions_events": int(np.isfinite(ev.d_ghg).sum()), "blocks_with_events": int(ev.block.nunique()),
+        "jobs_trend_factor_quiet_blocks": round(jg, 4), "lodes_2015_total": lodes15_total,
+        "methods": res,
+        "unvalidated": ["access to parks, shops and facilities after a change", "runoff after a change",
+                        "emissions of buildings under 25,000 sq ft (not in LL84)", "jobs at lot level (LODES is by block)"],
+        "sources_sha256": {"ll84_2015": _sha(RAW / "ll84_2015" / "ll84_manhattan_2015_bbl.json"),
+                           "lodes_2015": _sha(RAW / "lodes8_ny_2015" / "ny_wac_S000_JT00_2015.csv.gz")},
+    })
+
+
 # ----------------------------------------------------------------------------- 6. optimizer gap
 def optimizer(n_areas: int = 20, budget: int = 2, seed: int = 0) -> dict:
     import itertools
@@ -748,7 +992,7 @@ def report() -> str:
     return text
 
 
-STEPS = {"emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
+STEPS = {"delta_forms": delta_forms, "changes": changes, "emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
          "soho_noho": soho_noho, "rezonings": rezonings,
          "backtest_lgbm": backtest_lgbm, "backtest_eval": backtest_eval, "units": units,
          "east_harlem": east_harlem, "optimizer": optimizer, "report": report}

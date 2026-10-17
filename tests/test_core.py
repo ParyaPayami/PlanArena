@@ -239,3 +239,45 @@ def test_conversions_without_precedent_are_flagged_and_skipped(engine, suggester
     assert any(w["type"] == "precedent" for w in engine.evaluate(use, scope="cd:105")["warnings"])
     _, _, allowed = suggester.feasible(SuggestConfig(scope="cd:105"), engine.base_use)
     assert not allowed[tower, U["pub"]]
+
+
+def _deltas(engine, use, far, keys=("homes", "jobs", "ghg")):
+    ev = engine.evaluate(use, scope="city", far=far)
+    return {r["key"]: r["delta"] for r in ev["indicators"] if r["key"] in keys}
+
+
+def test_difference_form_is_invariant_to_baseline_residuals():
+    """R2: under the difference form, a baseline residual (observed vs modelled) does not enter the deltas."""
+    e = load_engine()
+    e.delta_form = "difference"
+    rng = np.random.default_rng(1)
+    # Density increases within the same use: no quantity can go negative, so no flooring is needed.
+    idx = np.nonzero((e.base_use == U["com"]) & (e.bldg > 0) & (e.lot > 0))[0][:40]
+    use = e.base_use.copy()
+    far = np.full(e.n, np.nan)
+    far[idx] = 1.5 * e.bldg[idx] / e.lot[idx]
+    before = _deltas(e, use, far)
+    # Inject a residual: inflate observed floor-area components and homes on the changed parcels.
+    for k in e.obs:
+        e.obs[k] = e.obs[k].copy()
+        e.obs[k][idx] = e.obs[k][idx] * 1.3 + 1000.0
+    e.obs_units = e.obs_units.copy()
+    e.obs_units[idx] = e.obs_units[idx] + rng.integers(1, 20, len(idx))
+    e.baseline_state = e.parcel_state(e.base_use)
+    e._variant_cache = {}
+    e._city_base = e.aggregate(e.baseline_state, e.access(e.baseline_state), np.ones(e.n, bool))
+    after = _deltas(e, use, far)
+    assert e.clip_events == 0
+    for k in before:
+        assert abs(after[k] - before[k]) < 1e-6 * max(1.0, abs(before[k])), k
+
+
+def test_hybrid_density_change_keeps_the_parcels_own_mix(engine):
+    """R2: a FAR change without a use change scales the parcel's observed composition, not the city's mix."""
+    i = int(np.nonzero((engine.base_use == U["com"]) & (engine.bldg > 50_000))[0][0])
+    far = np.full(engine.n, np.nan)
+    far[i] = 2 * engine.bldg[i] / engine.lot[i]
+    st = engine.parcel_state(engine.base_use, far)
+    base = engine.baseline_state
+    assert abs(st["jobs"][i] - 2 * base["jobs"][i]) < 1e-6 * max(1.0, base["jobs"][i])
+    assert abs(st["fa_total"][i] - 2 * engine.bldg[i]) < 1e-6 * engine.bldg[i]

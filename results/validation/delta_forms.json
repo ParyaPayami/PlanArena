@@ -1,0 +1,32 @@
+{
+  "test": "Optimizer recommendations (12 districts, default settings, GNN fit term off) under three delta forms, with and without a synthetic baseline residual (log-normal, sd 0.2) on observed floor-area components and homes. Jaccard = overlap of the recommended parcel sets (1 = identical).",
+  "forms": {
+    "replacement": {
+      "clip_events_per_use_table": 0,
+      "clip_events_noisy": 0,
+      "jaccard_clean_vs_noisy_median": 0.86,
+      "jaccard_clean_vs_noisy_min": 0.744,
+      "changes_per_district_median": 111
+    },
+    "difference": {
+      "clip_events_per_use_table": 303017,
+      "clip_events_noisy": 407177,
+      "jaccard_clean_vs_noisy_median": 0.945,
+      "jaccard_clean_vs_noisy_min": 0.794,
+      "changes_per_district_median": 112
+    },
+    "hybrid": {
+      "clip_events_per_use_table": 0,
+      "clip_events_noisy": 0,
+      "jaccard_clean_vs_noisy_median": 0.86,
+      "jaccard_clean_vs_noisy_min": 0.744,
+      "changes_per_district_median": 111
+    }
+  },
+  "agreement_between_forms_median_jaccard": {
+    "replacement vs hybrid": 1.0,
+    "difference vs hybrid": 0.782,
+    "replacement vs difference": 0.782
+  },
+  "note": "Clip events: quantities floored at zero, which happen when a modelled old-use composition exceeds what was observed (the difference form cannot represent complete conversions without flooring)."
+}

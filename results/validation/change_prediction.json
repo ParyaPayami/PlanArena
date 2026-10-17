@@ -1,0 +1,470 @@
+{
+  "test": "Prediction of change (R1): lots that changed use or floor area between MapPLUTO 15v1 and 25v3.1.  The 2015 engine gets the 2015 state plus the observed new use and floor area and predicts the change in homes, jobs, assessed value and emissions. Observed changes: homes and value from MapPLUTO (value net of the district trend of unchanged lots), jobs from LODES 2015 -> 2023 by 2020 census block (net of the trend of blocks without changes), emissions from LL84 calendar 2015 -> 2024 metered energy x LL97 factors.",
+  "events": 3350,
+  "use_change_events": 3234,
+  "density_only_events": 116,
+  "density_event_audit": {
+    "density_events_total": 1243,
+    "density_with_new_building": 121,
+    "density_inconsistent_2015_record": 149,
+    "density_without_construction_evidence": 1122
+  },
+  "emissions_events": 194,
+  "blocks_with_events": 1445,
+  "jobs_trend_factor_quiet_blocks": 1.0854,
+  "lodes_2015_total": 2408160,
+  "methods": {
+    "replacement": {
+      "all": {
+        "homes": {
+          "n": 3350,
+          "mae": 11.42,
+          "median_ae": 1.2,
+          "total_ratio": 1.348,
+          "pearson_r": 0.841,
+          "spearman": 0.68,
+          "sign_agreement": 0.675
+        },
+        "assessed_value": {
+          "n": 3350,
+          "mae": 2856049.04,
+          "median_ae": 500576.29,
+          "total_ratio": 0.675,
+          "pearson_r": 0.87,
+          "spearman": 0.313,
+          "sign_agreement": 0.541
+        },
+        "emissions": {
+          "n": 194,
+          "mae": 711.28,
+          "median_ae": 260.27,
+          "total_ratio": 1.159,
+          "pearson_r": 0.826,
+          "spearman": 0.657,
+          "sign_agreement": 0.763
+        },
+        "jobs_by_block": {
+          "n": 1445,
+          "mae": 452.61,
+          "median_ae": 95.03,
+          "total_ratio": -1.007,
+          "pearson_r": 0.093,
+          "spearman": 0.038,
+          "sign_agreement": 0.472
+        }
+      },
+      "use change": {
+        "homes": {
+          "n": 3234,
+          "mae": 10.48,
+          "median_ae": 1.1,
+          "total_ratio": 1.306,
+          "pearson_r": 0.872,
+          "spearman": 0.68,
+          "sign_agreement": 0.669
+        },
+        "assessed_value": {
+          "n": 3234,
+          "mae": 2587913.19,
+          "median_ae": 474771.39,
+          "total_ratio": 0.671,
+          "pearson_r": 0.901,
+          "spearman": 0.285,
+          "sign_agreement": 0.529
+        },
+        "emissions": {
+          "n": 193,
+          "mae": 713.74,
+          "median_ae": 262.14,
+          "total_ratio": 1.157,
+          "pearson_r": 0.826,
+          "spearman": 0.658,
+          "sign_agreement": 0.762
+        }
+      },
+      "density only (new building)": {
+        "homes": {
+          "n": 116,
+          "mae": 37.52,
+          "median_ae": 5.28,
+          "total_ratio": 2.006,
+          "pearson_r": 0.007,
+          "spearman": 0.616,
+          "sign_agreement": 0.828
+        },
+        "assessed_value": {
+          "n": 116,
+          "mae": 10331491.71,
+          "median_ae": 3385289.69,
+          "total_ratio": 0.7,
+          "pearson_r": 0.605,
+          "spearman": 0.539,
+          "sign_agreement": 0.853
+        },
+        "emissions": {
+          "n": 1
+        }
+      }
+    },
+    "difference": {
+      "all": {
+        "homes": {
+          "n": 3350,
+          "mae": 12.51,
+          "median_ae": 2.07,
+          "total_ratio": 1.346,
+          "pearson_r": 0.838,
+          "spearman": 0.643,
+          "sign_agreement": 0.669
+        },
+        "assessed_value": {
+          "n": 3350,
+          "mae": 2856049.04,
+          "median_ae": 500576.29,
+          "total_ratio": 0.675,
+          "pearson_r": 0.87,
+          "spearman": 0.313,
+          "sign_agreement": 0.541
+        },
+        "emissions": {
+          "n": 194,
+          "mae": 711.28,
+          "median_ae": 260.27,
+          "total_ratio": 1.159,
+          "pearson_r": 0.826,
+          "spearman": 0.657,
+          "sign_agreement": 0.763
+        },
+        "jobs_by_block": {
+          "n": 1445,
+          "mae": 464.59,
+          "median_ae": 103.67,
+          "total_ratio": -1.516,
+          "pearson_r": 0.086,
+          "spearman": 0.006,
+          "sign_agreement": 0.446
+        }
+      },
+      "use change": {
+        "homes": {
+          "n": 3234,
+          "mae": 11.65,
+          "median_ae": 2.0,
+          "total_ratio": 1.309,
+          "pearson_r": 0.869,
+          "spearman": 0.642,
+          "sign_agreement": 0.665
+        },
+        "assessed_value": {
+          "n": 3234,
+          "mae": 2587913.19,
+          "median_ae": 474771.39,
+          "total_ratio": 0.671,
+          "pearson_r": 0.901,
+          "spearman": 0.285,
+          "sign_agreement": 0.529
+        },
+        "emissions": {
+          "n": 193,
+          "mae": 713.74,
+          "median_ae": 262.14,
+          "total_ratio": 1.157,
+          "pearson_r": 0.826,
+          "spearman": 0.658,
+          "sign_agreement": 0.762
+        }
+      },
+      "density only (new building)": {
+        "homes": {
+          "n": 116,
+          "mae": 36.64,
+          "median_ae": 4.55,
+          "total_ratio": 1.918,
+          "pearson_r": -0.035,
+          "spearman": 0.608,
+          "sign_agreement": 0.802
+        },
+        "assessed_value": {
+          "n": 116,
+          "mae": 10331491.71,
+          "median_ae": 3385289.69,
+          "total_ratio": 0.7,
+          "pearson_r": 0.605,
+          "spearman": 0.539,
+          "sign_agreement": 0.853
+        },
+        "emissions": {
+          "n": 1
+        }
+      }
+    },
+    "hybrid": {
+      "all": {
+        "homes": {
+          "n": 3350,
+          "mae": 11.37,
+          "median_ae": 1.19,
+          "total_ratio": 1.312,
+          "pearson_r": 0.84,
+          "spearman": 0.671,
+          "sign_agreement": 0.673
+        },
+        "assessed_value": {
+          "n": 3350,
+          "mae": 2856049.04,
+          "median_ae": 500576.29,
+          "total_ratio": 0.675,
+          "pearson_r": 0.87,
+          "spearman": 0.313,
+          "sign_agreement": 0.541
+        },
+        "emissions": {
+          "n": 194,
+          "mae": 711.28,
+          "median_ae": 260.27,
+          "total_ratio": 1.159,
+          "pearson_r": 0.826,
+          "spearman": 0.657,
+          "sign_agreement": 0.763
+        },
+        "jobs_by_block": {
+          "n": 1445,
+          "mae": 450.3,
+          "median_ae": 98.2,
+          "total_ratio": -0.986,
+          "pearson_r": 0.089,
+          "spearman": 0.032,
+          "sign_agreement": 0.467
+        }
+      },
+      "use change": {
+        "homes": {
+          "n": 3234,
+          "mae": 10.43,
+          "median_ae": 1.1,
+          "total_ratio": 1.295,
+          "pearson_r": 0.872,
+          "spearman": 0.68,
+          "sign_agreement": 0.669
+        },
+        "assessed_value": {
+          "n": 3234,
+          "mae": 2587913.19,
+          "median_ae": 474771.39,
+          "total_ratio": 0.671,
+          "pearson_r": 0.901,
+          "spearman": 0.285,
+          "sign_agreement": 0.529
+        },
+        "emissions": {
+          "n": 193,
+          "mae": 713.74,
+          "median_ae": 262.14,
+          "total_ratio": 1.157,
+          "pearson_r": 0.826,
+          "spearman": 0.658,
+          "sign_agreement": 0.762
+        }
+      },
+      "density only (new building)": {
+        "homes": {
+          "n": 116,
+          "mae": 37.61,
+          "median_ae": 4.5,
+          "total_ratio": 1.575,
+          "pearson_r": -0.158,
+          "spearman": 0.413,
+          "sign_agreement": 0.759
+        },
+        "assessed_value": {
+          "n": 116,
+          "mae": 10331491.71,
+          "median_ae": 3385289.69,
+          "total_ratio": 0.7,
+          "pearson_r": 0.605,
+          "spearman": 0.539,
+          "sign_agreement": 0.853
+        },
+        "emissions": {
+          "n": 1
+        }
+      }
+    },
+    "no change": {
+      "all": {
+        "homes": {
+          "n": 3350,
+          "mae": 17.34,
+          "median_ae": 0.0,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.6
+        },
+        "assessed_value": {
+          "n": 3350,
+          "mae": 3789127.98,
+          "median_ae": 468171.73,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.001
+        },
+        "emissions": {
+          "n": 194,
+          "mae": 1087.74,
+          "median_ae": 307.53,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.0
+        }
+      },
+      "use change": {
+        "homes": {
+          "n": 3234,
+          "mae": 16.73,
+          "median_ae": 0.0,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.609
+        },
+        "assessed_value": {
+          "n": 3234,
+          "mae": 3467233.47,
+          "median_ae": 432816.87,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.001
+        },
+        "emissions": {
+          "n": 193,
+          "mae": 1093.25,
+          "median_ae": 311.71,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.0
+        }
+      },
+      "density only (new building)": {
+        "homes": {
+          "n": 116,
+          "mae": 34.27,
+          "median_ae": 6.0,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.353
+        },
+        "assessed_value": {
+          "n": 116,
+          "mae": 12763325.13,
+          "median_ae": 4298346.68,
+          "total_ratio": 0.0,
+          "pearson_r": null,
+          "spearman": null,
+          "sign_agreement": 0.0
+        },
+        "emissions": {
+          "n": 1
+        }
+      }
+    },
+    "transition-type mean (cross-fitted)": {
+      "all": {
+        "homes": {
+          "n": 3350,
+          "mae": 19.71,
+          "median_ae": 2.0,
+          "total_ratio": 0.989,
+          "pearson_r": 0.427,
+          "spearman": 0.566,
+          "sign_agreement": 0.461
+        },
+        "assessed_value": {
+          "n": 3350,
+          "mae": 4611841.85,
+          "median_ae": 745347.2,
+          "total_ratio": 0.913,
+          "pearson_r": 0.148,
+          "spearman": 0.31,
+          "sign_agreement": 0.582
+        },
+        "emissions": {
+          "n": 194,
+          "mae": 1329.14,
+          "median_ae": 499.89,
+          "total_ratio": 1.001,
+          "pearson_r": 0.09,
+          "spearman": 0.522,
+          "sign_agreement": 0.82
+        }
+      },
+      "use change": {
+        "homes": {
+          "n": 3234,
+          "mae": 18.96,
+          "median_ae": 1.84,
+          "total_ratio": 0.972,
+          "pearson_r": 0.435,
+          "spearman": 0.568,
+          "sign_agreement": 0.456
+        },
+        "assessed_value": {
+          "n": 3234,
+          "mae": 4193251.56,
+          "median_ae": 714965.4,
+          "total_ratio": 0.879,
+          "pearson_r": 0.233,
+          "spearman": 0.285,
+          "sign_agreement": 0.573
+        },
+        "emissions": {
+          "n": 193,
+          "mae": 1330.88,
+          "median_ae": 494.32,
+          "total_ratio": 0.995,
+          "pearson_r": 0.09,
+          "spearman": 0.526,
+          "sign_agreement": 0.819
+        }
+      },
+      "density only (new building)": {
+        "homes": {
+          "n": 116,
+          "mae": 40.56,
+          "median_ae": 24.43,
+          "total_ratio": 1.254,
+          "pearson_r": 0.084,
+          "spearman": 0.338,
+          "sign_agreement": 0.595
+        },
+        "assessed_value": {
+          "n": 116,
+          "mae": 16281850.48,
+          "median_ae": 3619524.21,
+          "total_ratio": 1.165,
+          "pearson_r": -0.144,
+          "spearman": 0.094,
+          "sign_agreement": 0.828
+        },
+        "emissions": {
+          "n": 1
+        }
+      }
+    }
+  },
+  "unvalidated": [
+    "access to parks, shops and facilities after a change",
+    "runoff after a change",
+    "emissions of buildings under 25,000 sq ft (not in LL84)",
+    "jobs at lot level (LODES is by block)"
+  ],
+  "sources_sha256": {
+    "ll84_2015": "cceff88eabb80f439f3de5835878cd2dcbe8ade7d990e0ebdc8651601f73ff5b",
+    "lodes_2015": "0f3074680ec0cec5a9458abae25ca8f9c7da1ef7811284cfdb64214f92462c6f"
+  }
+}

@@ -111,6 +111,13 @@ class ImpactEngine:
         self.t_serv = float(np.median(raw["serv"][has]))
         self.t_fac = float(np.median(raw["fac"][has]))
         self.value_model = None  # optional ML model: f(use_array, idx) -> values
+        # How a changed parcel's quantities are formed (see docs/METHODS.md, "Delta equations"):
+        #   "replacement": observed quantities of the old use are removed, modelled ones of the new use added
+        #   "difference":  y1 = y_obs + [f(u1, fa1) - f(u0, fa0)], floored at zero
+        #   "hybrid":      density-only changes scale the parcel's own observed mix (ratio form);
+        #                  use changes remove the observed old use and add the modelled new use
+        self.delta_form = "hybrid"
+        self.clip_events = 0  # difference form: how often a quantity was floored at zero
 
     # ------------------------------------------------------------- derived coefficients
     def _derive(self) -> None:
@@ -255,9 +262,11 @@ class ImpactEngine:
         return ch
 
     def _model_components(self, use: np.ndarray, idx: np.ndarray, far: np.ndarray | None = None) -> dict[str, np.ndarray]:
-        u = use[idx]
-        fa = self.modelled_floor_area(use, idx, far)
-        c = {k: np.zeros(len(idx)) for k in self.COMPONENTS}
+        return self._split(use[idx], self.modelled_floor_area(use, idx, far))
+
+    def _split(self, u: np.ndarray, fa: np.ndarray) -> dict[str, np.ndarray]:
+        """Modelled floor-area components of total floor area ``fa`` under uses ``u``."""
+        c = {k: np.zeros(len(u)) for k in self.COMPONENTS}
         s = self.mix_res_share
         c["res"] = np.where(u == U["res"], fa, 0) + np.where(u == U["mix"], s * fa, 0)
         c["retail"] = np.where(u == U["mix"], (1 - s) * fa, 0) + np.where(u == U["com"], self.com_mix["retail"] * fa, 0)
@@ -303,9 +312,33 @@ class ImpactEngine:
         mv = 1.0 if self.variant == "mid" else self.mult_value[self.variant]
         if len(changed):
             m = self._model_components(use, changed, far)
-            for k in self.COMPONENTS:
-                comp[k][changed] = m[k]
-            units[changed] = m["res"] / (self.unit_size[changed] * mu)
+            u0, u1 = self.base_use[changed], use[changed]
+            fa0 = self.bldg[changed]
+            if self.delta_form == "replacement":
+                for k in self.COMPONENTS:
+                    comp[k][changed] = m[k]
+                units[changed] = m["res"] / (self.unit_size[changed] * mu)
+            elif self.delta_form == "difference":
+                m0 = self._split(u0, fa0)
+                for k in self.COMPONENTS:
+                    raw = self.obs[k][changed] + m[k] - m0[k]
+                    self.clip_events += int((raw < -1e-6).sum())
+                    comp[k][changed] = np.clip(raw, 0, None)
+                raw = self.obs_units[changed] + (m["res"] - m0["res"]) / (self.unit_size[changed] * mu)
+                self.clip_events += int((raw < -1e-6).sum())
+                units[changed] = np.clip(raw, 0, None)
+            else:  # hybrid
+                # Scale the parcel's own record only when it is internally consistent: at least 1,000 sq ft, and
+                # if it has homes, 250-5,000 sq ft per home. Otherwise scaling would amplify a recording error.
+                h0 = self.obs_units[changed]
+                per = np.divide(fa0, h0, out=np.full(len(changed), 1000.0), where=h0 > 0)
+                plausible = (fa0 >= 1000) & ((h0 <= 0) | ((per >= 250) & (per <= 5000)))
+                same = (u1 == u0) & plausible
+                ratio = np.divide(m["_fa"], fa0, out=np.zeros(len(changed)), where=fa0 > 0)
+                for k in self.COMPONENTS:
+                    comp[k][changed] = np.where(same, self.obs[k][changed] * ratio, m[k])
+                units[changed] = np.where(same, self.obs_units[changed] * ratio,
+                                          m["res"] / (self.unit_size[changed] * mu))
             fa_total[changed] = m["_fa"]
             old_fa = self.bldg[changed]
             far_set = np.zeros(len(changed), bool) if far is None else np.isfinite(far[changed])
