@@ -47,6 +47,44 @@ Tagging is a transparent keyword screen (`planarena/requirements.py`). It shows 
 | licensing | 224 | N 82, B 29, F 28 | Out of scope (thesis agent roster: licensing) | out of scope |
 | plan sheets | 48 | H 24, K 9, D 4 | Out of scope (thesis agent roster: drawing extraction) | out of scope |
 
+## Hand-coded: area G, requirement by requirement (2026-10-17)
+
+Each requirement was read against PlanArena. Every item coded **met** is backed by an automated acceptance test in `tests/test_requirements.py`. Needs are paraphrased in our own words.
+
+**met** 8 · **partial** 10 · **not met** 7 · **out of scope** 4 (of 29)
+
+| ID | Need (paraphrase) | Status | PlanArena feature | Gap |
+|---|---|---|---|---|
+| G1 | Tie a plan amendment or study to its location | met | Studies are stored as parcel-level changes on the parcel twin |  |
+| G6 | Find and open past amendments and studies | met | Studies list, detail and history |  |
+| G7 | Record information about a study | met | Name, description, study area, hearing date, checklist, changes |  |
+| G8 | Describe location, existing development, current plan and proposed change | met | Parcel record (existing building, zoning, FAR) plus the proposed use and FAR per parcel |  |
+| G12 | Keep a history of study activity | met | Per-study history and a hash-chained, tamper-evident audit log |  |
+| G13 | Track status as staff update the workflow | met | Status changes are recorded in history and the audit log |  |
+| G14 | Quantify the change in development potential from an amendment | met | Zoning capacity, added capacity, soft sites, homes, jobs and floor area, with ranges |  |
+| G23 | Record the decision or outcome of a review | met | Adopted or withdrawn status |  |
+| G2 | Read the agency's central GIS data | partial | Reads MapPLUTO and uploaded GeoJSON, shapefile, GeoPackage | No live link to an enterprise GIS (ArcGIS REST or WFS) |
+| G4 | Track the amendment process with a configurable workflow | partial | Fixed status workflow: draft, under review, hearing scheduled, adopted, withdrawn | Workflow steps are not configurable |
+| G5 | Track study status and its documents (staff report, amended text) | partial | Status; staff report generated on demand | No document storage or versioned plan text |
+| G10 | Attach due dates and hearing dates | partial | Hearing date | No other deadlines or statutory clocks |
+| G11 | Configurable study checklist that staff can customise | partial | Default eight-step checklist; items can be ticked | Staff cannot add or edit items in the UI (the API accepts them) |
+| G15 | Track plan amendments that are not site-specific | partial | A study can be saved without parcel changes | No policy-text amendments or citywide policy levers |
+| G16 | Reports that quantify a proposal, including cumulative analysis of density changes | partial | Staff report with impacts, density (FAR) edits and capacity | No cumulative analysis across several studies |
+| G21 | Template for recording research, with attachments | partial | Description field and staff report template | No attachments |
+| G26 | Review against code: zoning, temporary uses, special events | partial | Simplified zoning rules-as-code screen | Not a legal determination; no temporary-use or event rules |
+| G29 | Query records by polygon, line or point, e.g. similar uses within a radius | partial | Lasso, box, block and notice-radius queries over parcels and uses | Permit and business records are not included |
+| G9 | Link a study to related records (other amendments, zoning applications) | not met |  | No record linking |
+| G18 | Enter requests received outside the system | not met |  | No request intake records |
+| G20 | Track a request's reviewers, comments and formal response | not met |  | No review-comment records |
+| G22 | Record public and agency input received outside the system | not met |  | The vote models stakeholders; real comments are not logged |
+| G24 | Link building permits to planning approvals | not met |  | No permit data (NYC DOB permits are open and could be added) |
+| G25 | Add new categories as the work changes | not met |  | Categories are fixed |
+| G30 | Follow a case from planning through permits, licences and enforcement | not met |  | No cross-module case record |
+| G3 | GIS for scheduling inspections | out of scope |  |  |
+| G17 | Public portal intake of review requests | out of scope |  |  |
+| G19 | Route applications to internal and external reviewers | out of scope |  |  |
+| G28 | Notify applicants of review status | out of scope |  |  |
+
 ## Beyond the catalogue
 
 The catalogue specifies records, workflow and compliance. It asks for development-potential quantification (area G) but not for these PlanArena features:

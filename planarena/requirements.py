@@ -125,6 +125,21 @@ def write(df: pd.DataFrame, out_md: Path, out_csv: Path) -> None:
         hit = df[df[k]]
         top = ", ".join(f"{c} {v}" for c, v in hit.area.value_counts().head(3).items())
         lines.append(f"| {k.replace('_', ' ')} | {len(hit)} | {top} | {feature} | {status} |")
+    coding_file = Path(__file__).with_name("requirements_coding.yaml")
+    if coding_file.exists():
+        import yaml
+
+        cod = yaml.safe_load(coding_file.read_text())
+        items = cod["items"]
+        counts = pd.Series([i["status"] for i in items]).value_counts()
+        order = ["met", "partial", "not met", "out of scope"]
+        lines += ["", f"## Hand-coded: area {cod['area']}, requirement by requirement ({cod['coded_on']})", "",
+                  "Each requirement was read against PlanArena. Every item coded **met** is backed by an automated "
+                  "acceptance test in `tests/test_requirements.py`. Needs are paraphrased in our own words.", "",
+                  " · ".join(f"**{k}** {int(counts.get(k, 0))}" for k in order) + f" (of {len(items)})", "",
+                  "| ID | Need (paraphrase) | Status | PlanArena feature | Gap |", "|---|---|---|---|---|"]
+        for i in sorted(items, key=lambda x: (order.index(x["status"]), int(x["id"][1:]))):
+            lines.append(f"| {i['id']} | {i['need']} | {i['status']} | {i.get('feature', '')} | {i.get('gap', '')} |")
     lines += ["", "## Beyond the catalogue", "",
               "The catalogue specifies records, workflow and compliance. It asks for development-potential "
               "quantification (area G) but not for these PlanArena features:",
