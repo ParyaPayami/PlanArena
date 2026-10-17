@@ -21,7 +21,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
-from planarena.agents.negotiation import generate_candidates, negotiate, price_of_anarchy
+from planarena.agents.negotiation import Plan, generate_candidates, negotiate, price_of_anarchy
+from planarena.agents.voting import hold_vote
 from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
 from planarena.api import planio, store
 from planarena.config import LAND_USES, PROCESSED, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
@@ -29,7 +30,7 @@ from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
 from planarena.optimize.pareto import pareto as run_pareto
 from planarena.optimize.suggest import SuggestConfig, Suggester
 
-ENGINE_VERSION = "0.2.0"
+ENGINE_VERSION = "0.3.0"
 app = FastAPI(title="PlanArena API", version=ENGINE_VERSION, default_response_class=ORJSONResponse)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -46,7 +47,9 @@ def runtime() -> dict:
     if (PROCESSED / "suitability.npy").exists():
         suit = np.load(PROCESSED / "suitability.npy")
         model_info["gnn"] = True
-        _attach_value_model(engine)
+        from planarena.models.gnn import attach_value_model  # lazy: torch loads only when a model exists
+
+        attach_value_model(engine)
     for name in ("gnn_cv", "ensemble_cv"):
         f = ROOT / "results" / f"{name}.json"
         if f.exists():
@@ -61,28 +64,6 @@ def runtime() -> dict:
         store.audit(db, "service_started", {"engine_version": ENGINE_VERSION, "source_sha256": engine.meta.get("source_sha256")})
     return {"engine": engine, "suggester": sug, "suitability": suit, "model_info": model_info,
             "soft_sites": engine.soft_site_mask(), "startup_seconds": round(time.time() - t0, 2), "geoms": None}
-
-
-def _attach_value_model(engine: ImpactEngine) -> None:
-    """Use the GNN value head for counterfactual value deltas of changed parcels."""
-    import torch
-
-    from planarena.models.gnn import ParcelGNN
-
-    ckpt = torch.load(PROCESSED / "gnn.pt", map_location="cpu")
-    model = ParcelGNN(ckpt["in_dim"])
-    model.load_state_dict(ckpt["state_dict"])
-    model.eval()
-    ctx = torch.tensor(np.load(PROCESSED / "gnn_context.npy"))
-    lot = engine.lot
-
-    @torch.no_grad()
-    def value_fn(use: np.ndarray, idx: np.ndarray) -> np.ndarray:
-        i = torch.as_tensor(idx, dtype=torch.long)
-        u = torch.as_tensor(np.clip(use[idx], 0, None), dtype=torch.long)
-        return np.expm1(model.value(ctx[i], u).numpy()) * lot[idx]
-
-    engine.value_model = value_fn
 
 
 def _geoms():
@@ -169,6 +150,23 @@ class NegotiateRequest(Strict):
     max_change_share: float = Field(0.05, gt=0, le=0.5)
 
 
+class PlanIn(Strict):
+    title: str = Field(..., min_length=1, max_length=120)
+    changes: dict[str, Change] = Field(default_factory=dict)
+
+
+class VoteRequest(Strict):
+    scope: str = "cd:103"
+    parcels: list[int] | None = None
+    changes: dict[str, Change] = Field(default_factory=dict, description="the user's plan, added as a candidate")
+    max_change_share: float = Field(0.05, gt=0, le=0.5)
+    seats: dict[str, float] | None = Field(None, description="stakeholder key -> seats (default 1 each)")
+    residents: bool = True
+    parcel_ballot: bool = True
+    samples: int = Field(200, ge=0, le=2000)
+    plans: dict[str, PlanIn] | None = Field(None, description="explicit candidates; skips plan generation")
+
+
 class ParetoRequest(Strict):
     parcels: list[int] = Field(min_length=1, max_length=300)
     respect_zoning: bool = True
@@ -207,7 +205,7 @@ class ExportRequest(Strict):
     title: str = Field("PlanArena study", max_length=120)
     description: str = Field("", max_length=4000)
     scope: str = "affected"
-    negotiation: dict | None = None
+    vote: dict | None = Field(None, description="compact vote summary for the staff report")
 
 
 # ----------------------------------------------------------------------------- core routes
@@ -397,6 +395,43 @@ async def negotiate_route(req: NegotiateRequest):
     return res
 
 
+@app.post("/api/vote")
+async def vote_route(req: VoteRequest):
+    """Comprehensive stakeholder vote: council (9 rules), residents' referendum, parcel-by-parcel ballot."""
+    r = runtime()
+    t0 = time.time()
+    keys = {s.key for s in DEFAULT_STAKEHOLDERS}
+    if req.seats and (set(req.seats) - keys or any(v < 0 for v in req.seats.values())
+                      or sum(req.seats.values()) <= 0):
+        raise HTTPException(400, f"seats must be non-negative, sum > 0, keys in {sorted(keys)}")
+    cur = _arrays(req.changes)[0] if req.changes else None
+    explicit = None
+    if req.plans is not None:
+        if not 1 <= len(req.plans) <= 30:
+            raise HTTPException(400, "give 1 to 30 plans")
+        explicit = [Plan(pid, p.title, "submitted", _arrays(p.changes)[0], {}) for pid, p in req.plans.items()]
+
+    def run():
+        return hold_vote(r["suggester"], DEFAULT_STAKEHOLDERS, seats=req.seats, scope=req.scope,
+                         max_change_share=req.max_change_share, current_use=cur,
+                         candidate_parcels=np.array(req.parcels) if req.parcels else None,
+                         residents=req.residents, samples=req.samples, plans=explicit,
+                         with_parcel_ballot=req.parcel_ballot)
+
+    try:
+        res = await run_in_threadpool(run)
+    except ValueError as err:
+        raise HTTPException(400, str(err)) from None
+    plans = res.pop("plans")
+    res["plan_changes"] = {p.id: _changes_of(p.use) for p in plans}
+    res["plan_evaluations"] = {p.id: p.evaluation for p in plans}
+    res["ms"] = round(1000 * (time.time() - t0), 1)
+    _audit("vote", {"scope": req.scope, "seats": req.seats, "winner": res["decision"]["plan"],
+                    "rule": res["decision"]["rule"], "double_majority": res["decision"]["double_majority"],
+                    "candidates": [c["id"] for c in res["candidates"]]})
+    return res
+
+
 @app.post("/api/price-of-anarchy")
 async def poa(req: NegotiateRequest):
     return await run_in_threadpool(price_of_anarchy, runtime()["suggester"], DEFAULT_STAKEHOLDERS,
@@ -553,7 +588,7 @@ def report(req: ExportRequest):
     use, far = _arrays(req.changes)
     ev = e.evaluate(use, scope=req.scope, far=far, ranges=True)
     _audit("staff_report", {"title": req.title, "n_changes": ev["n_changed"]})
-    return planio.staff_report(req.title, req.description, ev, req.changes, _prov(), req.negotiation)
+    return planio.staff_report(req.title, req.description, ev, req.changes, _prov(), req.vote)
 
 
 @app.get("/api/sample-plan.csv")

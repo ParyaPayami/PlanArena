@@ -40,7 +40,7 @@ Tagging is a transparent keyword screen (`planarena/requirements.py`). It shows 
 | notice radius | 18 | H 6, B 4, I 3 | Notice-radius parcel list (no mailing) | partial |
 | zoning rules | 57 | H 15, D 12, I 8 | Simplified zoning rules-as-code screen and warnings (not a legal determination) | partial |
 | hearings | 93 | I 84, H 4, B 1 | Hearing date and staff report; agendas and minutes are not handled | partial |
-| public input | 4 | E 1, G 1, I 1 | Stakeholder agents and negotiation; no comment intake | partial |
+| public input | 4 | E 1, G 1, I 1 | Modelled stakeholder vote and residents' referendum; no comment intake | partial |
 | fees payments | 281 | F 114, J 61, L 24 | Out of scope for PlanArena (thesis agent roster: fees and bonds) | out of scope |
 | inspections | 316 | L 263, J 11, M 10 | Out of scope (thesis agent roster: inspection scheduling and routing) | out of scope |
 | enforcement | 147 | M 82, L 23, B 7 | Out of scope (thesis agent roster: enforcement triage) | out of scope |
@@ -54,5 +54,5 @@ The catalogue specifies records, workflow and compliance. It asks for developmen
 * multi-indicator social, economic and environmental impact with sensitivity ranges
 * a graph neural network land-use suitability model with spatial cross-validation
 * an optimal land-use plan (best response) and a Pareto front (NSGA-III)
-* game-theoretic stakeholder negotiation (Nash, Kalai-Smorodinsky, price of anarchy)
+* a stakeholder vote under nine social-choice rules, a residents' referendum and a parcel-by-parcel ballot, compared with bargaining solutions (Nash, Kalai-Smorodinsky) and price of anarchy
 * a game-like mobile interface

@@ -147,13 +147,10 @@ class Suggester:
         gains["facility_access"] = adequacy_gain("pubfac_fa", e.k_fac, e.t_fac)
         return gains
 
-    def suggest(self, cfg: SuggestConfig | None = None, use: np.ndarray | None = None) -> dict:
-        cfg = cfg or SuggestConfig()
+    def feasible(self, cfg: SuggestConfig, use: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """(scope mask, eligible parcels, allowed uses per parcel) under the plan's protections."""
         e = self.e
-        use = (e.base_use if use is None else np.asarray(use)).astype("int16").copy()
-        start = use.copy()
         mask = e.scope_mask(use, cfg.scope)
-        pu = self.per_use_values()
         eligible = mask.copy()
         if cfg.candidate_parcels is not None:
             sel = np.zeros(e.n, bool)
@@ -178,6 +175,15 @@ class Suggester:
             built = e.bldg > 0
             unbuilt_uses = np.isin(np.arange(N_USES), [U["opn"], U["prk"], U["vac"]])
             allowed[built[:, None] & unbuilt_uses[None, :]] = False
+        return mask, eligible, allowed
+
+    def suggest(self, cfg: SuggestConfig | None = None, use: np.ndarray | None = None) -> dict:
+        cfg = cfg or SuggestConfig()
+        e = self.e
+        use = (e.base_use if use is None else np.asarray(use)).astype("int16").copy()
+        start = use.copy()
+        pu = self.per_use_values()
+        mask, eligible, allowed = self.feasible(cfg, use)
         budget = max(1, int(cfg.max_change_share * eligible.sum()))
         fit = None
         if self.suit is not None and cfg.w_fit > 0:

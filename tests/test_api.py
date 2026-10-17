@@ -109,3 +109,24 @@ def test_scenarios_and_tamper_evident_audit(client):
         db.execute("UPDATE audit SET body = '{}' WHERE id = (SELECT MIN(id) FROM audit)")
     assert client.get("/api/audit").json()["verify"]["valid"] is False
     assert client.delete(f"/api/scenarios/{s['id']}").status_code == 200
+
+
+def test_vote_with_explicit_plans(client):
+    base = client.post("/api/suggest", json={"scope": "cd:105", "mode": "balanced", "max_change_share": 0.03}).json()
+    r = client.post("/api/vote", json={
+        "scope": "cd:105", "samples": 10, "residents": False,
+        "plans": {"ai": {"title": "AI plan", "changes": base["changes"]}},
+        "seats": {"developer": 2, "residents": 1, "environment": 1, "city": 1, "business": 1},
+    })
+    assert r.status_code == 200, r.text
+    v = r.json()
+    assert [c["id"] for c in v["candidates"]] == ["status-quo", "ai"]
+    assert v["decision"]["plan"] in ("status-quo", "ai")
+    assert client.post("/api/vote", json={"seats": {"mayor": 1}}).status_code == 400
+
+
+def test_report_includes_vote_summary(client):
+    vote = {"decision": {"title": "Balanced", "rule": "Schulze", "explanation": ["It wins <b>4</b> of 9 rules."]},
+            "n_candidates": 3, "rules": {"Schulze": "Balanced"}}
+    html = client.post("/api/report", json={"changes": {"10": "res"}, "title": "T", "vote": vote}).text
+    assert "Stakeholder vote" in html and "&lt;b&gt;4&lt;/b&gt;" in html  # escaped, never raw HTML

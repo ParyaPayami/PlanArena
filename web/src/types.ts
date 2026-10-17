@@ -212,3 +212,67 @@ export interface ParcelInfo {
   per_use: Record<string, Record<string, number>>;
   suitability?: Record<string, number>;
 }
+
+export interface RuleResult {
+  winner: string;
+  label: string;
+  scores?: Record<string, number>;
+  ranking?: string[];
+  rounds?: { tally: Record<string, number>; eliminated?: string }[];
+  grades?: Record<string, { grade: string; median: number; above: number; below: number }>;
+  optimal?: boolean;
+}
+
+export interface VoteCandidate {
+  id: string;
+  title: string;
+  origin: string;
+  n_changed: number;
+  pillars: Record<Pillar, number>;
+  overall: number;
+}
+
+export interface Tally {
+  for: number;
+  against: number;
+  total: number;
+}
+
+export interface Vote {
+  candidates: VoteCandidate[];
+  aliases: Record<string, string>;
+  headline_rule: string;
+  council: {
+    voters: { key: string; name: string; seats: number }[];
+    utilities: number[][];
+    ballots: Record<string, string[]>;
+    rules: Record<string, RuleResult>;
+    pairwise: number[][];
+    condorcet_winner: string | null;
+    condorcet_loser: string | null;
+    smith_set: string[];
+    consensus: { winner: string; rules_won: Record<string, number>; n_rules: number };
+    manipulation: { rule: string; voter: string; sincere_winner: string; result: string }[];
+    robustness: null | { samples: number; coefficients: Record<string, number>; seats: Record<string, number>; both: Record<string, number> };
+    versus_status_quo: Tally;
+    gains: Record<string, boolean>;
+  };
+  residents: null | {
+    precincts: number;
+    residents: number;
+    affected_precincts: number;
+    affected_residents: number;
+    rules: Record<string, RuleResult>;
+    condorcet_winner: string | null;
+    smith_set: string[];
+    winner: string;
+    council_winner_vs_status_quo: Tally;
+    agrees_with_council: boolean;
+  };
+  bargaining: Record<string, { plan: string; utilities: number[]; welfare: number } | null | string[]>;
+  decision: { plan: string; title: string; rule: string; explanation: string[]; double_majority: boolean | null; council_majority: boolean };
+  parcel_ballot?: { eligible: number; passed: number; changed: number; budget: number; parcels: number[]; winner: string[]; support: number[]; chosen: number[] };
+  plan_changes: Record<string, Record<string, ChangeValue>>;
+  plan_evaluations: Record<string, Evaluation>;
+  ms: number;
+}

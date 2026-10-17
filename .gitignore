@@ -10,3 +10,4 @@ results/train.log
 .DS_Store
 data/reference/
 data/*.sqlite3*
+.Rhistory

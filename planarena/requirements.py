@@ -54,7 +54,7 @@ THEMES = {
     "hearings": (r"hearing|agenda|commission|council|public notice",
                  "Hearing date and staff report; agendas and minutes are not handled", "partial"),
     "public_input": (r"public (comment|input)|stakeholder|communit|testimon|social media",
-                     "Stakeholder agents and negotiation; no comment intake", "partial"),
+                     "Modelled stakeholder vote and residents' referendum; no comment intake", "partial"),
     "fees_payments": (r"\bfees?\b|payment|invoice|refund|bond|escrow|deposit|revenue",
                       "Out of scope for PlanArena (thesis agent roster: fees and bonds)", "out of scope"),
     "inspections": (r"inspect", "Out of scope (thesis agent roster: inspection scheduling and routing)",
@@ -132,7 +132,7 @@ def write(df: pd.DataFrame, out_md: Path, out_csv: Path) -> None:
               "* multi-indicator social, economic and environmental impact with sensitivity ranges",
               "* a graph neural network land-use suitability model with spatial cross-validation",
               "* an optimal land-use plan (best response) and a Pareto front (NSGA-III)",
-              "* game-theoretic stakeholder negotiation (Nash, Kalai-Smorodinsky, price of anarchy)",
+              "* a stakeholder vote under nine social-choice rules, a residents' referendum and a parcel-by-parcel ballot, compared with bargaining solutions (Nash, Kalai-Smorodinsky) and price of anarchy",
               "* a game-like mobile interface", ""]
     out_md.write_text("\n".join(lines))
 

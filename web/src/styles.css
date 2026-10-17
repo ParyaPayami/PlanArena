@@ -282,3 +282,34 @@ button.danger { border-color: #6a2531; color: #ff9aa5; }
 .tabs { grid-template-columns: repeat(6, 1fr) !important; }
 .tabs button { font-size: 11.5px !important; padding: 10px 2px !important; flex-direction: column; gap: 2px; }
 @media (max-width: 1250px) { .tool-label { display: none; } .search { width: 200px; } }
+
+/* ---- v0.3: stakeholder vote ---- */
+.seats { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 3px 0; }
+.seats button { width: 20px; height: 20px; padding: 0; border-radius: 6px; font-size: 13px; line-height: 1; }
+.seats b { min-width: 12px; font-variant-numeric: tabular-nums; }
+.badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0 8px; }
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #173226; color: var(--good); border: 1px solid #2c6e4a; }
+.badge.bad { background: #2c1419; color: var(--bad); border-color: #6a2531; }
+.explain { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.ballots, .rules { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 6px; }
+.ballots td, .ballots th, .rules td, .rules th { padding: 4px 5px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.ballots td.good, .rules td.good { font-weight: 700; }
+.h2h-wrap { overflow-x: auto; }
+.h2h { font-size: 11px; border-collapse: collapse; margin-top: 6px; }
+.h2h th { font-weight: 600; padding: 3px 5px; white-space: nowrap; text-align: center; }
+.h2h tbody th { text-align: left; }
+.h2h td { text-align: center; padding: 3px 6px; border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.h2h td.win { background: #173226; color: var(--good); }
+.h2h td.lose { background: #2c1419; color: var(--bad); }
+.h2h td.self { color: var(--muted); }
+.robust-row { display: grid; grid-template-columns: 92px 1fr 38px; align-items: center; gap: 8px; font-size: 12px; margin-top: 6px; }
+.robust-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.robust-row .bar { height: 8px; background: var(--panel); border-radius: 4px; overflow: hidden; }
+.robust-row .bar div { height: 100%; background: #4b5a75; }
+.robust-row .bar div.on { background: var(--good); }
+.yesno { display: flex; height: 22px; border-radius: 7px; overflow: hidden; font-size: 11px; font-weight: 700; }
+.yesno .yes { background: #2c6e4a; display: flex; align-items: center; padding-left: 6px; white-space: nowrap; }
+.yesno .no { background: #6a2531; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; white-space: nowrap; }
+.council-vote { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+.council-vote .ballot { display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 2px; }
+.council-vote .ballot .agent-icon { font-size: 24px; }

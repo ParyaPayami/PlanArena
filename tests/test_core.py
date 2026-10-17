@@ -165,3 +165,53 @@ def test_web_layers_are_polygonal():
     for f in [WEB_DATA / "parcels.geojson", *sorted((WEB_DATA / "levels").glob("*.geojson"))]:
         types = {ft["geometry"]["type"] for ft in json.loads(f.read_text())["features"]}
         assert types <= {"Polygon", "MultiPolygon"}, (f.name, types)
+
+
+def _tennessee():
+    # Candidates 0 Memphis, 1 Nashville, 2 Chattanooga, 3 Knoxville (a standard social-choice example).
+    orders = {0: [0, 1, 2, 3], 1: [1, 2, 3, 0], 2: [2, 3, 1, 0], 3: [3, 2, 1, 0]}
+    U = np.zeros((4, 4))
+    for v, o in orders.items():
+        for pos, c in enumerate(o):
+            U[c, v] = 3 - pos
+    return U, np.array([42.0, 26.0, 15.0, 17.0])
+
+
+def test_voting_rules_match_textbook_results():
+    from planarena.agents import voting as V
+
+    U, w = _tennessee()
+    r = V.run_rules(U, w)
+    assert r["plurality"]["winner"] == 0  # Memphis
+    assert r["irv"]["winner"] == 3  # Knoxville
+    for rule in ("borda", "copeland", "schulze", "kemeny"):
+        assert r[rule]["winner"] == 1, rule  # Nashville
+    assert r["condorcet_winner"] == 1 and r["condorcet_loser"] == 0
+    assert r["kemeny"]["ranking"] == [1, 2, 3, 0]
+
+
+def test_condorcet_paradox_has_no_winner():
+    from planarena.agents import voting as V
+
+    U = np.array([[2, 0, 1], [1, 2, 0], [0, 1, 2]], float)
+    r = V.run_rules(U, np.ones(3))
+    assert r["condorcet_winner"] is None and r["smith_set"] == [0, 1, 2]
+
+
+def test_full_vote_is_consistent(suggester):
+    from planarena.agents.voting import hold_vote
+
+    r = hold_vote(suggester, DEFAULT_STAKEHOLDERS, scope="cd:110", samples=20)
+    c = r["council"]
+    ids = [x["id"] for x in r["candidates"]]
+    assert ids[0] == "status-quo" and r["decision"]["plan"] == c["rules"]["schulze"]["winner"]
+    if c["condorcet_winner"]:
+        assert c["rules"]["schulze"]["winner"] == c["condorcet_winner"]
+        assert c["rules"]["kemeny"]["winner"] == c["condorcet_winner"]
+    assert c["smith_set"] and c["rules"]["schulze"]["winner"] in c["smith_set"]
+    for k in ("coefficients", "seats", "both"):
+        assert abs(sum(c["robustness"][k].values()) - 1) < 1e-9
+    pb = r["parcel_ballot"]
+    assert pb["changed"] <= pb["budget"] and pb["changed"] <= pb["passed"]
+    assert all(pb["support"][pb["parcels"].index(i)] > 0.5 for i in pb["chosen"])
+    assert r["residents"]["precincts"] > 0

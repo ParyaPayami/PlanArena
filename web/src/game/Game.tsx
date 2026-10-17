@@ -5,7 +5,8 @@ import Toast from "../components/Toast";
 import { api } from "../api";
 import { loadCity, startAutoEvaluate, useStore } from "../store";
 import { fmtDelta, fmtScore } from "../format";
-import type { Evaluation, Meta } from "../types";
+import type { Evaluation, Meta, Vote } from "../types";
+import type { Changes } from "../api";
 
 const STAR_KEY = "planarena-stars";
 
@@ -67,7 +68,7 @@ function LevelSelect({ meta, onPick }: { meta: Meta; onPick: (cd: string) => voi
       <div className="game-hero">
         <div className="logo big" />
         <h1>PlanArena</h1>
-        <p>Re-plan Manhattan one neighbourhood at a time. Add homes, keep parks close and cut emissions. Then see if you can beat the AI planner.</p>
+        <p>Re-plan Manhattan one neighbourhood at a time. Add homes, keep parks close and cut emissions. Then put your plan to the stakeholder council against the AI planner's.</p>
         <div className="star-total">⭐ {total} / {Object.keys(meta.levels).length * 3}</div>
       </div>
       <div className="levels">
@@ -90,7 +91,10 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
   const [brush, setBrush] = useState("res");
   const [base, setBase] = useState<Evaluation | null>(null);
   const [rival, setRival] = useState<Evaluation | null>(null);
+  const [rivalChanges, setRivalChanges] = useState<Changes | null>(null);
   const [finished, setFinished] = useState(false);
+  const [council, setCouncil] = useState<Vote | null>(null);
+  const [voting, setVoting] = useState(false);
   const [floats, setFloats] = useState<{ id: number; text: string; good: boolean }[]>([]);
   const prevEv = useRef<Evaluation | undefined>(undefined);
 
@@ -104,7 +108,11 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
       setLoaded(true);
     });
     api.evaluate({}, `cd:${cd}`).then((e) => live && setBase(e));
-    api.suggest({ scope: `cd:${cd}`, mode: "balanced", max_change_share: 0.05 }).then((r) => live && setRival(r.evaluation));
+    api.suggest({ scope: `cd:${cd}`, mode: "balanced", max_change_share: 0.05 }).then((r) => {
+      if (!live) return;
+      setRival(r.evaluation);
+      setRivalChanges(r.changes);
+    });
     return () => {
       live = false;
     };
@@ -135,8 +143,30 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
   const g = mission ? goals(s.evaluation, mission) : [];
   const done = g.filter((x) => x.done).length;
   const overall = s.evaluation && s.evaluation.n_changed ? s.evaluation.overall : 0;
-  const beatAI = rival ? overall >= rival.overall && s.evaluation?.n_changed : false;
-  const stars = g.length ? (g[0].done ? 1 : 0) + (done === 3 ? 1 : 0) + (done === 3 && beatAI ? 1 : 0) : 0;
+  // The council elects a plan by the Schulze rule; identical plans are merged, so resolve aliases.
+  const elected = council ? council.decision.plan : null;
+  const youId = council ? (council.aliases.you ?? "you") : "you";
+  const councilElectsYou = !!council && elected === youId && youId !== "status-quo";
+  const stars = g.length ? (g[0].done ? 1 : 0) + (done === 3 ? 1 : 0) + (done === 3 && councilElectsYou ? 1 : 0) : 0;
+  const finish = async () => {
+    setFinished(true);
+    setCouncil(null);
+    setVoting(true);
+    try {
+      const v = await api.vote({
+        scope: `cd:${cd}`, residents: false, parcel_ballot: false, samples: 0,
+        plans: { ai: { title: "AI planner", changes: rivalChanges ?? {} }, you: { title: "Your plan", changes: s.changes() } },
+      });
+      setCouncil(v);
+    } catch (e) {
+      s.notify(String(e), "bad");
+    } finally {
+      setVoting(false);
+    }
+  };
+  useEffect(() => {
+    if (council) saveStars(cd, stars);
+  }, [council]);
   const levelKeys = Object.keys(meta.levels);
   const nextCd = levelKeys[(levelKeys.indexOf(cd) + 1) % levelKeys.length];
 
@@ -211,8 +241,8 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
         <div className="sheet-actions">
           <button className="round" onClick={s.undo} disabled={!s.past.length} aria-label="Undo">↶</button>
           <button className="round" onClick={s.toggle3d} aria-label="3D">{s.view3d ? "3D" : "2D"}</button>
-          <button className="primary finish" onClick={() => { setFinished(true); saveStars(cd, stars); }}>
-            Finish {"★".repeat(stars)}
+          <button className="primary finish" onClick={finish}>
+            Finish & vote 🗳
           </button>
         </div>
       </div>
@@ -220,12 +250,37 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
         <div className="modal-back">
           <div className="modal">
             <div className="result-stars">{[0, 1, 2].map((k) => <span key={k} className={k < stars ? "on" : ""}>★</span>)}</div>
-            <h2>{stars === 3 ? "You beat the AI planner!" : stars === 2 ? "Great plan!" : stars === 1 ? "Homes delivered!" : "Keep trying"}</h2>
+            <h2>
+              {voting ? "The council is voting…" : councilElectsYou && stars === 3 ? "The council elected your plan!"
+                : councilElectsYou ? "Elected! Now meet every goal" : stars >= 2 ? "Great plan, but the council chose another"
+                : stars === 1 ? "Homes delivered!" : "Keep trying"}
+            </h2>
             <div className="vs">
               <div><div className="eyebrow">You</div><div className="big-score">{fmtScore(overall)}</div></div>
               <div className="muted">vs</div>
               <div><div className="eyebrow">AI planner</div><div className="big-score">{rival ? fmtScore(rival.overall) : "…"}</div></div>
             </div>
+            {council && (
+              <>
+                <div className="council-vote">
+                  {council.council.voters.map((v) => {
+                    const a = meta.stakeholders.find((x) => x.key === v.key);
+                    const first = council.council.ballots[v.key][0];
+                    const label = council.candidates.find((c) => c.id === first)?.title ?? first;
+                    return (
+                      <div key={v.key} className="ballot" title={a?.name}>
+                        <span className="agent-icon">{a?.icon}</span>
+                        <span className={first === youId ? "good" : first === "status-quo" ? "muted" : "bad"}>{label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="muted small center-row">
+                  Elected by the Schulze rule: <b>{council.decision.title}</b>
+                  {council.council.condorcet_winner === council.decision.plan ? " (beats each rival head to head)" : ""}
+                </div>
+              </>
+            )}
             <PillarCards ev={s.evaluation} />
             <div className="row gap center-row">
               <button onClick={() => setFinished(false)}>Keep editing</button>

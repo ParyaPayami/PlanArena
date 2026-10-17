@@ -4,7 +4,7 @@ import Scoreboard from "../components/Scoreboard";
 import Palette from "../components/Palette";
 import ParcelInspector from "../components/ParcelInspector";
 import AIPanel from "../components/AIPanel";
-import AgentsPanel from "../components/AgentsPanel";
+import VotePanel from "../components/VotePanel";
 import StudiesPanel from "../components/StudiesPanel";
 import DeskPanel from "../components/DeskPanel";
 import DataPanel from "../components/DataPanel";
@@ -17,7 +17,7 @@ import { useStore, type Tab } from "../store";
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "impact", label: "Impact", icon: "📊" },
   { key: "ai", label: "Optimize", icon: "✨" },
-  { key: "agents", label: "Negotiate", icon: "🤝" },
+  { key: "agents", label: "Vote", icon: "🗳" },
   { key: "studies", label: "Studies", icon: "🗂" },
   { key: "desk", label: "Desk", icon: "🧭" },
   { key: "data", label: "Import/Export", icon: "⇅" },
@@ -119,6 +119,14 @@ export default function Studio() {
       </header>
       <aside className="left">
         <Palette />
+        {s.overlay && (
+          <div className="preview-banner">
+            {s.overlay.label}
+            <button className="link" onClick={() => s.setOverlay(null)}>
+              close
+            </button>
+          </div>
+        )}
         {s.preview && (
           <div className="preview-banner">
             Previewing <b>{s.preview.label}</b>
@@ -159,7 +167,7 @@ export default function Studio() {
             s.selectMany(b.parcels, add);
             s.notify(`Tax block ${b.block}: ${b.parcels.length} parcels`, "info");
           }}
-          suggestionOverlay={suitOverlay ? suit : null}
+          suggestionOverlay={s.overlay ?? (suitOverlay ? suit : null)}
         />
         <ParcelInspector />
       </main>
@@ -174,7 +182,7 @@ export default function Studio() {
         <div className="tab-body">
           {s.tab === "impact" && <Scoreboard />}
           {s.tab === "ai" && <AIPanel suitOverlay={suitOverlay} setSuitOverlay={setSuitOverlay} />}
-          {s.tab === "agents" && <AgentsPanel />}
+          {s.tab === "agents" && <VotePanel />}
           {s.tab === "studies" && <StudiesPanel />}
           {s.tab === "desk" && <DeskPanel />}
           {s.tab === "data" && <DataPanel />}

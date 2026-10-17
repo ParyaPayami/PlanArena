@@ -10,7 +10,7 @@ export default function DeskPanel() {
   const setHighlight = useStore((s) => s.setHighlight);
   const selectMany = useStore((s) => s.selectMany);
   const notify = useStore((s) => s.notify);
-  const negotiation = useStore((s) => s.negotiation);
+  const vote = useStore((s) => s.vote);
   const ev = useStore((s) => s.evaluation);
   const [feet, setFeet] = useState(500);
   const [notice, setNotice] = useState<{ count: number; feet: number; parcels: { i: number; bbl: number; address: string; use: string | null }[] } | null>(null);
@@ -104,13 +104,13 @@ export default function DeskPanel() {
         <button
           className="primary wide"
           disabled={!ev?.n_changed}
-          onClick={() => api.openReport(useStore.getState().changes(), title, "", negotiation ?? undefined)}
+          onClick={() => api.openReport(useStore.getState().changes(), title, "", vote)}
         >
           Open printable staff report
         </button>
         <div className="muted small">
-          Built only from engine outputs: impacts with sensitivity ranges, capacity, screening flags, negotiation
-          outcome, and data provenance. Print it to PDF from the browser.
+          Built only from engine outputs: impacts with sensitivity ranges, capacity, screening flags, the stakeholder
+          vote, and data provenance. Print it to PDF from the browser.
         </div>
       </div>
     </div>

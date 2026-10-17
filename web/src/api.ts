@@ -1,4 +1,4 @@
-import type { ChangeValue, Evaluation, ImportReview, Meta, Negotiation, ParcelInfo, ParetoResult, Study } from "./types";
+import type { ChangeValue, Evaluation, ImportReview, Meta, Negotiation, ParcelInfo, ParetoResult, Study, Vote } from "./types";
 
 async function post<T>(url: string, body: unknown): Promise<T> {
   const r = await fetch(url, {
@@ -57,6 +57,16 @@ export const api = {
   ),
   negotiate: (body: { scope: string; changes?: Changes; parcels?: number[]; max_change_share?: number }) =>
     post<Negotiation>("/api/negotiate", body),
+  vote: (body: {
+    scope: string;
+    changes?: Changes;
+    max_change_share?: number;
+    seats?: Record<string, number>;
+    residents?: boolean;
+    parcel_ballot?: boolean;
+    samples?: number;
+    plans?: Record<string, { title: string; changes: Changes }>;
+  }) => post<Vote>("/api/vote", body),
   priceOfAnarchy: (scope: string) =>
     post<{ welfare_fragmented: number; welfare_cooperative: number; price_of_anarchy: number | null }>(
       "/api/price-of-anarchy",
@@ -87,11 +97,18 @@ export const api = {
   audit: () => get<{ verify: { valid: boolean; rows: number; head?: string }; rows: { id: number; timestamp: string; action: string; body: unknown }[] }>("/api/audit?limit=60"),
   exportFile: (fmt: "csv" | "geojson" | "provenance", changes: Changes, title = "PlanArena study") =>
     download(`/api/export/${fmt}`, { changes, title }, fmt === "provenance" ? "planarena-report.json" : `planarena-plan.${fmt}`),
-  openReport: async (changes: Changes, title: string, description = "", negotiation?: unknown) => {
+  openReport: async (changes: Changes, title: string, description = "", vote?: Vote) => {
+    const summary = vote && {
+      decision: vote.decision,
+      n_candidates: vote.candidates.length,
+      rules: Object.fromEntries(
+        Object.values(vote.council.rules).map((r) => [r.label, vote.candidates.find((c) => c.id === r.winner)?.title ?? r.winner]),
+      ),
+    };
     const r = await fetch("/api/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ changes, title, description, negotiation }),
+      body: JSON.stringify({ changes, title, description, vote: summary }),
     });
     const html = await r.text();
     const w = window.open("", "_blank");

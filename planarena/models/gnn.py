@@ -59,3 +59,32 @@ class ParcelGNN(nn.Module):
 
 def edge_dict(graph: dict, device="cpu") -> dict:
     return {("parcel", r, "parcel"): torch.as_tensor(graph[r], dtype=torch.long, device=device) for r in RELATIONS}
+
+
+def attach_value_model(engine, processed=None) -> bool:
+    """Use the trained GNN value head for counterfactual value deltas of changed parcels.
+
+    Returns False (and leaves the rate-table value model in place) when no trained model exists.
+    """
+    import numpy as np
+
+    from planarena.config import PROCESSED
+
+    d = processed or PROCESSED
+    if not (d / "gnn.pt").exists():
+        return False
+    ckpt = torch.load(d / "gnn.pt", map_location="cpu")
+    model = ParcelGNN(ckpt["in_dim"])
+    model.load_state_dict(ckpt["state_dict"])
+    model.eval()
+    ctx = torch.tensor(np.load(d / "gnn_context.npy"))
+    lot = engine.lot
+
+    @torch.no_grad()
+    def value_fn(use, idx):
+        i = torch.as_tensor(idx, dtype=torch.long)
+        u = torch.as_tensor(np.clip(use[idx], 0, None), dtype=torch.long)
+        return np.expm1(model.value(ctx[i], u).numpy()) * lot[idx]
+
+    engine.value_model = value_fn
+    return True

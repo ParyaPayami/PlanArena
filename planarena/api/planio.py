@@ -189,7 +189,7 @@ def _fmt(v: float, kind: str, key: str) -> str:
 
 
 def staff_report(title: str, description: str, ev: dict, changes: dict, prov: dict,
-                 negotiation: dict | None = None) -> str:
+                 vote: dict | None = None) -> str:
     """Printable staff-report draft. Deterministic text, built only from engine outputs."""
     e = html.escape
     rows = "".join(
@@ -204,10 +204,14 @@ def staff_report(title: str, description: str, ev: dict, changes: dict, prov: di
     warn = "".join(f"<li>{e(w['message'])}</li>" for w in ev["warnings"]) or "<li>None detected by the screening rules.</li>"
     cap_b, cap_s = ev["capacity"]["baseline"], ev["capacity"]["scenario"]
     neg = ""
-    if negotiation:
-        neg = (f"<h2>Stakeholder negotiation</h2><p>Five stakeholder agents negotiated over {len(negotiation['plans'])} "
-               f"candidate plans. Agreement: <b>{e(negotiation['agreed_plan'])}</b> after {negotiation['rounds']} rounds "
-               f"({'reached by the agents' if negotiation['agreed_by_protocol'] else 'mediated'}).</p>")
+    if vote:
+        d = vote.get("decision", {})
+        rules = "".join(f"<tr><td>{e(k)}</td><td>{e(v)}</td></tr>" for k, v in (vote.get("rules") or {}).items())
+        lines = "".join(f"<li>{e(x)}</li>" for x in d.get("explanation", []))
+        neg = (f"<h2>Stakeholder vote</h2><p>The stakeholder council voted over {int(vote.get('n_candidates', 0))} "
+               f"candidate plans. Decision ({e(d.get('rule', 'Schulze'))} rule): <b>{e(d.get('title', ''))}</b>.</p>"
+               f"<ul>{lines}</ul>"
+               + (f"<table><tr><th>Rule</th><th>Council winner</th></tr>{rules}</table>" if rules else ""))
     p = ev["pillars"]
     return f"""<!doctype html><html><head><meta charset=utf-8><title>{e(title)} – staff report draft</title>
 <style>body{{font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;max-width:860px;margin:32px auto;color:#111;padding:0 16px}}

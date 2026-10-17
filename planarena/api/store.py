@@ -22,7 +22,7 @@ STATUSES = ("draft", "under review", "hearing scheduled", "adopted", "withdrawn"
 DEFAULT_CHECKLIST = [
     "Define study area and purpose",
     "Document existing conditions (land use, zoning, capacity)",
-    "Develop alternatives (optimizer / negotiation)",
+    "Develop alternatives (optimizer / stakeholder vote)",
     "Evaluate impacts and uncertainty",
     "Review zoning conflicts and protected resources",
     "Prepare notice radius and mailing list",

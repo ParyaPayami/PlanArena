@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { api, type Changes } from "./api";
-import type { Evaluation, Meta, Negotiation } from "./types";
+import type { Evaluation, Meta, Vote } from "./types";
 
 export interface CityData {
   features: GeoJSON.Feature[];
@@ -46,7 +46,8 @@ interface State {
   evaluating: boolean;
   scope: string;
   preview?: Preview;
-  negotiation?: Negotiation;
+  vote?: Vote;
+  overlay?: { top: number[]; p: number[]; label: string } | null;
   highlight?: Highlight;
   focus?: { lon: number; lat: number; zoom: number; id: number };
   view3d: boolean;
@@ -65,7 +66,8 @@ interface State {
   reset: () => void;
   setScope: (s: string) => void;
   setPreview: (p?: Preview) => void;
-  setNegotiation: (n?: Negotiation) => void;
+  setVote: (v?: Vote) => void;
+  setOverlay: (o?: { top: number[]; p: number[]; label: string } | null) => void;
   setHighlight: (h?: Highlight) => void;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   setTab: (t: Tab) => void;
@@ -188,7 +190,8 @@ export const useStore = create<State>((set, get) => ({
 
   setScope: (scope) => set({ scope }),
   setPreview: (preview) => set((s) => ({ preview, version: s.version + 1 })),
-  setNegotiation: (negotiation) => set({ negotiation }),
+  setVote: (vote) => set({ vote }),
+  setOverlay: (overlay) => set({ overlay }),
   setHighlight: (highlight) => set((s) => ({ highlight, selVersion: s.selVersion + 1 })),
   flyTo: (lon, lat, zoom = 17) => set({ focus: { lon, lat, zoom, id: Date.now() } }),
   setTab: (tab) => set({ tab }),
