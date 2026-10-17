@@ -1,0 +1,84 @@
+{
+  "test": "Inputs are only what Tier A has everywhere (planarena.cities.tier_a.lot_features: building size and height, Overture\nbuilding classes, places and land-use polygons, census-block housing and population, and the rule-based label).\nLabels are the Tier B parcel use under each built pseudo-lot's representative point. Leave-one-city-out: train on the\nother Tier B cities, test on the held-out one, next to the rules on the same lots. The deployed model is trained on\nall Tier B cities and used by the Tier A builder only if it beats the rules in every held-out city.",
+  "held_out": {
+    "manhattan": {
+      "trained_on": [
+        "milwaukee"
+      ],
+      "n": 39067,
+      "model": {
+        "accuracy": 0.623,
+        "macro_f1": 0.297,
+        "recall_by_use": {
+          "res": 0.82,
+          "mix": 0.453,
+          "com": 0.596,
+          "ind": 0.026,
+          "tra": 0.02,
+          "pub": 0.241,
+          "opn": 0.387,
+          "prk": 0.009,
+          "vac": 0.004
+        }
+      },
+      "rules": {
+        "accuracy": 0.631,
+        "macro_f1": 0.274,
+        "recall_by_use": {
+          "res": 0.736,
+          "mix": 0.708,
+          "com": 0.283,
+          "ind": 0.031,
+          "tra": 0.193,
+          "pub": 0.51,
+          "opn": 0.0,
+          "prk": 0.0,
+          "vac": 0.0
+        }
+      },
+      "majority_class_accuracy": 0.502
+    },
+    "milwaukee": {
+      "trained_on": [
+        "manhattan"
+      ],
+      "n": 143416,
+      "model": {
+        "accuracy": 0.595,
+        "macro_f1": 0.195,
+        "recall_by_use": {
+          "res": 0.637,
+          "mix": 0.079,
+          "com": 0.321,
+          "ind": 0.0,
+          "tra": 0.213,
+          "pub": 0.74,
+          "opn": 0.394,
+          "prk": 0.084,
+          "vac": 0.144
+        }
+      },
+      "rules": {
+        "accuracy": 0.908,
+        "macro_f1": 0.287,
+        "recall_by_use": {
+          "res": 0.988,
+          "mix": 0.042,
+          "com": 0.508,
+          "ind": 0.452,
+          "tra": 0.085,
+          "pub": 0.57,
+          "opn": 0.0,
+          "prk": 0.0,
+          "vac": 0.0
+        }
+      },
+      "majority_class_accuracy": 0.884
+    }
+  },
+  "variants_tried": [
+    "LightGBM with balanced class weights (2026-10-17): worse than the rules in both held-out cities (Manhattan accuracy 0.455, Milwaukee 0.372)",
+    "LightGBM unweighted (reported here)"
+  ],
+  "model_beats_rules_everywhere": false
+}

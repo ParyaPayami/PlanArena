@@ -86,6 +86,8 @@ export default function CityMap(props: Props) {
 
   // Selection outline: thin when zoomed out so the new colours of painted parcels stay visible.
   const selW = viewState.zoom >= 15 ? 2.5 : viewState.zoom >= 13.5 ? 1.6 : 0.9;
+  // Unchanged parcel outlines fade out when zoomed out, so small-lot cities do not turn dark.
+  const baseW = viewState.zoom >= 15 ? 0.35 : viewState.zoom >= 14 ? 0.2 : 0;
   const changedAt = (i: number) => use[i] !== base[i] || (far !== undefined && !Number.isNaN(far[i]));
 
   const layer = new GeoJsonLayer({
@@ -129,7 +131,7 @@ export default function CityMap(props: Props) {
       if (selected.has(i)) return selW;
       if (highlight?.parcels.has(i)) return 2.2;
       if (preview?.has(i) || changedAt(i)) return 1.4;
-      return 0.35;
+      return baseW;
     },
     getElevation: (f: GeoJSON.Feature) => {
       const p = f.properties as { i: number; h: number };
@@ -145,7 +147,7 @@ export default function CityMap(props: Props) {
     updateTriggers: {
       getFillColor: [version, preview, props.suggestionOverlay, highlight?.key],
       getLineColor: [version, selVersion, preview, highlight?.key],
-      getLineWidth: [version, selVersion, preview, highlight?.key, selW],
+      getLineWidth: [version, selVersion, preview, highlight?.key, selW, baseW],
       getElevation: [version, preview],
     },
     transitions: { getFillColor: 220, getElevation: 400 },

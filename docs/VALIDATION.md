@@ -6,18 +6,49 @@ Every number below is read from `results/**/*.json`, produced by `planarena/vali
 
 ## A. Existing conditions
 
-**Emissions, same year as fitting (LL84 2024):** 9,188 buildings; log–log r 0.808; median absolute error 34%; total modelled / metered 1.07×.
+**Emissions, same year as fitting (LL84 2024):** 9,188 buildings; log–log r 0.816; median absolute error 29%; total modelled / metered 1.00×.
 
-**Emissions, another year (LL84 2023, coefficients fitted on 2024):** 6,238 buildings; log–log r 0.795; median absolute error 37%; total 1.07× (5.119 vs 4.784 Mt). Most buildings appear in both years, so this is not a test on unseen buildings. The aggregate agrees far better than individual buildings do.
+**Emissions, another year (LL84 2023, coefficients fitted on 2024):** 6,238 buildings; log–log r 0.803; median absolute error 31%; total 0.99× (4.758 vs 4.784 Mt). Most buildings appear in both years, so this is not a test on unseen buildings. The aggregate agrees far better than individual buildings do.
 
-**Jobs against LEHD LODES 2023:** total modelled 2,480,984 (scaled to QCEW) vs LODES 2,504,522.
+**Jobs against LEHD LODES 2023:** total modelled 2,480,984 (scaled to QCEW) vs LODES 2,504,522. In sample: the rates are fitted on LODES 2023. Out-of-sample evidence is the forward test in jobs_rates.json.
 
 | Level | Units | log–log r | Spearman | Median error (units with ≥100 jobs) |
 |---|---:|---:|---:|---:|
-| tract | 310 | 0.816 | 0.819 | 40% |
-| block | 3,390 | 0.704 | 0.701 | 55% |
+| tract | 310 | 0.843 | 0.847 | 36% |
+| block | 3,390 | 0.727 | 0.736 | 46% |
 
 **Homes from floor area (records of 295 lots developed 2015–2025):** given the observed use and floor area, PlanArena estimates 22,333 homes against 20,516 recorded (1.089×; log–log r 0.894; median error 28%). Reference, CEQR 900 sq ft per home on the observed residential floor area: 1.099×.
+
+**Where the emissions estimate is weak (LL84 2023):**
+
+| Group | Buildings | Median error | log–log r | Total ratio |
+|---|---:|---:|---:|---:|
+| All (PlanArena) | 6,238 | 31% | 0.803 | 0.99× |
+| Baseline: one citywide intensity × floor area | 6,238 | 29% | 0.802 | 0.92× |
+| Held-out buildings (intensities refitted on the other half) | 3,274 | 30% | 0.790 | 0.95× |
+| Buildings 2023 only | 260 | 39% | 0.766 | 0.88× |
+| Buildings in 2023 and 2024 | 5,978 | 30% | 0.805 | 1.00× |
+| Use: com | 1,242 | 33% | 0.842 | 0.95× |
+| Use: ind | 50 | 69% | 0.620 | 1.05× |
+| Use: mix | 1,773 | 26% | 0.855 | 0.96× |
+| Use: pub | 637 | 56% | 0.660 | 1.03× |
+| Use: res | 2,513 | 30% | 0.795 | 1.05× |
+| Use: tra | 23 | 56% | 0.555 | 1.03× |
+| Size: 100k-500k sq ft | 1,840 | 32% | 0.600 | 0.96× |
+| Size: 20k-100k sq ft | 3,996 | 30% | 0.500 | 1.07× |
+| Size: <20k sq ft | 126 | 39% | 0.285 | 0.40× |
+| Size: >500k sq ft | 276 | 30% | 0.344 | 1.00× |
+
+**Jobs by block (blocks with ≥100 jobs, n = 1,942):** median error 45% for PlanArena against 48% for a flat rate per sq ft of non-residential floor area.
+
+**Jobs rates tested forward in time** (fitted on 2015 lots and LODES 2015, tested on 2025 lots against LODES 2023; 1,942 blocks with ≥100 jobs):
+
+| Method | Median error | log r | Total ratio |
+|---|---:|---:|---:|
+| CBECS composition (current model) | 45% | 0.699 | 1.01× |
+| NNLS rates fitted on 2015 | 44% | 0.701 | 0.83× |
+| NNLS rates fitted on 2015, total calibrated | 46% | 0.698 | 1.00× |
+| flat rate per sq ft of non-residential floor area | 48% | 0.679 | 1.02× |
 
 ## B. Consistency with planning calculations
 
@@ -41,14 +72,14 @@ Lots that changed between MapPLUTO 15v1 and 25v3.1: 3,350 events (3,234 use chan
 
 | Method | Change type | Homes r | Homes total ratio | Homes median error | Value r | Emissions r (n) | Emissions total ratio |
 |---|---|---:|---:|---:|---:|---:|---:|
-| replacement | all | 0.841 | 1.35× | 1.2 | 0.870 | 0.826 (194) | 1.16× |
-| replacement | use change | 0.872 | 1.31× | 1.1 | 0.901 | 0.826 (193) | 1.16× |
+| replacement | all | 0.841 | 1.35× | 1.2 | 0.870 | 0.857 (194) | 1.01× |
+| replacement | use change | 0.872 | 1.31× | 1.1 | 0.901 | 0.857 (193) | 1.00× |
 | replacement | density only (new building) | 0.007 | 2.01× | 5.3 | 0.605 | – (1) | – |
-| difference | all | 0.838 | 1.35× | 2.1 | 0.870 | 0.826 (194) | 1.16× |
-| difference | use change | 0.869 | 1.31× | 2.0 | 0.901 | 0.826 (193) | 1.16× |
+| difference | all | 0.838 | 1.35× | 2.1 | 0.870 | 0.857 (194) | 1.01× |
+| difference | use change | 0.869 | 1.31× | 2.0 | 0.901 | 0.857 (193) | 1.00× |
 | difference | density only (new building) | -0.035 | 1.92× | 4.5 | 0.605 | – (1) | – |
-| hybrid | all | 0.840 | 1.31× | 1.2 | 0.870 | 0.826 (194) | 1.16× |
-| hybrid | use change | 0.872 | 1.29× | 1.1 | 0.901 | 0.826 (193) | 1.16× |
+| hybrid | all | 0.840 | 1.31× | 1.2 | 0.870 | 0.857 (194) | 1.01× |
+| hybrid | use change | 0.872 | 1.29× | 1.1 | 0.901 | 0.857 (193) | 1.00× |
 | hybrid | density only (new building) | -0.158 | 1.57× | 4.5 | 0.605 | – (1) | – |
 | no change | all | – | 0.00× | 0.0 | – | – (194) | 0.00× |
 | no change | use change | – | 0.00× | 0.0 | – | – (193) | 0.00× |
@@ -57,7 +88,7 @@ Lots that changed between MapPLUTO 15v1 and 25v3.1: 3,350 events (3,234 use chan
 | transition-type mean (cross-fitted) | use change | 0.435 | 0.97× | 1.8 | 0.233 | 0.090 (193) | 0.99× |
 | transition-type mean (cross-fitted) | density only (new building) | 0.084 | 1.25× | 24.4 | -0.144 | – (1) | – |
 
-Jobs change by 2020 census block (LODES 2015 → 2023, net of the trend of blocks without changes): replacement r 0.093; difference r 0.086; hybrid r 0.089. No method has useful skill at block level.
+Jobs change by 2020 census block (LODES 2015 → 2023, net of the trend of blocks without changes): replacement r 0.071; difference r 0.076; hybrid r 0.068. No method has useful skill at block level.
 
 **Not validated:** access to parks, shops and facilities after a change; runoff after a change; emissions of buildings under 25,000 sq ft (not in LL84); jobs at lot level (LODES is by block).
 
@@ -65,11 +96,11 @@ Jobs change by 2020 census block (LODES 2015 → 2023, net of the trend of block
 
 | Delta form | Median overlap | Lowest overlap |
 |---|---:|---:|
-| replacement | 0.860 | 0.744 |
-| difference | 0.945 | 0.794 |
-| hybrid | 0.860 | 0.744 |
+| replacement | 0.903 | 0.658 |
+| difference | 0.970 | 0.771 |
+| hybrid | 0.903 | 0.658 |
 
-Agreement between forms (median overlap): replacement vs hybrid 1.000; difference vs hybrid 0.782; replacement vs difference 0.782.
+Agreement between forms (median overlap): replacement vs hybrid 1.000; difference vs hybrid 0.827; replacement vs difference 0.827.
 
 ## D. Models
 
@@ -89,6 +120,17 @@ Parcels evaluated: 41,942 of 42,075; the 133 parcels with no recorded land use h
 LightGBM has higher current-use accuracy than the GNN in 5 of 5 folds.
 
 The GNN cross-validation is transductive: held-out parcels stay in the graph with their use and value masked. See docs/METHODS.md.
+
+**Ablation** (same folds; `results/validation/ablation_gnn.json`):
+
+| Model | Accuracy | Macro F1 | Log loss |
+|---|---|---|---|
+| GNN, transductive (as above) | 0.671 ± 0.016 | 0.380 ± 0.008 | 0.918 ± 0.031 |
+| GNN, inductive (no test-parcel edges in training) | 0.670 ± 0.015 | 0.380 ± 0.008 | 0.922 ± 0.031 |
+| LightGBM | 0.689 ± 0.013 | 0.465 ± 0.013 | 0.912 ± 0.051 |
+| LightGBM + GNN embedding | 0.704 ± 0.016 | 0.475 ± 0.015 | 0.919 ± 0.063 |
+
+Adding the GNN embedding raises LightGBM accuracy in 5 of 5 folds.
 
 ### Pattern models as redevelopment predictors (2015 → 2025)
 
@@ -125,9 +167,55 @@ Best simple baseline: Land-value share of assessed value (AUC 0.754).
 
 Model selection for the GNN used a spatial hold-out inside the training period, which is not a temporal test; its accuracy there is not comparable with the temporal test above.
 
+### Rolling origin, calibration and label audit
+
+Each row trains only on outcomes known at the decision year and tests on the next period.
+
+| Horizon | Test | Positives | Base rate | AUC (95% CI) | Avg precision (95% CI) | Best baseline AUC | Spatial CV in the same period, AP | ECE raw → isotonic |
+|---:|---|---:|---:|---|---|---:|---:|---|
+| 1 y | 2016->2017 | 187 | 0.44% | 0.901 (0.875–0.926) | 0.118 (0.080–0.172) | 0.841 | 0.110 | 0.001 |
+| 1 y | 2017->2018 | 206 | 0.48% | 0.889 (0.861–0.918) | 0.199 (0.149–0.261) | 0.840 | 0.181 | 0.001 → 0.001 |
+| 1 y | 2018->2019 | 267 | 0.63% | 0.898 (0.873–0.918) | 0.251 (0.192–0.307) | 0.781 | 0.311 | 0.001 → 0.001 |
+| 1 y | 2019->2020 | 313 | 0.74% | 0.885 (0.861–0.908) | 0.191 (0.121–0.251) | 0.787 | 0.140 | 0.003 → 0.002 |
+| 1 y | 2020->2021 | 66 | 0.16% | 0.952 (0.923–0.972) | 0.029 (0.019–0.043) | 0.916 | 0.771 | 0.003 → 0.006 |
+| 1 y | 2021->2022 | 128 | 0.30% | 0.886 (0.850–0.913) | 0.068 (0.043–0.102) | 0.759 | 0.035 | 0.002 → 0.002 |
+| 1 y | 2022->2023 | 73 | 0.17% | 0.849 (0.770–0.902) | 0.083 (0.040–0.149) | 0.735 | 0.031 | 0.002 → 0.001 |
+| 1 y | 2023->2024 | 139 | 0.33% | 0.849 (0.802–0.897) | 0.077 (0.048–0.125) | 0.833 | 0.032 | 0.001 → 0.002 |
+| 1 y | 2024->2025 | 126 | 0.30% | 0.855 (0.814–0.890) | 0.095 (0.054–0.138) | 0.735 | 0.025 | 0.001 → 0.001 |
+| 3 y | 2018->2021 | 570 | 1.34% | 0.881 (0.863–0.896) | 0.150 (0.125–0.179) | 0.807 | 0.244 | 0.007 |
+| 3 y | 2019->2022 | 461 | 1.09% | 0.863 (0.844–0.884) | 0.175 (0.132–0.232) | 0.784 | 0.152 | 0.004 → 0.005 |
+| 3 y | 2020->2023 | 260 | 0.62% | 0.882 (0.858–0.901) | 0.113 (0.080–0.163) | 0.769 | 0.299 | 0.008 → 0.012 |
+| 3 y | 2021->2024 | 355 | 0.84% | 0.879 (0.858–0.897) | 0.140 (0.106–0.182) | 0.816 | 0.105 | 0.004 → 0.004 |
+| 3 y | 2022->2025 | 350 | 0.83% | 0.865 (0.838–0.888) | 0.120 (0.086–0.163) | 0.799 | 0.085 | 0.003 → 0.002 |
+| 5 y | 2020->2025 | 569 | 1.35% | 0.847 (0.826–0.865) | 0.139 (0.107–0.183) | 0.754 | 0.256 | 0.011 |
+
+Within-period spatial cross-validation (right-hand columns) is not a guide to forward performance: it is much higher than the temporal test in some periods and lower in others. Only the temporal rows estimate forward performance. Probabilities track the development rate of the training periods, so rankings are more reliable than five-year probabilities.
+
+**With verified labels** (floor-area growth counts only with a DOB certificate; see METHODS.md):
+
+| Horizon | Test | Positives | Base rate | AUC | Average precision | Best baseline AUC |
+|---:|---|---:|---:|---:|---:|---:|
+| 5 y | 2020->2025 | 485 | 1.15% | 0.886 | 0.146 | 0.789 |
+| 3 y | 2022->2025 | 278 | 0.66% | 0.893 | 0.125 | 0.835 |
+| 1 y | 2024->2025 | 77 | 0.18% | 0.897 | 0.070 | 0.806 |
+
+**Label audit 2015->2020** (2015-03-01 to 2020-12-01): 1,814 lots labelled redeveloped; 47% of them have a DOB new-building or alteration-type-1 certificate of occupancy in the window (25% new-building only); 49% of lots with a new-building certificate are labelled redeveloped. Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound.
+**Label audit 2020->2025** (2020-12-01 to 2025-09-01): 569 lots labelled redeveloped; 55% of them have a DOB new-building or alteration-type-1 certificate of occupancy in the window (45% new-building only); 33% of lots with a new-building certificate are labelled redeveloped. Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound.
+
 ## E. Optimizer (best plan found, not a global optimum)
 
-Exhaustive search over every plan with up to 2 changes in 20 single-block study areas (4–32 candidate moves each; 16 with a positive optimum). First-order search alone found the exhaustive optimum in 69% of them (mean gap 19.1%); with the exact re-scoring step, 100% (median 0.29 s). This says nothing about district or city scale.
+Exhaustive search over every plan with up to 2 changes in 20 single-block study areas (4–32 candidate moves each; 15 with a positive optimum). First-order search alone found the exhaustive optimum in 73% of them (mean gap 11.9%); with the exact re-scoring step, 93% (median 0.28 s). This says nothing about district or city scale.
+
+**District scale** (Every district, budget 10 changes, objective = overall score - conversion penalty x changes (GNN term off). Exact-evaluation heuristics search the 150 best first-order moves. No method guarantees a global optimum; 'share of best found' compares each method with the best plan any method found.)
+
+| Method | Median share of best plan found | Districts where best | Median seconds |
+|---|---:|---:|---:|
+| surrogate top moves | 92.6% | 0 | 0.02 |
+| first order | 96.4% | 1 | 0.13 |
+| first order plus exact polish | 97.4% | 1 | 1.18 |
+| greedy exact | 100.0% | 12 | 26.68 |
+| simulated annealing | 93.0% | 0 | 7.7 |
+| random restarts 50 | 65.9% | 0 | 0.97 |
 
 ## F. Simulated stakeholder scenarios
 
@@ -135,10 +223,42 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 
 | Finding (12 districts, one seat each) | Districts |
 |---|---|
-| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 7 of 12 |
+| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 9 of 12 |
 | All nine rules agree | 0 of 12 |
 | The council winner beats no change in both simulated electorates | 12 of 12 |
 | The simulated residents' winner is the council's winner | 1 of 12 |
-| The council winner is also the Nash bargaining solution | 1 of 12 |
-| One insincere ballot could change the Schulze result | 6 of 12 |
-| Median robustness of the winner (coefficients and seats varied, 200 draws) | 67.8% |
+| The council winner is also the Nash bargaining solution | 0 of 12 |
+| One insincere ballot could change the Schulze result | 4 of 12 |
+| Median robustness of the winner (coefficients and seats varied, 200 draws) | 73.0% |
+
+**Sensitivity of the simulated outcome:**
+
+| Change to the assumptions | Result |
+|---|---|
+| Stakeholder utility weights redrawn (Dirichlet around the assumed weights) | winner unchanged in a median 58% of draws |
+| Ten random feasible plans added to the ballot (not built from the utilities) | winner unchanged in 12 of 12 districts; beats every random plan head to head in 12 |
+| Residents' indifference threshold swept 0–0.1 points | residents' winner stable in 12 of 12 districts |
+| One stakeholder given three seats (each in turn) | same winner in a median 33% of seat allocations |
+
+## G. Any US city: Tier A against Tier B
+
+Tier A runs for any US place from national open data (Census 2020 blocks, LODES, Overture Maps, EIA and EPA). To measure what that costs, the Tier A pipeline is run inside cities that also have parcel records (Tier B) and scored against them (`planarena/cities/compare.py`).
+
+| City | Test | Tier A | Tier B |
+|---|---|---|---|
+| Manhattan | Lots | 45,808 pseudo-lots | 42,075 parcels |
+| Manhattan | Land use of built lots (accuracy; macro F1) | 63%; 0.274 (majority class 50%) | records |
+| Manhattan | Floor area by census block (total; log r; median error) | 1.22×; 0.797; 18% | records |
+| Manhattan | Homes by census block, Census 2020 vs city records (total; r) | 0.92×; 0.765 | records |
+| Manhattan | Jobs by census block vs LODES (r; in-sample) | 0.517 | 0.647 |
+| Manhattan | Building emissions vs LL84 2023, 5,638 buildings (total; median error) | 0.69×; 42% | 0.82×; 33% |
+| Milwaukee | Lots | 165,024 pseudo-lots | 148,042 parcels |
+| Milwaukee | Land use of built lots (accuracy; macro F1) | 91%; 0.286 (majority class 88%) | records |
+| Milwaukee | Floor area by census block (total; log r; median error) | 1.55×; 0.684; 25% | records |
+| Milwaukee | Homes by census block, Census 2020 vs city records (total; r) | 0.94×; 0.872 | records |
+| Milwaukee | Jobs by census block vs LODES (r; in-sample) | 0.628 | 0.567 |
+| Manhattan | Land use from a model trained on Milwaukee (accuracy; macro F1) | 62%; 0.297 (rules 63%; 0.274) | records |
+| Milwaukee | Land use from a model trained on Manhattan (accuracy; macro F1) | 60%; 0.195 (rules 91%; 0.287) | records |
+
+Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities.
+A land-use model trained on one Tier B city and tested on the other did not beat the rules in every held-out city, so Tier A uses the rules (2 model variants tried; `results/validation/landuse_model.json`).

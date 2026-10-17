@@ -14,3 +14,6 @@ data/*.sqlite3*
 data/raw/
 data/processed_*/
 data/transition/
+data/national/
+data/cities/
+data/ablation/

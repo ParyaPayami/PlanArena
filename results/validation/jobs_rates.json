@@ -1,0 +1,36 @@
+{
+  "test": "Jobs per sq ft by floor-area type fitted to LODES with non-negative least squares on 2015 lots and LODES 2015\nblocks, then tested forward on 2025 lots against LODES 2023, against the CBECS-based model and a flat rate.",
+  "blocks_tested": 1942,
+  "nnls_sqft_per_worker_fitted_2015": {
+    "office": 363.2,
+    "retail": 229.2,
+    "other": 709.0,
+    "factory": 353.7,
+    "storage": 283.1,
+    "pubfac": 1203.0,
+    "trafac": 968.7
+  },
+  "growth_scale_2015_to_2023": 1.04,
+  "methods": {
+    "CBECS composition (current model)": {
+      "median_abs_pct_error_blocks_ge_100": 0.454,
+      "log_r": 0.699,
+      "total_ratio": 1.012
+    },
+    "NNLS rates fitted on 2015": {
+      "median_abs_pct_error_blocks_ge_100": 0.439,
+      "log_r": 0.701,
+      "total_ratio": 0.827
+    },
+    "NNLS rates fitted on 2015, total calibrated": {
+      "median_abs_pct_error_blocks_ge_100": 0.456,
+      "log_r": 0.698,
+      "total_ratio": 1.0
+    },
+    "flat rate per sq ft of non-residential floor area": {
+      "median_abs_pct_error_blocks_ge_100": 0.475,
+      "log_r": 0.679,
+      "total_ratio": 1.022
+    }
+  }
+}

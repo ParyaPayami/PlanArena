@@ -67,6 +67,7 @@ export default function Scoreboard() {
   const setScope = useStore((s) => s.setScope);
   const meta = useStore((s) => s.meta);
   if (!ev || !meta) return <div className="panel-pad muted">Calculating baseline…</div>;
+  const missing = meta.missing_indicators ?? [];
   const changed = ev.n_changed;
   const pillars: Pillar[] = ["social", "economic", "environmental"];
   return (
@@ -95,13 +96,18 @@ export default function Scoreboard() {
         Scores are changes within {ev.scope === "city" ? "the whole city" : `the ${ev.scope_parcels.toLocaleString()} parcels within a 10-minute walk of your changes`}. Positive is better.
       </div>
       <PillarCards ev={ev} />
+      {missing.length > 0 && (
+        <div className="muted small scope-note">
+          No data in this city for: {ev.indicators.filter((r) => missing.includes(r.key)).map((r) => r.label).join(", ")}.
+        </div>
+      )}
       {pillars.map((p) => (
         <div key={p} className="ind-group">
           <div className="ind-group-head" style={{ color: PILLAR_COLOR[p] }}>
             {PILLAR_LABEL[p]}
           </div>
           {ev.indicators
-            .filter((r) => r.pillar === p)
+            .filter((r) => r.pillar === p && !missing.includes(r.key))
             .map((r) => {
               const w = Math.min(Math.abs(r.score), 25) / 25;
               return (

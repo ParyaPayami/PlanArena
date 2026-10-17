@@ -84,7 +84,57 @@ def _cv_tables() -> list[str]:
             out += ["", f"LightGBM has higher current-use accuracy than the GNN in {wins} of {len(acc_g)} folds."]
     out += ["", "The GNN cross-validation is transductive: held-out parcels stay in the graph with their use and value "
             "masked. See docs/METHODS.md."]
+    a = load("ablation_gnn")
+    if a:
+        sa = a["summary"]
+        names = {"gnn_transductive": "GNN, transductive (as above)", "gnn_inductive": "GNN, inductive (no test-parcel edges in training)",
+                 "lightgbm": "LightGBM", "lightgbm_plus_gnn_embedding": "LightGBM + GNN embedding"}
+        ma = lambda k, met: f"{sa[k][met]['mean']:.3f} ± {sa[k][met]['sd']:.3f}" if k in sa and met in sa[k] else "–"
+        out += ["", "**Ablation** (same folds; `results/validation/ablation_gnn.json`):", "",
+                "| Model | Accuracy | Macro F1 | Log loss |", "|---|---|---|---|"]
+        out += [f"| {v} | {ma(k, 'accuracy')} | {ma(k, 'macro_f1')} | {ma(k, 'log_loss')} |" for k, v in names.items()]
+        out += ["", f"Adding the GNN embedding raises LightGBM accuracy in {a['embedding_improves_lightgbm_in_folds']} "
+                f"of {len(a['folds'])} folds."]
     return out
+
+
+def _tiers() -> list[str]:
+    """Tier A (national open data) scored against Tier B parcel records in the same city."""
+    rows = []
+    for city in ("manhattan", "milwaukee"):
+        t = load(f"tier_a_vs_b_{city}")
+        if not t:
+            continue
+        lu, fa, hb, jb = t["land_use"], t["floor_area_by_block"], t["homes_by_block"], t["jobs_by_block"]
+        rows += [f"| {t['city']} | Lots | {num(t['tier_a']['n_parcels'])} pseudo-lots | {num(t['tier_b_parcels'])} parcels |",
+                 f"| {t['city']} | Land use of built lots (accuracy; macro F1) | {pct(lu['accuracy'])}; {r3(lu['macro_f1'])} "
+                 f"(majority class {pct(lu['majority_class_accuracy'])}) | records |",
+                 f"| {t['city']} | Floor area by census block (total; log r; median error) | {times(fa['total_ratio'])}; "
+                 f"{r3(fa['log_r'])}; {pct(fa['median_abs_pct_error'])} | records |",
+                 f"| {t['city']} | Homes by census block, Census 2020 vs city records (total; r) | {times(hb['total_ratio'])}; "
+                 f"{r3(hb['pearson_r'])} | records |",
+                 f"| {t['city']} | Jobs by census block vs LODES (r; in-sample) | {r3(jb['tier_a']['pearson_r'])} | {r3(jb['tier_b']['pearson_r'])} |"]
+        em = t.get("emissions_ll84_2023")
+        if em:
+            rows.append(f"| {t['city']} | Building emissions vs LL84 2023, {num(em['tier_a']['n'])} buildings (total; median error) | "
+                        f"{times(em['tier_a']['total_ratio'])}; {pct(em['tier_a']['median_abs_pct_error'])} | "
+                        f"{times(em['tier_b']['total_ratio'])}; {pct(em['tier_b']['median_abs_pct_error'])} |")
+    lm = load("landuse_model")
+    if lm:
+        for city, h in lm["held_out"].items():
+            rows.append(f"| {city.title()} | Land use from a model trained on {', '.join(x.title() for x in h['trained_on'])} "
+                        f"(accuracy; macro F1) | {pct(h['model']['accuracy'])}; {r3(h['model']['macro_f1'])} "
+                        f"(rules {pct(h['rules']['accuracy'])}; {r3(h['rules']['macro_f1'])}) | records |")
+    if not rows:
+        return []
+    return ["Tier A runs for any US place from national open data (Census 2020 blocks, LODES, Overture Maps, EIA and EPA). "
+            "To measure what that costs, the Tier A pipeline is run inside cities that also have parcel records "
+            "(Tier B) and scored against them (`planarena/cities/compare.py`).", "",
+            "| City | Test | Tier A | Tier B |", "|---|---|---|---|"] + rows + [
+            "", "Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities."] + (
+            [f"A land-use model trained on one Tier B city and tested on the other {'beat' if lm['model_beats_rules_everywhere'] else 'did not beat'} "
+             f"the rules in every held-out city, so Tier A uses {'the model' if lm['model_beats_rules_everywhere'] else 'the rules'} "
+             f"({len(lm['variants_tried'])} model variants tried; `results/validation/landuse_model.json`)."] if lm else [])
 
 
 # ----------------------------------------------------------------------------- VALIDATION.md
@@ -110,7 +160,7 @@ def render_validation() -> str:
               "far better than individual buildings do.", ""]
     if jb:
         L += [f"**Jobs against LEHD LODES 2023:** total modelled {num(jb['modelled_total_jobs'])} (scaled to QCEW) vs LODES "
-              f"{num(jb['lodes_total_jobs'])}.", "",
+              f"{num(jb['lodes_total_jobs'])}." + (f" {jb['note']}" if jb.get("note") else ""), "",
               "| Level | Units | log–log r | Spearman | Median error (units with ≥100 jobs) |", "|---|---:|---:|---:|---:|"]
         for lv in ("tract", "block"):
             x = jb[lv]
@@ -122,6 +172,36 @@ def render_validation() -> str:
               f"({times(un['aggregate_ratio'], 3)}; log–log r {r3(un['log_log_r'])}; median error {pct(un['median_abs_pct_error'])}). "
               f"Reference, CEQR 900 sq ft per home on the observed residential floor area: "
               f"{times(un['reference_ceqr_900sf_on_observed_residential_area']['aggregate_ratio'], 3)}.", ""]
+
+    eb = load("existing_breakdowns")
+    if eb:
+        e23 = eb["emissions_2023"]
+        L += ["**Where the emissions estimate is weak (LL84 2023):**", "",
+              "| Group | Buildings | Median error | log–log r | Total ratio |", "|---|---:|---:|---:|---:|"]
+        def row(label, x):
+            return f"| {label} | {num(x.get('n'))} | {pct(x.get('median_abs_pct_error'))} | {r3(x.get('log_r'))} | {times(x.get('total_ratio'))} |"
+        L.append(row("All (PlanArena)", e23["all"]))
+        L.append(row("Baseline: one citywide intensity × floor area", e23["baseline_single_citywide_eui"]))
+        L.append(row("Held-out buildings (intensities refitted on the other half)", e23["held_out_buildings"]))
+        for k, x in e23["by_overlap"].items():
+            L.append(row(f"Buildings {k}", x))
+        for k, x in e23["by_use"].items():
+            L.append(row(f"Use: {k}", x))
+        for k, x in e23["by_size"].items():
+            L.append(row(f"Size: {k} sq ft", x))
+        L.append("")
+        jj = eb["jobs_2023"]["blocks_with_100_jobs_or_more"]
+        L += [f"**Jobs by block (blocks with ≥100 jobs, n = {num(jj['model']['n'])}):** median error {pct(jj['model']['median_abs_pct_error'])} "
+              f"for PlanArena against {pct(jj['baseline_floor_area_only']['median_abs_pct_error'])} for a flat rate per sq ft of "
+              "non-residential floor area.", ""]
+    jr = load("jobs_rates")
+    if jr:
+        L += [f"**Jobs rates tested forward in time** (fitted on 2015 lots and LODES 2015, tested on 2025 lots against LODES 2023; "
+              f"{num(jr['blocks_tested'])} blocks with ≥100 jobs):", "",
+              "| Method | Median error | log r | Total ratio |", "|---|---:|---:|---:|"]
+        for k, x in jr["methods"].items():
+            L.append(f"| {k} | {pct(x['median_abs_pct_error_blocks_ge_100'])} | {r3(x['log_r'])} | {times(x['total_ratio'])} |")
+        L.append("")
 
     # B. Planning calculations
     L += ["## B. Consistency with planning calculations", ""]
@@ -215,6 +295,39 @@ def render_validation() -> str:
         L += ["", "Model selection for the GNN used a spatial hold-out inside the training period, which is not a "
               "temporal test; its accuracy there is not comparable with the temporal test above.", ""]
 
+    ro = load("rolling_origin")
+    if ro:
+        L += ["### Rolling origin, calibration and label audit", "",
+              "Each row trains only on outcomes known at the decision year and tests on the next period.", "",
+              "| Horizon | Test | Positives | Base rate | AUC (95% CI) | Avg precision (95% CI) | Best baseline AUC | Spatial CV in the same period, AP | ECE raw → isotonic |",
+              "|---:|---|---:|---:|---|---|---:|---:|---|"]
+        for o in ro["origins"]:
+            lg, bl = o["lightgbm"], o["baselines"]
+            bb = max(bl.values(), key=lambda x: x["auc"])
+            ece = f"{r3(lg['ece_raw'])} → {r3(lg.get('ece_isotonic'))}" if "ece_isotonic" in lg else r3(lg["ece_raw"])
+            L.append(f"| {o['horizon']} y | {o['test']} | {num(o['positives'])} | {pct(o['base_rate'], 2)} | {r3(lg['auc'])} "
+                     f"({r3(lg['auc_95ci'][0])}–{r3(lg['auc_95ci'][1])}) | {r3(lg['average_precision'])} "
+                     f"({r3(lg['ap_95ci'][0])}–{r3(lg['ap_95ci'][1])}) | {r3(bb['auc'])} | "
+                     f"{r3(o['spatial_cv_within_test_period']['average_precision'])} | {ece} |")
+        L += ["", "Within-period spatial cross-validation (right-hand columns) is not a guide to forward performance: it is "
+              "much higher than the temporal test in some periods and lower in others. Only the temporal rows estimate "
+              "forward performance. Probabilities track the development rate of the training periods, so rankings are "
+              "more reliable than five-year probabilities.", ""]
+        if ro.get("verified_labels"):
+            L += ["**With verified labels** (floor-area growth counts only with a DOB certificate; see METHODS.md):", "",
+                  "| Horizon | Test | Positives | Base rate | AUC | Average precision | Best baseline AUC |", "|---:|---|---:|---:|---:|---:|---:|"]
+            for v in ro["verified_labels"]:
+                L.append(f"| {v['horizon']} y | {v['test']} | {num(v['positives'])} | {pct(v['base_rate'], 2)} | {r3(v['auc'])} | "
+                         f"{r3(v['average_precision'])} | {r3(v['best_baseline_auc'])} |")
+            L.append("")
+        for k, a in ro.get("label_audit", {}).items():
+            L.append(f"**Label audit {k}** ({a['window']}): {num(a['labelled_developed'])} lots labelled redeveloped; "
+                     f"{pct(a['precision_vs_new_building_or_alteration_certificate'])} of them have a DOB new-building or "
+                     f"alteration-type-1 certificate of occupancy in the window ({pct(a['precision_vs_new_building_certificate'])} "
+                     f"new-building only); {pct(a['recall_of_new_building_certificates'])} of lots with a new-building certificate "
+                     f"are labelled redeveloped. {a['note']}")
+        L.append("")
+
     # E. Optimizer
     op = load("optimizer_gap")
     if op:
@@ -226,10 +339,29 @@ def render_validation() -> str:
               f"(mean gap {pct(op['mean_gap'], 1)}); with the exact re-scoring step, {pct(op['polished']['share_exact_optimum_found'])} "
               f"(median {op['polished']['median_seconds']} s). This says nothing about district or city scale.", ""]
 
+    ob = load("optimizer_benchmark")
+    if ob:
+        L += ["**District scale** (" + ob["test"] + ")", "",
+              "| Method | Median share of best plan found | Districts where best | Median seconds |", "|---|---:|---:|---:|"]
+        for k, x in ob["summary"].items():
+            L.append(f"| {k.replace('_', ' ')} | {pct(x['median_share_of_best_found'], 1)} | {x['districts_where_best']} | {x['median_seconds']} |")
+        L.append("")
+
     # F. Simulated stakeholder scenarios
     vs = load("vote_summary")
     if vs:
         L += ["## F. Simulated stakeholder scenarios", "", _vote_text(vs), ""]
+    sv = load("vote_sensitivity")
+    if sv:
+        x = sv["summary"]
+        n = x["districts"]
+        L += ["**Sensitivity of the simulated outcome:**", "", "| Change to the assumptions | Result |", "|---|---|",
+              f"| Stakeholder utility weights redrawn (Dirichlet around the assumed weights) | winner unchanged in a median {pct(x['median_winner_unchanged_under_weight_draws'])} of draws |",
+              f"| Ten random feasible plans added to the ballot (not built from the utilities) | winner unchanged in {x['districts_winner_unchanged_with_random_candidates']} of {n} districts; beats every random plan head to head in {x['districts_winner_beats_every_random_plan']} |",
+              f"| Residents' indifference threshold swept 0–0.1 points | residents' winner stable in {x['districts_residents_winner_stable_across_jnd']} of {n} districts |",
+              f"| One stakeholder given three seats (each in turn) | same winner in a median {pct(x['median_share_of_seat_allocations_with_same_winner'])} of seat allocations |", ""]
+    if _tiers():
+        L += ["## G. Any US city: Tier A against Tier B", ""] + _tiers() + [""]
     return "\n".join(L).rstrip() + "\n"
 
 
@@ -294,12 +426,27 @@ def readme_blocks() -> dict[str, str]:
         mk, mv = _best_model(tr["development"])
         bk, bv = _best_baseline(tr["development"])
         rows.append(f"| D | Redevelopment within 5 years, temporal holdout 2020→2025 | {mk} AUC {r3(mv['auc'])}, precision in top 1% {pct(mv['precision_top1pct'])} (base rate {pct(tr['test_base_rate'], 1)}); best baseline {bk} AUC {r3(bv['auc'])} |")
+    ro, jr, eb = load("rolling_origin"), load("jobs_rates"), load("existing_breakdowns")
+    if eb:
+        x, b0 = eb["emissions_2023"]["all"], eb["emissions_2023"]["baseline_single_citywide_eui"]
+        rows.append(f"| A | Building-level emissions error vs a single citywide intensity | median {pct(x['median_abs_pct_error'])} vs {pct(b0['median_abs_pct_error'])} (totals {times(x['total_ratio'])} vs {times(b0['total_ratio'])}) |")
+    if jr:
+        mth = jr["methods"]
+        fit = mth.get("NNLS rates fitted on 2015, total calibrated") or mth.get("NNLS rates fitted on 2015")
+        rows.append(f"| A | Jobs rates tested forward (fit 2015, test 2023), block median error | fitted rates {pct(fit['median_abs_pct_error_blocks_ge_100'])}; CBECS {pct(mth['CBECS composition (current model)']['median_abs_pct_error_blocks_ge_100'])}; flat rate {pct(mth['flat rate per sq ft of non-residential floor area']['median_abs_pct_error_blocks_ge_100'])} |")
+    if ro:
+        aucs = [o["lightgbm"]["auc"] for o in ro["origins"]]
+        rows.append(f"| D | Redevelopment, rolling origin ({len(aucs)} tests, 1-, 3- and 5-year horizons) | AUC {r3(min(aucs))}–{r3(max(aucs))}; above the best simple baseline in every test |")
+        la = ro.get("label_audit", {}).get("2020->2025")
+        if la:
+            rows.append(f"| D | Labels vs DOB certificates of occupancy (2020→2025) | {pct(la['precision_vs_new_building_or_alteration_certificate'])} of labelled lots have a certificate (a lower bound); labels are noisy |")
     if op:
         rows.append(f"| E | Optimizer vs exhaustive search ({op['areas_with_positive_optimum']} single-block areas, up to 2 changes) | optimum found in {pct(op['polished']['share_exact_optimum_found'])} with exact re-scoring; small cases only |")
     blocks["key_results"] = "\n".join(["| Class | What is tested | Result |", "|---|---|---|"] + rows)
     vs = load("vote_summary")
     blocks["vote"] = _vote_text(vs) if vs else ""
     blocks["gnn_cv"] = "\n".join(_cv_tables())
+    blocks["tiers"] = "\n".join(_tiers())
     return blocks
 
 

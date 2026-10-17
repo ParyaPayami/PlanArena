@@ -21,8 +21,14 @@ Unchanged parcels keep their observed values exactly. For changed parcels, three
 **Consistent record:** F⁰ ≥ 1,000 sq ft and, if the lot has homes, 250 ≤ F⁰/h⁰ ≤ 5,000 sq ft per home.
 
 **The other quantities, in every form:**
-- **Jobs** = Σₖ cₖ / (floor area per worker)ₖ. The rates come from CBECS and are scaled once so that the observed baseline matches the employment total.
-- **Emissions** = F × EUI(u) × emission factor. Both the baseline and the plan use this model, so the delta is a pure model difference.
+- **Jobs** = Σₖ cₖ / (floor area per worker)ₖ.
+  - The relative rates are fitted to LEHD LODES 2023 jobs by census block, with non-negative least squares on the floor-area components. The total is scaled once to the BLS QCEW employment count.
+  - These rates replaced the EIA CBECS rates after a forward test: rates fitted on 2015 lots and LODES 2015, tested on 2025 lots against LODES 2023.
+- **Emissions** = F × EUI(u) × EF(u).
+  - EUI(u) is the site energy of the fuels Local Law 97 counts, divided by MapPLUTO floor area, summed over the LL84 buildings of PlanArena land use u (a ratio estimator).
+  - EF(u) is that use's emission factor from its fuel mix.
+  - Grouping by PlanArena use, rather than by LL84 property type, was chosen on held-out buildings.
+  - Both the baseline and the plan use this model, so the delta is a pure model difference.
 - **Runoff** = lot × [roof share × C_roof + (1 − roof share) × C_ground(u)]. Also a pure model difference.
 - **Assessed value** uses the difference form in all cases: v¹ᵢ = max(0, v⁰ᵢ + [V(u¹ᵢ, F¹ᵢ) − V(u⁰ᵢ, F⁰ᵢ)]). V is the rate-table or GNN value model.
 - **Access indicators** (parks, services, facilities, mix, green cover) are recomputed from the resulting state.
@@ -74,6 +80,11 @@ The form with the smaller bias and error on observed change is the default. Its 
 - **Uncertainty.** 600 m tile block bootstrap for AUC and average precision; three seeds.
 - **Spatial-within-period cross-validation** of the test pair is reported only to show the optimism of non-temporal tests.
 
+**Label definitions.**
+- **The default label** includes floor-area growth recorded in MapPLUTO, some of which is record correction rather than construction.
+- **The verified label** keeps new buildings (by year built). It keeps floor-area growth only when a DOB new-building or alteration-type-1 certificate of occupancy was issued for the lot, or its predecessor, in the window.
+- Results are reported for both labels.
+
 **Precedent.** The conversion-precedent table is date-aware: `precedent(as_of=t)` uses only snapshot pairs that ended by t.
 
 ## 4. Simulated stakeholder scenario
@@ -123,3 +134,64 @@ The form with the smaller bias and error on observed change is the default. Its 
 - **Reported value:** welfare(benchmark) / welfare(fragmented).
 
 A formal price of anarchy would need the worst equilibrium and the true optimum. This ratio is neither, so it is reported only as a heuristic illustration and is not used as evidence.
+
+## 7. Pattern-consistency models and their ablation
+
+**Task.** Reconstruct each parcel's current land use (and assessed value) from its context. This measures how well a use fits the existing pattern, not whether it is desirable.
+
+**Spatial cross-validation.** Five folds of 600 m tiles. Two settings for the GNN:
+- **Transductive** (as first reported): held-out parcels stay in the graph, with their use and value masked during training and testing. Their features and their edges are seen in training.
+- **Inductive:** during training, every edge touching a held-out parcel is removed, so held-out parcels play no part in training. At test time the full graph is used, with held-out parcels masked.
+
+**Ablation** (`planarena/models/ablation.py`), on the same folds:
+- GNN, transductive and inductive;
+- LightGBM on the context features plus the land-use mix of neighbours (held-out parcels hidden);
+- LightGBM with the GNN embedding added. Each training parcel's embedding is computed while that parcel is hidden (ten random chunks), so its own use never enters its features.
+
+The GNN is kept only where the ablation shows that it adds accuracy; the redevelopment layer uses LightGBM.
+
+## 8. Reproduction
+
+`make reproduce` downloads every input, rebuilds the twins, recalibrates, retrains, reruns every validation and regenerates the docs. `planarena/tools/fetch_open_data.py` records each input's URL, query and SHA-256 in `data/raw/*/SOURCE.json` and `results/data_manifest.json`. `make compare` lists result files that differ from the committed ones.
+
+## 9. Cities beyond Manhattan
+
+**Tier B (parcel records).** An adapter maps a city's parcel file into the `parcels.parquet` schema (`planarena/cities/adapters/`). Milwaukee uses the Master Property File and the city's parcel polygons:
+- land use from the MPROP land-use group (parking codes 7521, 7523 and 7525 become parking);
+- floor area, units, stories, year built and assessed value (including exempt value) from the record;
+- condominium units are summed to their parcel;
+- locally designated historic properties are protected;
+- districts are aldermanic districts.
+
+Milwaukee regulates bulk with height, setback and density rules rather than one FAR. Its zoning screen is therefore simplified: the district family sets the allowed uses, and the context FAR (below) stands in for capacity.
+
+**Tier A (national open data, any place).**
+- **Area:** the place's TIGER boundary; 2020 census blocks whose representative point lies inside it.
+- **Lots:** Overture buildings are assigned to blocks by representative point. A building of under 60 m² within 25 m of a larger one is accessory: it adds no lot and no floor area for homes or jobs. Within each block, each building's lot is its Voronoi cell (seeded at its representative point), clipped to the block and to 30 m around the building. Block land outside every cell becomes lots without buildings when larger than 5,000 sq ft.
+- **Floor area:** footprint × floors, with floors = height / 3.5 m. A missing height takes the block median, then the city median.
+- **Land use (rules):**
+  1. the building's Overture class;
+  2. otherwise the most common use of the Overture places inside the lot (hospitals are public facilities);
+  3. otherwise the Overture land-use polygon under the lot;
+  4. otherwise residential if the block has housing units;
+  5. otherwise industrial for footprints over 20,000 sq ft, else commercial.
+
+  Each lot records which rule decided (`use_confidence`).
+- **Homes:** each block's 2020 housing units are allocated to its residential and mixed lots by residential floor area (mixed use: 70% residential, an assumption), then rounded so block totals are kept.
+- **Jobs:** floor area per worker by type is fitted by non-negative least squares to the place's LODES block totals, as in Manhattan.
+- **Capacity without zoning:** the context FAR is the 90th percentile of built FAR among built lots in the census block group, or the lot's own built FAR if higher. All uses are allowed.
+- **Districts:** census tracts grouped by k-means on their centroids, about 75,000 residents each.
+
+**Coefficients in every city other than Manhattan:**
+- Residential site EUI: RECS 2020 by state.
+- Non-residential site EUI: CBECS 2018 by census division and use (national where a cell has fewer than 30 buildings).
+- Emission factors: eGRID2023 state electricity rates and the EPA Emission Factors Hub (AR5 GWPs), weighted by each use's fuel mix.
+- Persons per household: Census 2020 population per housing unit (which understates household size, because vacant units are included).
+
+**Tier A against Tier B** (`planarena/cities/compare.py`). The Tier A pipeline is run inside a Tier B city, on that city's outline. It is scored there on:
+- land use of built pseudo-lots, against the parcel under each lot's representative point;
+- floor area and homes, by census block;
+- jobs by block, against LODES;
+- in Manhattan, building emissions against LL84.
+
+**Land-use model for Tier A** (`planarena/cities/landuse_model.py`). LightGBM on the national features of each built pseudo-lot (`lot_features.parquet`), trained on the Tier B cities and tested on a held-out Tier B city, next to the rules on the same lots. It replaces the rules only if it beats them in every held-out city; the variants tried are listed in the result file.

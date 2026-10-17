@@ -1,9 +1,17 @@
 import type { ChangeValue, Evaluation, ImportReview, Meta, Negotiation, ParcelInfo, ParetoResult, Study, Vote } from "./types";
 
+/** The city this page works on (?city=<id>; Manhattan by default). Every API call carries it in a header. */
+export const CITY = new URLSearchParams(window.location.search).get("city") || "manhattan";
+const CITY_HEADER = { "X-PlanArena-City": CITY };
+/** Map layers of the current city. */
+export const cityDataUrl = (path: string) => (CITY === "manhattan" ? `/data/${path}` : `/city-data/${CITY}/${path}`);
+/** Same page, another city. */
+export const cityHref = (id: string, page = window.location.pathname) => (id === "manhattan" ? page : `${page}?city=${id}`);
+
 async function post<T>(url: string, body: unknown): Promise<T> {
   const r = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CITY_HEADER },
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`${url}: ${r.status} ${await r.text()}`);
@@ -11,7 +19,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function get<T>(url: string): Promise<T> {
-  const r = await fetch(url);
+  const r = await fetch(url, { headers: CITY_HEADER });
   if (!r.ok) throw new Error(`${url}: ${r.status}`);
   return r.json() as Promise<T>;
 }
@@ -21,7 +29,7 @@ export type Changes = Record<string, ChangeValue>;
 async function send<T>(method: string, url: string, body?: unknown): Promise<T> {
   const r = await fetch(url, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: body ? { "Content-Type": "application/json", ...CITY_HEADER } : CITY_HEADER,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!r.ok) throw new Error(`${url}: ${r.status} ${await r.text()}`);
@@ -29,7 +37,7 @@ async function send<T>(method: string, url: string, body?: unknown): Promise<T> 
 }
 
 async function download(url: string, body: unknown, filename: string) {
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...CITY_HEADER }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(await r.text());
   const blob = await r.blob();
   const a = document.createElement("a");
@@ -39,7 +47,15 @@ async function download(url: string, body: unknown, filename: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+export interface CityEntry { id: string; label: string; tier: string; source?: string; parcels?: number }
+export interface PlaceHit { geoid: string; label: string; state: string; kind: string; land_km2: number; built: boolean }
+export interface BuildJob { geoid: string; label?: string; status: "running" | "done" | "failed"; step?: string; elapsed?: number; log?: string }
+
 export const api = {
+  cities: () => get<CityEntry[]>("/api/cities"),
+  places: (q: string) => get<PlaceHit[]>(`/api/places?q=${encodeURIComponent(q)}`),
+  buildCity: (geoid: string) => send<BuildJob>("POST", `/api/cities/${geoid}/build`),
+  buildStatus: (geoid: string) => get<BuildJob>(`/api/cities/${geoid}/build`),
   meta: () => get<Meta>("/api/meta"),
   parcel: (i: number) => get<ParcelInfo>(`/api/parcel/${i}`),
   suitability: () => get<{ top: number[]; p: number[] }>("/api/suitability"),
@@ -80,7 +96,7 @@ export const api = {
   importPlan: async (file: File): Promise<ImportReview> => {
     const fd = new FormData();
     fd.append("file", file);
-    const r = await fetch(`/api/import`, { method: "POST", body: fd });
+    const r = await fetch(`/api/import`, { method: "POST", body: fd, headers: CITY_HEADER });
     if (!r.ok) throw new Error((await r.json().catch(() => ({ detail: r.statusText }))).detail);
     return r.json();
   },
@@ -112,7 +128,7 @@ export const api = {
     };
     const r = await fetch("/api/report", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CITY_HEADER },
       body: JSON.stringify({ changes, title, description, vote: summary }),
     });
     const html = await r.text();

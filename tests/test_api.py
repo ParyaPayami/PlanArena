@@ -84,6 +84,9 @@ def test_exports_and_report(client):
     ch = {"10": "opn", "11": {"use": "res", "far": 5}}
     gj = json.loads(client.post("/api/export/geojson", json={"changes": ch}).text)
     assert len(gj["features"]) == 2 and gj["features"][0]["geometry"]
+    x, y = gj["features"][0]["geometry"]["coordinates"][0][0][:2] if gj["features"][0]["geometry"]["type"] == "Polygon" \
+        else gj["features"][0]["geometry"]["coordinates"][0][0][0][:2]
+    assert -74.1 < x < -73.9 and 40.6 < y < 40.9  # RFC 7946: longitude/latitude
     prov = json.loads(client.post("/api/export/provenance", json={"changes": ch}).text)
     assert len(prov["source"]["sha256"]) == 64 and prov["evaluation"]["n_changed"] == 2
     html = client.post("/api/report", json={"changes": ch, "title": "Test study"}).text

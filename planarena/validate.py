@@ -110,8 +110,12 @@ def jobs() -> dict:
     p["tract"] = p.block.str[:11]
     mb = p.groupby("block").jobs.sum()
     ob = wac.set_index("w_geocode").C000
-    res = {"test": "Modelled baseline jobs (CBECS floorspace per worker, scaled to QCEW 2024) against LEHD LODES8 "
+    in_sample = "LODES" in e.coef["jobs_sqft_per_worker"].get("source", "")
+    res = {"test": "Modelled baseline jobs (floor area per worker by type, scaled to QCEW 2024) against LEHD LODES8 "
                    "workplace jobs, 2023, Manhattan, by 2020 census block and tract",
+           "in_sample": in_sample,
+           "note": ("In sample: the rates are fitted on LODES 2023. Out-of-sample evidence is the forward test in "
+                    "jobs_rates.json.") if in_sample else "Rates from EIA CBECS; not fitted on LODES.",
            "lodes_total_jobs": int(ob.sum()), "modelled_total_jobs": round(float(p.jobs.sum())),
            "parcels_without_block": int(len(e.p) - len(p)),
            "source": "https://lehd.ces.census.gov/data/lodes/LODES8/ny/wac/ny_wac_S000_JT00_2023.csv.gz",
@@ -879,6 +883,151 @@ def optimizer(n_areas: int = 20, budget: int = 2, seed: int = 0) -> dict:
     })
 
 
+# ----------------------------------------------------------------------------- 2a. local error (R8)
+def existing_breakdowns(seed: int = 0) -> dict:
+    """Existing conditions in detail: where the aggregate agreement hides local error.
+
+    Emissions: errors by land use, building size and district; buildings present in both LL84 years vs one;
+    held-out buildings (EUIs refitted on a random half of LL84 2024 buildings, tested on the other half);
+    a citywide single-EUI baseline. Jobs: a citywide jobs-per-floor-area baseline, and errors by district.
+    """
+    import pyogrio
+
+    from planarena.calibrate import GROUPS, LL97
+    from planarena.indicators.engine import load_engine
+    from planarena.models.transition import SIZE_LABELS, size_class
+
+    e = load_engine()
+    U_ = {k: v for k, v in USE_INDEX.items()}
+    ef = e._cval("emissions_tco2e_per_kbtu")
+    def ll84(f):
+        d = pd.DataFrame(json.loads(Path(f).read_text()))
+        for c in list(LL97) + ["property_gfa_calculated"]:
+            d[c] = pd.to_numeric(d.get(c), errors="coerce")
+        d["bbl"] = pd.to_numeric(d.nyc_borough_block_and_lot.astype(str).str.split(";").str[0].str.strip(), errors="coerce")
+        d["obs_t"] = sum(d[c].clip(lower=0).fillna(0) * v for c, v in LL97.items())
+        d["site_kbtu"] = sum(d[c].clip(lower=0).fillna(0) * (3.412 if c == "electricity_use_grid_purchase" and False else 1.0) for c in LL97)
+        return d[d.obs_t > 0].drop_duplicates("bbl")
+    d24 = ll84(DATA / "reference" / "ll84_manhattan_2024_bbl.json")
+    d23 = ll84(RAW / "ll84_2023" / "ll84_manhattan_2023_bbl.json")
+    idx = {int(b): i for i, b in enumerate(e.p.bbl)}
+    for d in (d24, d23):
+        d["i"] = d.bbl.map(idx)
+    d23 = d23.dropna(subset=["i"]).copy()
+    d23["i"] = d23.i.astype(int)
+    d23["model_t"] = e.baseline_state["ghg"][d23.i]
+    d23 = d23[d23.model_t > 0]
+    d23["in_both_years"] = d23.bbl.isin(set(d24.bbl))
+    d23["use"] = [USE_KEYS[u] if u >= 0 else "unknown" for u in e.base_use[d23.i]]
+    d23["size"] = [SIZE_LABELS[c] for c in size_class(e.bldg[d23.i])]
+    d23["district"] = e.cd[d23.i]
+    def m(g):
+        o, mo = g.obs_t.to_numpy(), g.model_t.to_numpy()
+        if len(o) < 10:
+            return {"n": int(len(o))}
+        return {"n": int(len(o)), "median_abs_pct_error": round(float(np.median(np.abs(mo - o) / o)), 3),
+                "log_r": round(float(np.corrcoef(np.log(o), np.log(mo))[0, 1]), 3), "total_ratio": round(float(mo.sum() / o.sum()), 3)}
+    em = {"all": m(d23),
+          "by_use": {k: m(g) for k, g in d23.groupby("use")},
+          "by_size": {k: m(g) for k, g in d23.groupby("size")},
+          "by_district": {str(k): m(g) for k, g in d23.groupby("district")},
+          "by_overlap": {("in 2023 and 2024" if k else "2023 only"): m(g) for k, g in d23.groupby("in_both_years")}}
+    # Citywide single-EUI baseline: floor-area-weighted mean EUI of all LL84 2024 buildings
+    d24 = d24.dropna(subset=["i"]).copy()
+    d24["i"] = d24.i.astype(int)
+    gfa = d24.property_gfa_calculated
+    site = sum(d24[c].clip(lower=0).fillna(0) for c in LL97)
+    eui_city = float(site.sum() / gfa[gfa > 0].sum())
+    base = d23.copy()
+    base["model_t"] = e.bldg[base.i] * eui_city * ef
+    em["baseline_single_citywide_eui"] = m(base[base.model_t > 0])
+    # Held-out buildings: refit the use-group EUIs on a random half of LL84 2024 buildings
+    rng = np.random.default_rng(seed)
+    d24["half"] = rng.random(len(d24)) < 0.5
+    d24["group"] = None
+    for k, types in GROUPS.items():
+        d24.loc[d24.primary_property_type.isin(types), "group"] = k
+    d24["site"] = site
+    fit = d24[d24.half & (gfa > 0) & d24.group.notna()]
+    eui_fit = (fit.groupby("group").site.sum() / fit.groupby("group").property_gfa_calculated.sum()).to_dict()
+    test = d23[~d23.bbl.isin(set(fit.bbl))].copy()
+    test["model_t"] = [e.bldg[i] * eui_fit.get(USE_KEYS[e.base_use[i]] if e.base_use[i] >= 0 else "", np.nan) * ef for i in test.i]
+    test = test.dropna(subset=["model_t"])
+    em["held_out_buildings"] = m(test[test.model_t > 0]) | {"note": "EUIs refitted on a random half of LL84 2024 buildings; "
+                                                                     "tested on 2023 buildings not in that half"}
+    # Jobs: citywide floor-area baseline and errors by district (blocks)
+    wac_f = RAW / "lodes8_ny_2023" / "ny_wac_S000_JT00_2023.csv.gz"
+    with gzip.open(wac_f, "rt") as fh:
+        wac = pd.read_csv(fh, dtype={"w_geocode": str}, usecols=["w_geocode", "C000"])
+    ob = wac[wac.w_geocode.str.startswith("36061")].set_index("w_geocode").C000
+    src = pyogrio.read_dataframe(PLUTO_CUR, columns=["BBL", "BCTCB2020"], read_geometry=False)
+    blk = dict(zip(pd.to_numeric(src.BBL, errors="coerce"), src.BCTCB2020.astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(11)))
+    p = pd.DataFrame({"bbl": e.p.bbl.astype("int64"), "jobs": e.baseline_state["jobs"], "cd": e.cd,
+                      "nonres": np.clip(e.bldg - e.p.res_area.to_numpy(), 0, None)})
+    p["block"] = ["36061" + str(blk.get(int(b), "00000000000"))[1:] for b in p.bbl]
+    rate = ob.sum() / p.nonres.sum()
+    p["jobs_base"] = p.nonres * rate
+    gb = p.groupby("block").agg(model=("jobs", "sum"), base=("jobs_base", "sum"), cd=("cd", "first"))
+    gb["obs"] = ob.reindex(gb.index).fillna(0)
+    big = gb[gb.obs >= 100]
+    jm = lambda col, g: {"n": int(len(g)), "median_abs_pct_error": round(float(np.median(np.abs(g[col] - g.obs) / g.obs)), 3)}
+    jobs = {"blocks_with_100_jobs_or_more": {"model": jm("model", big), "baseline_floor_area_only": jm("base", big)},
+            "by_district_median_error": {str(k): jm("model", g)["median_abs_pct_error"] for k, g in big.groupby("cd") if len(g) >= 10}}
+    return _save("existing_breakdowns", {"test": existing_breakdowns.__doc__.strip(), "emissions_2023": em, "jobs_2023": jobs,
+                                         "citywide_eui_kbtu_sqft": round(eui_city, 1)})
+
+
+# ----------------------------------------------------------------------------- 2b. jobs rates (R8)
+def jobs_rates() -> dict:
+    """Jobs per sq ft by floor-area type fitted to LODES with non-negative least squares on 2015 lots and LODES 2015
+    blocks, then tested forward on 2025 lots against LODES 2023, against the CBECS-based model and a flat rate."""
+    import pyogrio
+    from scipy.optimize import nnls
+
+    from planarena.indicators.engine import load_engine
+
+    def wac(f):
+        with gzip.open(f, "rt") as fh:
+            w = pd.read_csv(fh, dtype={"w_geocode": str}, usecols=["w_geocode", "C000"])
+        return w[w.w_geocode.str.startswith("36061")].set_index("w_geocode").C000
+
+    def comps(e, blocks):
+        o = e.obs
+        X = pd.DataFrame({k: o[k] for k in ("office", "retail", "other", "factory", "storage", "pubfac", "trafac")})
+        X["block"] = blocks
+        return X.groupby("block").sum()
+
+    src = pyogrio.read_dataframe(PLUTO_CUR, columns=["BBL", "BCTCB2020"], read_geometry=False)
+    blk = dict(zip(pd.to_numeric(src.BBL, errors="coerce"), src.BCTCB2020.astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(11)))
+    e25, e15 = load_engine(), load_engine(P15)
+    b25 = ["36061" + str(blk.get(int(b), "00000000000"))[1:] for b in e25.p.bbl]
+    # 2015 lots: assign blocks by geometry to the 2025 lots that contain them
+    j = _geo_match(P15, PROCESSED)
+    b15 = [b25[k] if k >= 0 else "none" for k in j]
+    X15, X25 = comps(e15, b15), comps(e25, b25)
+    y15, y23 = wac(RAW / "lodes8_ny_2015" / "ny_wac_S000_JT00_2015.csv.gz"), wac(RAW / "lodes8_ny_2023" / "ny_wac_S000_JT00_2023.csv.gz")
+    X15 = X15[X15.index != "none"]
+    t15 = y15.reindex(X15.index).fillna(0).to_numpy()
+    rates, _ = nnls(X15.to_numpy(), t15)
+    scale = y23.sum() / y15.sum()
+    pred_fit = X25.to_numpy() @ rates * scale
+    flat = X25.sum(axis=1).to_numpy() * (y23.sum() / X25.to_numpy().sum())
+    jb = pd.Series(e25.baseline_state["jobs"]).groupby(np.array(b25)).sum().reindex(X25.index).to_numpy()
+    obs = y23.reindex(X25.index).fillna(0).to_numpy()
+    big = obs >= 100
+    def mm(pr):
+        return {"median_abs_pct_error_blocks_ge_100": round(float(np.median(np.abs(pr[big] - obs[big]) / obs[big])), 3),
+                "log_r": round(float(np.corrcoef(np.log1p(obs[big]), np.log1p(pr[big]))[0, 1]), 3),
+                "total_ratio": round(float(pr.sum() / obs.sum()), 3)}
+    sqft = {k: round(1 / r, 1) if r > 0 else None for k, r in zip(X15.columns, rates)}
+    return _save("jobs_rates", {
+        "test": jobs_rates.__doc__.strip(), "blocks_tested": int(big.sum()),
+        "nnls_sqft_per_worker_fitted_2015": sqft, "growth_scale_2015_to_2023": round(float(scale), 4),
+        "methods": {"CBECS composition (current model)": mm(jb), "NNLS rates fitted on 2015": mm(pred_fit),
+                    "NNLS rates fitted on 2015, total calibrated": mm(pred_fit * obs.sum() / pred_fit.sum()),
+                    "flat rate per sq ft of non-residential floor area": mm(flat)}})
+
+
 # ----------------------------------------------------------------------------- 6b. district-scale benchmark (R7)
 def optimizer_benchmark(budget: int = 10, n_cand: int = 150, sa_evals: int = 400, seeds=(0, 1, 2)) -> dict:
     """Heuristics on the same objective in every district: J = overall score - conversion penalty x changes,
@@ -1013,14 +1162,15 @@ def report() -> str:
     return "docs written"
 
 
-STEPS = {"delta_forms": delta_forms, "changes": changes, "optimizer_benchmark": optimizer_benchmark, "emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
+STEPS = {"jobs_rates": jobs_rates, "existing_breakdowns": existing_breakdowns, "delta_forms": delta_forms, "changes": changes, "optimizer_benchmark": optimizer_benchmark, "emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
          "soho_noho": soho_noho, "rezonings": rezonings,
          "backtest_lgbm": backtest_lgbm, "backtest_eval": backtest_eval, "units": units,
          "east_harlem": east_harlem, "optimizer": optimizer, "report": report}
 
 if __name__ == "__main__":
     step = sys.argv[1] if len(sys.argv) > 1 else "all"
-    todo = (["emissions", "jobs", "backtest", "units", "east_harlem", "soho_noho", "rezonings", "optimizer", "report"]
+    todo = (["emissions", "jobs_rates", "jobs", "existing_breakdowns", "units", "east_harlem", "soho_noho", "rezonings",
+             "delta_forms", "changes", "backtest", "optimizer", "optimizer_benchmark", "report"]
             if step == "all" else [step])
     for s in todo:
         t0 = time.time()

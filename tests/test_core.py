@@ -294,3 +294,23 @@ def test_precedent_table_only_uses_earlier_periods():
     assert all(int(p.split("->")[1]) <= 2018 for p in early["pairs"])
     assert (np.array(early["counts"]) <= np.array(late["counts"])).all()
     assert early["total_changes"] < late["total_changes"]
+
+
+def test_transition_features_read_only_the_decision_year_snapshot(tmp_path, monkeypatch):
+    """R5: the features of a lot at decision year t come from the t snapshot alone, never from a later one."""
+    from pathlib import Path
+
+    from planarena.models import history, rolling
+
+    t = 2020
+    if not (history.snapshot_dir(t) / "parcels.parquet").exists():
+        pytest.skip("annual snapshots not built (python -I -m planarena.models.history)")
+    monkeypatch.setattr(rolling, "CACHE", tmp_path)
+    opened = []
+    real_pq, real_load = rolling.pd.read_parquet, rolling.np.load
+    monkeypatch.setattr(rolling.pd, "read_parquet", lambda p, *a, **k: (opened.append(Path(p)), real_pq(p, *a, **k))[1])
+    monkeypatch.setattr(rolling.np, "load", lambda p, *a, **k: (opened.append(Path(p)), real_load(p, *a, **k))[1])
+    x = rolling._x(t)
+    data = [p for p in opened if tmp_path not in p.parents]
+    assert data and all(p.parent == history.snapshot_dir(t) for p in data), data
+    assert x.shape[0] == len(real_pq(history.snapshot_dir(t) / "parcels.parquet"))

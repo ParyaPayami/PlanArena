@@ -320,3 +320,7 @@ button.danger { border-color: #6a2531; color: #ff9aa5; }
 .glossary ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .add-item { margin-top: 6px; }
 .add-item input { flex: 1; }
+.city-button { font: inherit; color: inherit; padding: 0; display: inline-flex; gap: 6px; align-items: center; }
+.city-button .badge { margin: 0; }
+.city-hits { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; max-height: 40vh; overflow: auto; }
+.city-hit { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }

@@ -173,7 +173,8 @@ def provenance(meta: dict, coef: dict, derived: dict, models: dict, engine_versi
         "engine_version": engine_version,
         "source": {"name": meta.get("source"), "sha256": meta.get("source_sha256"), "url": meta.get("source_url"),
                    "data_quality": meta.get("data_quality")},
-        "method": ("Observed MapPLUTO baseline; only changed parcels are modelled. Ranges are a sensitivity envelope "
+        "method": ("Observed baseline (MapPLUTO for Manhattan; national open data for Tier A places, see "
+                   "source.data_quality); only changed parcels are modelled. Ranges are a sensitivity envelope "
                    "from low/high coefficient variants (empirical Q25/Q75 or published ranges), not calibrated "
                    "prediction intervals. Zoning screen is simplified rules-as-code, not legal compliance."),
         "coefficients": coef, "derived_from_data": derived, "models": models,

@@ -36,21 +36,21 @@
         },
         "emissions": {
           "n": 194,
-          "mae": 711.28,
-          "median_ae": 260.27,
-          "total_ratio": 1.159,
-          "pearson_r": 0.826,
-          "spearman": 0.657,
+          "mae": 636.37,
+          "median_ae": 184.12,
+          "total_ratio": 1.007,
+          "pearson_r": 0.857,
+          "spearman": 0.678,
           "sign_agreement": 0.763
         },
         "jobs_by_block": {
           "n": 1445,
-          "mae": 452.61,
-          "median_ae": 95.03,
-          "total_ratio": -1.007,
-          "pearson_r": 0.093,
-          "spearman": 0.038,
-          "sign_agreement": 0.472
+          "mae": 451.49,
+          "median_ae": 107.63,
+          "total_ratio": -0.763,
+          "pearson_r": 0.071,
+          "spearman": 0.006,
+          "sign_agreement": 0.466
         }
       },
       "use change": {
@@ -74,11 +74,11 @@
         },
         "emissions": {
           "n": 193,
-          "mae": 713.74,
-          "median_ae": 262.14,
-          "total_ratio": 1.157,
-          "pearson_r": 0.826,
-          "spearman": 0.658,
+          "mae": 638.26,
+          "median_ae": 183.04,
+          "total_ratio": 1.005,
+          "pearson_r": 0.857,
+          "spearman": 0.68,
           "sign_agreement": 0.762
         }
       },
@@ -128,21 +128,21 @@
         },
         "emissions": {
           "n": 194,
-          "mae": 711.28,
-          "median_ae": 260.27,
-          "total_ratio": 1.159,
-          "pearson_r": 0.826,
-          "spearman": 0.657,
+          "mae": 636.37,
+          "median_ae": 184.12,
+          "total_ratio": 1.007,
+          "pearson_r": 0.857,
+          "spearman": 0.678,
           "sign_agreement": 0.763
         },
         "jobs_by_block": {
           "n": 1445,
-          "mae": 464.59,
-          "median_ae": 103.67,
-          "total_ratio": -1.516,
-          "pearson_r": 0.086,
-          "spearman": 0.006,
-          "sign_agreement": 0.446
+          "mae": 460.11,
+          "median_ae": 113.14,
+          "total_ratio": -1.531,
+          "pearson_r": 0.076,
+          "spearman": -0.021,
+          "sign_agreement": 0.443
         }
       },
       "use change": {
@@ -166,11 +166,11 @@
         },
         "emissions": {
           "n": 193,
-          "mae": 713.74,
-          "median_ae": 262.14,
-          "total_ratio": 1.157,
-          "pearson_r": 0.826,
-          "spearman": 0.658,
+          "mae": 638.26,
+          "median_ae": 183.04,
+          "total_ratio": 1.005,
+          "pearson_r": 0.857,
+          "spearman": 0.68,
           "sign_agreement": 0.762
         }
       },
@@ -220,20 +220,20 @@
         },
         "emissions": {
           "n": 194,
-          "mae": 711.28,
-          "median_ae": 260.27,
-          "total_ratio": 1.159,
-          "pearson_r": 0.826,
-          "spearman": 0.657,
+          "mae": 636.37,
+          "median_ae": 184.12,
+          "total_ratio": 1.007,
+          "pearson_r": 0.857,
+          "spearman": 0.678,
           "sign_agreement": 0.763
         },
         "jobs_by_block": {
           "n": 1445,
-          "mae": 450.3,
-          "median_ae": 98.2,
-          "total_ratio": -0.986,
-          "pearson_r": 0.089,
-          "spearman": 0.032,
+          "mae": 454.14,
+          "median_ae": 108.08,
+          "total_ratio": -0.834,
+          "pearson_r": 0.068,
+          "spearman": 0.003,
           "sign_agreement": 0.467
         }
       },
@@ -258,11 +258,11 @@
         },
         "emissions": {
           "n": 193,
-          "mae": 713.74,
-          "median_ae": 262.14,
-          "total_ratio": 1.157,
-          "pearson_r": 0.826,
-          "spearman": 0.658,
+          "mae": 638.26,
+          "median_ae": 183.04,
+          "total_ratio": 1.005,
+          "pearson_r": 0.857,
+          "spearman": 0.68,
           "sign_agreement": 0.762
         }
       },

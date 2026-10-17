@@ -4,29 +4,29 @@
     "replacement": {
       "clip_events_per_use_table": 0,
       "clip_events_noisy": 0,
-      "jaccard_clean_vs_noisy_median": 0.86,
-      "jaccard_clean_vs_noisy_min": 0.744,
-      "changes_per_district_median": 111
+      "jaccard_clean_vs_noisy_median": 0.903,
+      "jaccard_clean_vs_noisy_min": 0.658,
+      "changes_per_district_median": 112
     },
     "difference": {
-      "clip_events_per_use_table": 303017,
-      "clip_events_noisy": 407177,
-      "jaccard_clean_vs_noisy_median": 0.945,
-      "jaccard_clean_vs_noisy_min": 0.794,
+      "clip_events_per_use_table": 302814,
+      "clip_events_noisy": 406981,
+      "jaccard_clean_vs_noisy_median": 0.97,
+      "jaccard_clean_vs_noisy_min": 0.771,
       "changes_per_district_median": 112
     },
     "hybrid": {
       "clip_events_per_use_table": 0,
       "clip_events_noisy": 0,
-      "jaccard_clean_vs_noisy_median": 0.86,
-      "jaccard_clean_vs_noisy_min": 0.744,
-      "changes_per_district_median": 111
+      "jaccard_clean_vs_noisy_median": 0.903,
+      "jaccard_clean_vs_noisy_min": 0.658,
+      "changes_per_district_median": 112
     }
   },
   "agreement_between_forms_median_jaccard": {
     "replacement vs hybrid": 1.0,
-    "difference vs hybrid": 0.782,
-    "replacement vs difference": 0.782
+    "difference vs hybrid": 0.827,
+    "replacement vs difference": 0.827
   },
   "note": "Clip events: quantities floored at zero, which happen when a modelled old-use composition exceeds what was observed (the difference form cannot represent complete conversions without flooring)."
 }

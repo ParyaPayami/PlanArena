@@ -44,12 +44,15 @@ def _x(year: int) -> np.ndarray:
     return np.load(f)
 
 
-def _y(y0: int, y1: int) -> pd.DataFrame:
+def _y_plain(y0: int, y1: int) -> pd.DataFrame:
     CACHE.mkdir(parents=True, exist_ok=True)
     f = CACHE / f"y_{y0}_{y1}.parquet"
     if not f.exists():
         labels(snapshot_dir(y0), snapshot_dir(y1), y0).to_parquet(f)
     return pd.read_parquet(f)
+
+
+_y = _y_plain  # label function used by the evaluation; swapped for the verified variant in verified_labels_check
 
 
 def _rows(lab: pd.DataFrame) -> np.ndarray:
@@ -145,6 +148,62 @@ def evaluate_origin(h: int, t: int, seeds=(SEED, SEED + 1, SEED + 2)) -> dict:
     return out
 
 
+def _certificates(y0: int, y1: int) -> tuple[set, set]:
+    """BBLs with a DOB new-building / alteration-type-1 certificate of occupancy issued in the window (y0, y1]."""
+    raw = DATA / "raw" / "dob_co"
+    a = pd.DataFrame(json.loads((raw / "dob_co_legacy_mn.json").read_text()))
+    a["date"] = pd.to_datetime(a.c_o_issue_date, errors="coerce")
+    a["kind"] = a.job_type.map({"NB": "new building", "A1": "alteration"})
+    b = pd.DataFrame(json.loads((raw / "dob_co_now_mn.json").read_text()))
+    b["date"] = pd.to_datetime(b.c_of_o_issuance_date, format="%m/%d/%y %I:%M:%S %p", errors="coerce")
+    b["kind"] = np.where(b.job_type.str.upper().str.contains("NEW BUILDING"), "new building",
+                         np.where(b.job_type.str.upper().str.contains("ALTERATION TYPE 1"), "alteration", None))
+    co = pd.concat([a[["bbl", "date", "kind"]], b[["bbl", "date", "kind"]]]).dropna()
+    co["bbl"] = pd.to_numeric(co.bbl, errors="coerce")
+    lo, hi = pd.Timestamp(RELEASE_DATE[y0]), pd.Timestamp(RELEASE_DATE[y1])
+    co = co[(co.date > lo) & (co.date <= hi)].dropna(subset=["bbl"])
+    return set(co[co.kind == "new building"].bbl.astype("int64")), set(co[co.kind == "alteration"].bbl.astype("int64"))
+
+
+def _evidence(y0: int, y1: int, lab: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    nb, alt = _certificates(y0, y1)
+    bbl0 = pd.read_parquet(snapshot_dir(y0) / "parcels.parquet").bbl.to_numpy().astype("int64")
+    bbl1 = pd.read_parquet(snapshot_dir(y1) / "parcels.parquet").bbl.to_numpy().astype("int64")
+    j1 = lab.j1.to_numpy()
+    on = lambda s_: np.array([(bbl0[i] in s_) or (j1[i] >= 0 and bbl1[j1[i]] in s_) for i in range(len(bbl0))])
+    ev_nb = on(nb)
+    return ev_nb, ev_nb | on(alt)
+
+
+def _y_verified(y0: int, y1: int) -> pd.DataFrame:
+    """Redeveloped = a new building completed in the period (year built), or floor-area growth confirmed by a DOB
+    new-building / alteration-type-1 certificate in the window. Removes unconfirmed floor-area changes."""
+    f = CACHE / f"yv_{y0}_{y1}.parquet"
+    if not f.exists():
+        lab = _y_plain(y0, y1).copy()
+        _, ev_any = _evidence(y0, y1, lab)
+        lab["developed"] = lab.new_building.to_numpy() | (lab.floor_area_growth.to_numpy() & ev_any)
+        lab.to_parquet(f)
+    return pd.read_parquet(f)
+
+
+def verified_labels_check(cases=((5, 2020), (3, 2022), (1, 2024))) -> list[dict]:
+    """Retrain and test with verified labels for selected horizons (robustness of the label definition)."""
+    global _y
+    plain = _y
+    out = []
+    try:
+        _y = _y_verified
+        for h, t in cases:
+            o = evaluate_origin(h, t, seeds=(SEED,))
+            out.append({"horizon": h, "test": o["test"], "positives": o["positives"], "base_rate": o["base_rate"],
+                        "auc": o["lightgbm"]["auc"], "average_precision": o["lightgbm"]["average_precision"],
+                        "best_baseline_auc": max(v["auc"] for v in o["baselines"].values())})
+    finally:
+        _y = plain
+    return out
+
+
 def label_audit(y0: int, y1: int) -> dict:
     """Agreement of PLUTO-derived redevelopment labels with DOB certificates of occupancy in the same window."""
     raw = DATA / "raw" / "dob_co"
@@ -196,9 +255,18 @@ def main() -> dict:
                 print(h, t, o["lightgbm"]["auc"], o["lightgbm"]["average_precision"], o["spatial_cv_within_test_period"], flush=True)
     for y0, y1 in ((2015, 2020), (2020, 2025)):
         res["label_audit"][f"{y0}->{y1}"] = label_audit(y0, y1)
+    res["verified_labels"] = verified_labels_check()
     OUT.write_text(json.dumps(res, indent=2))
     return res
 
 
 if __name__ == "__main__":
     main()
+
+
+def verified_only() -> None:
+    """Add the verified-label check to an existing rolling_origin.json without recomputing the rest."""
+    res = json.loads(OUT.read_text())
+    res["verified_labels"] = verified_labels_check()
+    OUT.write_text(json.dumps(res, indent=2))
+    print(res["verified_labels"])

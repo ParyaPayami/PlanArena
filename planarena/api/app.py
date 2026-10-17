@@ -7,13 +7,17 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+import sys
+import threading
 import time
-from functools import lru_cache
+from collections import OrderedDict
+from contextvars import ContextVar
 from typing import Literal, Union
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, ORJSONResponse, Response
@@ -25,7 +29,8 @@ from planarena.agents.negotiation import Plan, generate_candidates, negotiate, p
 from planarena.agents.voting import hold_vote
 from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
 from planarena.api import planio, store
-from planarena.config import LAND_USES, PROCESSED, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
+from planarena.cities import registry
+from planarena.config import LAND_USES, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
 from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
 from planarena.optimize.pareto import pareto as run_pareto
 from planarena.optimize.suggest import SuggestConfig, Suggester
@@ -36,38 +41,75 @@ app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["*"], allow_headers=["*"])
 STAKE = {s.key: s for s in DEFAULT_STAKEHOLDERS}
+CITY: ContextVar[str] = ContextVar("city", default=registry.DEFAULT)
+
+
+@app.middleware("http")
+async def select_city(request: Request, call_next):
+    """Every API call works on one city: the X-PlanArena-City header or ?city= (default Manhattan)."""
+    city = request.headers.get("x-planarena-city") or request.query_params.get("city") or registry.DEFAULT
+    if request.url.path.startswith("/api/") and city != registry.DEFAULT and not registry.exists(city):
+        return ORJSONResponse({"detail": f"city not built: {city}"}, status_code=404)
+    token = CITY.set(city)
+    try:
+        return await call_next(request)
+    finally:
+        CITY.reset(token)
 
 
 # ----------------------------------------------------------------------------- state
-@lru_cache(maxsize=1)
-def runtime() -> dict:
+_RUNTIMES: OrderedDict[str, dict] = OrderedDict()
+_RT_LOCK = threading.Lock()
+MAX_CITIES_LOADED = 3
+
+
+def runtime(city: str | None = None) -> dict:
+    city = city or CITY.get()
+    with _RT_LOCK:
+        if city in _RUNTIMES:
+            _RUNTIMES.move_to_end(city)
+            return _RUNTIMES[city]
+        r = _load_runtime(city)
+        _RUNTIMES[city] = r
+        while len(_RUNTIMES) > MAX_CITIES_LOADED:
+            _RUNTIMES.popitem(last=False)
+        return r
+
+
+def _load_runtime(city: str) -> dict:
     t0 = time.time()
-    engine = load_engine()
+    d = registry.city_dir(city)
+    engine = load_engine(d)
     suit, model_info = None, {"gnn": False}
-    if (PROCESSED / "suitability.npy").exists():
-        suit = np.load(PROCESSED / "suitability.npy")
+    if (d / "suitability.npy").exists():
+        suit = np.load(d / "suitability.npy")
         model_info["gnn"] = True
         from planarena.models.gnn import attach_value_model  # lazy: torch loads only when a model exists
 
         attach_value_model(engine)
-    for name in ("gnn_cv", "ensemble_cv"):
-        f = ROOT / "results" / f"{name}.json"
-        if f.exists():
-            model_info[name.replace("gnn_cv", "cv_summary")] = json.loads(f.read_text()).get("cv_summary")
+    if (d / "pattern.npy").exists():  # the ablation's best model replaces the GNN alone (planarena/models/ablation.py)
+        suit = np.load(d / "pattern.npy")
+        model_info["pattern_model"] = json.loads((d / "pattern_meta.json").read_text())
+    if city == registry.DEFAULT:  # validation results exist for the Manhattan demo only
+        for name in ("gnn_cv", "ensemble_cv"):
+            f = ROOT / "results" / f"{name}.json"
+            if f.exists():
+                model_info[name.replace("gnn_cv", "cv_summary")] = json.loads(f.read_text()).get("cv_summary")
+        vf = ROOT / "results" / "validation_emissions_ll84.json"
+        if vf.exists():
+            model_info["emissions_validation"] = json.loads(vf.read_text())
     redev = None
-    if (PROCESSED / "redevelopment.npz").exists():
-        z = np.load(PROCESSED / "redevelopment.npz")
+    if (d / "redevelopment.npz").exists():
+        z = np.load(d / "redevelopment.npz")
         redev = {"p": z["p"], "q": z["q"]}
-        model_info["redevelopment"] = json.loads((PROCESSED / "redevelopment_meta.json").read_text())
-    vf = ROOT / "results" / "validation_emissions_ll84.json"
-    if vf.exists():
-        model_info["emissions_validation"] = json.loads(vf.read_text())
+        model_info["redevelopment"] = json.loads((d / "redevelopment_meta.json").read_text())
     sug = Suggester(engine, suit)
     sug.per_use_values()
     engine.evaluate(engine.base_use, ranges=True)  # warms the sensitivity-variant caches
     with store.connect() as db:
-        store.audit(db, "service_started", {"engine_version": ENGINE_VERSION, "source_sha256": engine.meta.get("source_sha256")})
-    return {"engine": engine, "suggester": sug, "suitability": suit, "model_info": model_info,
+        store.audit(db, "city_loaded", {"engine_version": ENGINE_VERSION, "city": city,
+                                        "source_sha256": engine.meta.get("source_sha256")})
+    return {"city": city, "engine": engine, "suggester": sug, "suitability": suit, "model_info": model_info,
             "soft_sites": engine.soft_site_mask(), "startup_seconds": round(time.time() - t0, 2), "geoms": None,
             "redevelopment": redev}
 
@@ -76,8 +118,17 @@ def _geoms():
     r = runtime()
     if r["geoms"] is None:
         import geopandas as gpd
-        r["geoms"] = gpd.read_parquet(PROCESSED / "parcels.geoparquet").geometry.values
+        r["geoms"] = gpd.read_parquet(registry.city_dir(r["city"]) / "parcels.geoparquet").geometry.values
     return r["geoms"]
+
+
+def _wgs84(geoms, e: ImpactEngine):
+    """RFC 7946 GeoJSON is longitude/latitude: reproject from the twin's projected CRS."""
+    import geopandas as gpd
+
+    from planarena.config import PROJECTED_CRS, WEB_CRS
+
+    return gpd.GeoSeries(geoms, crs=e.meta.get("crs", PROJECTED_CRS)).to_crs(WEB_CRS).values
 
 
 Change = Union[str, dict]
@@ -242,7 +293,9 @@ def meta():
     coef = e.coef  # provisional defaults merged with planarena/indicators/calibrated.yaml
     base = e.evaluate(e.base_use, scope="city")
     return {
-        "version": ENGINE_VERSION, "city": e.meta["city"], "source": e.meta["source"],
+        "version": ENGINE_VERSION, "city": e.meta["city"], "city_id": r["city"], "tier": e.meta.get("tier", "B"),
+        "columns": e.meta.get("columns"), "missing_indicators": e.meta.get("missing_indicators", []),
+        "source": e.meta["source"],
         "source_sha256": e.meta.get("source_sha256"), "source_url": e.meta.get("source_url"),
         "data_quality": e.meta.get("data_quality"), "n_parcels": e.n, "bbox": e.meta["bbox_wgs84"],
         "levels": e.meta["levels"],
@@ -537,17 +590,21 @@ def radius(req: RadiusRequest):
 
 
 # ----------------------------------------------------------------------------- scenarios & audit
+def _study_city(s: dict | None) -> dict | None:
+    return s if s is not None and s.get("city", registry.DEFAULT) == CITY.get() else None
+
+
 @app.get("/api/scenarios")
 def scenarios():
     with store.connect() as db:
-        return store.list_scenarios(db)
+        return [s for s in store.list_scenarios(db) if _study_city(s)]
 
 
 @app.post("/api/scenarios", status_code=201)
 def create_scenario(body: ScenarioIn):
     e: ImpactEngine = runtime()["engine"]
     use, far = _arrays(body.changes)
-    data = body.model_dump()
+    data = body.model_dump() | {"city": CITY.get()}
     ev = e.evaluate(use, far=far)
     data["summary"] = {"overall": ev["overall"], "pillars": ev["pillars"], "n_changed": ev["n_changed"]}
     with store.connect() as db:
@@ -557,14 +614,21 @@ def create_scenario(body: ScenarioIn):
 @app.get("/api/scenarios/{sid}")
 def get_scenario(sid: str):
     with store.connect() as db:
-        s = store.get(db, sid)
+        s = _study_city(store.get(db, sid))
     if s is None:
         raise HTTPException(404, "scenario not found")
     return s
 
 
+def _own_study(sid: str) -> None:
+    with store.connect() as db:
+        if _study_city(store.get(db, sid)) is None:
+            raise HTTPException(404, "scenario not found")
+
+
 @app.patch("/api/scenarios/{sid}")
 def patch_scenario(sid: str, patch: ScenarioPatch):
+    _own_study(sid)
     data = {k: v for k, v in patch.model_dump().items() if v is not None}
     if "changes" in data:
         use, far = _arrays(data["changes"])
@@ -582,6 +646,7 @@ def patch_scenario(sid: str, patch: ScenarioPatch):
 
 @app.delete("/api/scenarios/{sid}")
 def delete_scenario(sid: str):
+    _own_study(sid)
     with store.connect() as db:
         if not store.delete(db, sid):
             raise HTTPException(404, "scenario not found")
@@ -590,6 +655,7 @@ def delete_scenario(sid: str):
 
 @app.get("/api/scenarios/{sid}/history")
 def scenario_history(sid: str):
+    _own_study(sid)
     with store.connect() as db:
         return store.history(db, sid)
 
@@ -652,7 +718,7 @@ def export(fmt: Literal["csv", "geojson", "provenance"], req: ExportRequest):
         return Response(text, media_type="text/csv",
                         headers={"Content-Disposition": "attachment; filename=planarena-plan.csv"})
     if fmt == "geojson":
-        gj = planio.export_geojson(req.changes, _geoms(), e.p.bbl.to_numpy(), e.p.address.to_numpy())
+        gj = planio.export_geojson(req.changes, _wgs84(_geoms(), e), e.p.bbl.to_numpy(), e.p.address.to_numpy())
         return Response(json.dumps(gj), media_type="application/geo+json",
                         headers={"Content-Disposition": "attachment; filename=planarena-plan.geojson"})
     use, far = _arrays(req.changes)
@@ -682,6 +748,86 @@ def sample_plan():
 
 
 # ----------------------------------------------------------------------------- static web app
+# ----------------------------------------------------------------------------- cities
+_BUILDS: dict[str, dict] = {}
+_BUILD_LOCK = threading.Lock()
+
+
+@app.get("/api/cities")
+def cities():
+    """Cities already built (Manhattan, Tier B parcel cities and Tier A places)."""
+    return list(registry.cities().values())
+
+
+@app.get("/api/places")
+def place_search(q: str, limit: int = 12):
+    """Any US place (Census gazetteer): incorporated places, CDPs and New England towns."""
+    from planarena.national import places
+
+    hits = places.search(q, min(max(limit, 1), 30))
+    built = registry.cities()
+    return [h | {"built": h["geoid"] in built} for h in hits]
+
+
+def _run_build(geoid: str) -> None:
+    job = _BUILDS[geoid]
+    log = registry.city_dir(geoid) / "build.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with open(log, "w") as fh:
+        p = subprocess.run([sys.executable, "-I", "-m", "planarena.cities.tier_a", geoid], cwd=ROOT,
+                           stdout=fh, stderr=subprocess.STDOUT)
+    job["status"] = "done" if p.returncode == 0 else "failed"
+    job["log"] = log.read_text()[-4000:]
+    with store.connect() as db:
+        store.audit(db, "city_built", {"city": geoid, "status": job["status"]})
+
+
+@app.post("/api/cities/{geoid}/build", status_code=202)
+def build_city(geoid: str):
+    """Build a Tier A twin of any US place from national open data (a few minutes; downloads per city)."""
+    from planarena.national import places
+
+    if not re.fullmatch(r"\d{7}|\d{10}", geoid):
+        raise HTTPException(400, "GEOID must be a 7-digit place or 10-digit New England town code")
+    try:
+        pl = places.place(geoid)
+    except KeyError:
+        raise HTTPException(404, "unknown place") from None
+    with _BUILD_LOCK:
+        job = _BUILDS.get(geoid)
+        if job and job["status"] == "running":
+            return job
+        if any(j["status"] == "running" for j in _BUILDS.values()):
+            raise HTTPException(429, "another city is being built; try again when it finishes")
+        job = _BUILDS[geoid] = {"geoid": geoid, "label": pl["label"], "status": "running", "started": time.time()}
+    threading.Thread(target=_run_build, args=(geoid,), daemon=True).start()
+    return job
+
+
+@app.get("/api/cities/{geoid}/build")
+def build_status(geoid: str):
+    job = _BUILDS.get(geoid)
+    if job is None:
+        if registry.exists(geoid):
+            return {"geoid": geoid, "status": "done"}
+        raise HTTPException(404, "no build for this place")
+    log = registry.city_dir(geoid) / "build.log"
+    tail = log.read_text().strip().splitlines()[-1:] if log.exists() else []
+    return job | {"step": tail[0] if tail else "starting", "elapsed": round(time.time() - job["started"])}
+
+
+@app.get("/city-data/{geoid}/{path:path}")
+def city_data(geoid: str, path: str):
+    """Web layers of a built city other than Manhattan."""
+    if not registry.exists(geoid) or geoid == registry.DEFAULT:
+        raise HTTPException(404, "city not built")
+    base = registry.web_dir(geoid).resolve()
+    f = (base / path).resolve()
+    if not f.is_file() or not f.is_relative_to(base):
+        raise HTTPException(404, "not found")
+    return FileResponse(f, headers={"Cache-Control": "no-cache"})
+
+
 DIST = ROOT / "web" / "dist"
 if WEB_DATA.exists():
     app.mount("/data", StaticFiles(directory=WEB_DATA), name="data")

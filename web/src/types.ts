@@ -35,6 +35,10 @@ export interface Meta {
   coefficients: Record<string, unknown>;
   statuses: string[];
   city: string;
+  city_id: string;
+  tier: "A" | "B";
+  columns?: Record<string, string>;
+  missing_indicators: string[];
   source: string;
   n_parcels: number;
   bbox: [number, number, number, number];

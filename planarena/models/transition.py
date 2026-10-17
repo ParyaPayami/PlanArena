@@ -91,7 +91,8 @@ def labels(d0: Path, d1: Path, year0: int) -> pd.DataFrame:
     grew = (fa1 - fa0 > 0.25 * fa0) & (fa1 - fa0 > 2000)
     newb = p1.year_built.to_numpy() >= year0
     dev1 = (grew | newb)
-    lab = pd.DataFrame({"matched": ok, "developed": ok & dev1[t1], "dest": np.where(ok, p1.use.to_numpy()[t1], -1)})
+    lab = pd.DataFrame({"matched": ok, "developed": ok & dev1[t1], "dest": np.where(ok, p1.use.to_numpy()[t1], -1),
+                        "new_building": ok & newb[t1], "floor_area_growth": ok & grew[t1], "j1": j1})
     lab["use0"] = p0.use.to_numpy()
     return lab
 

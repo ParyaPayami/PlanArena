@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CityMap from "../components/CityMap";
 import { PillarCards } from "../components/Scoreboard";
 import Toast from "../components/Toast";
-import { api } from "../api";
+import { api, cityDataUrl, cityHref } from "../api";
 import { loadCity, startAutoEvaluate, useStore } from "../store";
 import { fmtDelta, fmtScore } from "../format";
 import type { Evaluation, Meta, Vote } from "../types";
@@ -80,7 +80,7 @@ function LevelSelect({ meta, onPick }: { meta: Meta; onPick: (cd: string) => voi
           </button>
         ))}
       </div>
-      <a className="game-desktop-link" href="/">Open the planner Studio (desktop) →</a>
+      <a className="game-desktop-link" href={cityHref(meta.city_id, "/")}>Open the planner Studio (desktop) →</a>
     </div>
   );
 }
@@ -100,7 +100,7 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
 
   useEffect(() => {
     let live = true;
-    loadCity(`/data/levels/${cd}.geojson`).then(({ meta: m, data }) => {
+    loadCity(cityDataUrl(`levels/${cd}.geojson`)).then(({ meta: m, data }) => {
       if (!live) return;
       useStore.getState().init(m, data);
       useStore.setState({ scope: `cd:${cd}`, selected: new Set(), past: [], future: [], preview: undefined, evaluation: undefined });
@@ -173,14 +173,20 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
   const view = useMemo(() => {
     if (!s.data) return null;
     let x = 0, y = 0, n = 0;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const f of s.data.features) {
       const i = (f.properties as { i: number }).i;
       if (!Number.isFinite(s.data.lon[i]) || !Number.isFinite(s.data.lat[i])) continue;
       x += s.data.lon[i];
       y += s.data.lat[i];
+      x0 = Math.min(x0, s.data.lon[i]); x1 = Math.max(x1, s.data.lon[i]);
+      y0 = Math.min(y0, s.data.lat[i]); y1 = Math.max(y1, s.data.lat[i]);
       n++;
     }
-    return { longitude: x / n, latitude: y / n, zoom: 14.2, pitch: 0, bearing: -29 };
+    const manhattan = meta.city_id === "manhattan";
+    // Manhattan levels keep their tuned view along the street grid; elsewhere fit the level, north up.
+    const fit = Math.log2(360 / Math.max(x1 - x0, (y1 - y0) * 1.4, 1e-4)) - 0.4;
+    return { longitude: x / n, latitude: y / n, zoom: manhattan ? 14.2 : Math.min(15.5, fit), pitch: 0, bearing: manhattan ? -29 : 0 };
   }, [loaded]);
 
   if (!loaded || !s.data || !view || !s.meta)

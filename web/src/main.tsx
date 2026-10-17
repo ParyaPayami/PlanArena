@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import Studio from "./studio/Studio";
 import Game from "./game/Game";
 import { loadCity, startAutoEvaluate, useStore } from "./store";
+import { cityDataUrl } from "./api";
 import "./styles.css";
 
 const isPlay = window.location.pathname.startsWith("/play");
@@ -13,7 +14,7 @@ function Boot() {
   const ready = useStore((s) => !!s.data);
   useEffect(() => {
     if (isPlay) return;
-    loadCity("/data/parcels.geojson", setProgress)
+    loadCity(cityDataUrl("parcels.geojson"), setProgress)
       .then(({ meta, data }) => {
         useStore.getState().init(meta, data);
         startAutoEvaluate();

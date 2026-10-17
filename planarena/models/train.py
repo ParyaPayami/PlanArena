@@ -115,7 +115,7 @@ def main():
     RESULTS.mkdir(exist_ok=True)
     if not a.skip_cv:
         print("baselines (separate process)...", flush=True)
-        subprocess.run([sys.executable, "-m", "planarena.models.baselines", "--folds", str(a.folds)],
+        subprocess.run([sys.executable, "-I", "-m", "planarena.models.baselines", "--folds", str(a.folds)],
                        check=True, cwd=ROOT)
         base = json.loads((RESULTS / "baselines_cv.json").read_text())
         print("GNN folds...", flush=True)

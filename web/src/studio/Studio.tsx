@@ -10,8 +10,9 @@ import DeskPanel from "../components/DeskPanel";
 import DataPanel from "../components/DataPanel";
 import MethodsDialog from "../components/MethodsDialog";
 import SearchBox from "../components/SearchBox";
+import CityPicker from "../components/CityPicker";
 import Toast from "../components/Toast";
-import { api } from "../api";
+import { api, cityHref } from "../api";
 import { useStore, type Tab } from "../store";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
@@ -72,7 +73,10 @@ export default function Studio() {
 
   const [w, so, ea, no] = meta.bbox;
   const initialViewState = useMemo(
-    () => ({ longitude: (w + ea) / 2 + 0.012, latitude: (so + no) / 2 - 0.035, zoom: 12.4, pitch: 0, bearing: -29 }),
+    () =>
+      meta.city_id === "manhattan"
+        ? { longitude: (w + ea) / 2 + 0.012, latitude: (so + no) / 2 - 0.035, zoom: 12.4, pitch: 0, bearing: -29 }
+        : { longitude: (w + ea) / 2, latitude: (so + no) / 2, zoom: Math.min(15, Math.log2(360 / Math.max(ea - w, (no - so) * 1.4)) + 0.6), pitch: 0, bearing: 0 },
     [],
   );
 
@@ -84,7 +88,7 @@ export default function Studio() {
           <div>
             <div className="brand-name">PlanArena</div>
             <div className="brand-sub">
-              {meta.city} · digital twin · {meta.n_parcels.toLocaleString()} parcels
+              <CityPicker /> · {meta.n_parcels.toLocaleString()} {meta.tier === "A" ? "pseudo-lots" : "parcels"}
             </div>
           </div>
         </div>
@@ -112,7 +116,7 @@ export default function Studio() {
           <button onClick={() => s.setMethodsOpen(true)} title="Data, methods and provenance" aria-label="Data and methods">
             ⓘ
           </button>
-          <a className="button ghost" href="/play">
+          <a className="button ghost" href={cityHref(meta.city_id, "/play")}>
             📱 Play
           </a>
         </div>

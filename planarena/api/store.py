@@ -88,9 +88,11 @@ def create(db, data: dict, source_sha256: str) -> dict:
         "study_area": data.get("study_area", ""), "changes": data.get("changes", {}),
         "checklist": data.get("checklist") or [{"label": c, "done": False} for c in DEFAULT_CHECKLIST],
         "summary": data.get("summary"), "created_at": now, "updated_at": now, "source_sha256": source_sha256,
+        "city": data.get("city", "manhattan"),
     }
     db.execute("INSERT INTO scenarios VALUES (?,?,?,?,?)", (body["id"], body["name"], json.dumps(body), now, now))
-    audit(db, "scenario_created", {"id": body["id"], "name": body["name"], "n_changes": len(body["changes"])})
+    audit(db, "scenario_created", {"id": body["id"], "name": body["name"], "city": body["city"],
+                                   "n_changes": len(body["changes"])})
     return body
 
 
