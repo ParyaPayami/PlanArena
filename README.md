@@ -29,7 +29,7 @@ Double-click **Start PlanArena.command** in this folder. Your browser opens the 
 ## Run it
 
 ```bash
-cd PlanArena   # first time: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cd PlanArena   # first time: python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -I -m planarena.api          # then open http://localhost:8787  (phone game: /play)
 ```
 

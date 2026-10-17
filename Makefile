@@ -5,6 +5,7 @@
 # Needs Python 3.13, curl, pdftotext (poppler) and Node 20+ for the web app.
 # Downloaded data is untrusted: every step that reads it runs Python in isolated mode (-I).
 
+PYTHON ?= python3.13   # the version requirements.txt is pinned for
 PY  := .venv/bin/python -I
 RUN := PYTHONWARNINGS=ignore $(PY) -m
 
@@ -15,7 +16,7 @@ reproduce: venv fetch twin history calibrate results web test compare
 results: train transition rolling ablation vote cities validate report
 
 venv:
-	test -x .venv/bin/python || python3 -m venv .venv
+	test -x .venv/bin/python || $(PYTHON) -m venv .venv
 	.venv/bin/pip install -q -r requirements.txt
 	.venv/bin/python -c "import sysconfig,pathlib; pathlib.Path(sysconfig.get_paths()['purelib'],'planarena_repo.pth').write_text('$(CURDIR)\n')"
 
