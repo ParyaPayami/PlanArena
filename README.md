@@ -11,18 +11,19 @@
   * Plan import with review, exports with provenance.
 * **Phone game** (`/play`): an installable PWA with neighbourhood levels, missions, tap/drag painting and stars. At the end, the stakeholder council votes between your plan, the AI planner's plan and no change.
 
-Demo city: Manhattan, 42,075 parcels from NYC DCP MapPLUTO 25v3.1. The source file's SHA-256 is recorded in `twin_meta.json` and in every export.
+Demo city: Manhattan, 42,075 parcels from NYC DCP MapPLUTO 25v3.1, downloaded from DCP by `planarena.twin.fetch`. The archive's and the extract's SHA-256 are recorded in `twin_meta.json` and in every export.
 
 ## Run it
 
 ```bash
-cd ~/Desktop/PlanArena   # first time: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cd PlanArena   # first time: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m planarena.api          # then open http://localhost:8787  (phone game: /play)
 ```
 
 To rebuild everything from raw data:
 
 ```bash
+.venv/bin/python -I -m planarena.twin.fetch  # official MapPLUTO 25v3.1 (300 MB) -> Manhattan extract + SOURCE.json
 .venv/bin/python -m planarena.twin.build     # digital twin: parcels, graph, raster, web layers
 .venv/bin/python -m planarena.calibrate      # coefficients from LL84/LL97/CBECS/QCEW + LL84 validation
 .venv/bin/python -m planarena.models.train   # baselines + GNN spatial CV + final model (~7 min, CPU)

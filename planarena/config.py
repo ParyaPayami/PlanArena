@@ -10,12 +10,8 @@ DATA = ROOT / "data"
 PROCESSED = DATA / "processed"
 WEB_DATA = ROOT / "web" / "public" / "data"
 
-PLUTO_PATH = Path(
-    os.environ.get(
-        "PLANARENA_PLUTO",
-        Path.home() / "Desktop/PIMALUOS/data/manhattan/pluto_manhattan.geojson",
-    )
-)
+# Manhattan extract of the official MapPLUTO 25v3.1 release (python -I -m planarena.twin.fetch).
+PLUTO_PATH = Path(os.environ.get("PLANARENA_PLUTO", DATA / "raw" / "pluto_25v3_1" / "mn_mappluto_25v3_1.gpkg"))
 CITY_NAME = os.environ.get("PLANARENA_CITY", "Manhattan, New York City")
 
 PROJECTED_CRS = "EPSG:2263"  # NY State Plane Long Island, US feet

@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
@@ -198,6 +199,8 @@ def build(out_dir=PROCESSED, web_dir=WEB_DATA, pluto_path=PLUTO_PATH, web: bool 
         "source": f"NYC DCP MapPLUTO {g['Version'].iloc[0]}",
         "source_path": str(pluto_path),
         "source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change",
+        "source_archive": (json.loads((Path(pluto_path).parent / "SOURCE.json").read_text())
+                           if (Path(pluto_path).parent / "SOURCE.json").exists() else None),
         "source_sha256": h.hexdigest(),
         "data_quality": quality,
         "n_parcels": int(len(df)),

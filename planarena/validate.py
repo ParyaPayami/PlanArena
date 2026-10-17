@@ -26,12 +26,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from planarena.config import DATA, PROCESSED, ROOT, USE_INDEX, USE_KEYS
+from planarena.config import DATA, PLUTO_PATH, PROCESSED, ROOT, USE_INDEX, USE_KEYS
 
 RAW = DATA / "raw"
 P15 = DATA / "processed_15v1"
 OUT = ROOT / "results" / "validation"
-PLUTO_CUR = Path("/Users/ppayami/Desktop/PIMALUOS/data/manhattan/pluto_manhattan.geojson")
+PLUTO_CUR = PLUTO_PATH
 U = USE_INDEX
 N_USES = len(USE_KEYS)
 
