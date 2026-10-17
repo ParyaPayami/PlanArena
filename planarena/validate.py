@@ -879,6 +879,131 @@ def optimizer(n_areas: int = 20, budget: int = 2, seed: int = 0) -> dict:
     })
 
 
+# ----------------------------------------------------------------------------- 6b. district-scale benchmark (R7)
+def optimizer_benchmark(budget: int = 10, n_cand: int = 150, sa_evals: int = 400, seeds=(0, 1, 2)) -> dict:
+    """Heuristics on the same objective in every district: J = overall score - conversion penalty x changes,
+    GNN fit term off, fixed budget. Reports the best plan found by each method, runtime and exact evaluations."""
+    from planarena.indicators.engine import load_engine
+    from planarena.optimize.suggest import SuggestConfig, Suggester
+
+    e = load_engine()
+    sug = Suggester(e, None)
+    sug.per_use_values()
+    pen = SuggestConfig().conversion_penalty
+    rows = []
+    for cd in range(101, 113):
+        scope = f"cd:{cd}"
+        cfg = SuggestConfig(scope=scope, w_fit=0.0, rounds=3)
+        mask, eligible, allowed = sug.feasible(cfg, e.base_use)
+        cfg.max_change_share = budget / max(eligible.sum(), 1)
+        nev = [0]
+
+        def J(use):
+            nev[0] += 1
+            return e.evaluate(use, scope=scope)["overall"] - pen * int((use != e.base_use).sum())
+
+        # First-order gains, used to shortlist candidate moves for the exact-evaluation heuristics
+        ctx = sug._state(mask, e.base_use)
+        ag = sug._access_gain(e.base_use, ctx["state"], ctx["acc"], mask, sug.per_use_values())
+        g = sug._gain(sug._coefficients(ctx["base"], cfg.pillar_weights, None), sug.per_use_values(), e.base_use, ag)
+        g[~allowed] = -np.inf
+        g[~eligible] = -np.inf
+        g[np.arange(e.n), e.base_use] = -np.inf
+        flat = np.argsort(-g, axis=None)[:n_cand]
+        moves = [(int(i // g.shape[1]), int(i % g.shape[1])) for i in flat if np.isfinite(g.flat[i])]
+        # Surrogate optimum: with one budget and one choice per parcel, the best first-order plan is the top moves
+        # of distinct parcels (exact for the linear surrogate, not for the true objective).
+        sur, seen = e.base_use.copy(), set()
+        for p_, u_ in moves:
+            if p_ not in seen and len(seen) < budget:
+                sur[p_] = u_
+                seen.add(p_)
+        res = {"district": cd, "eligible": int(eligible.sum()), "moves_shortlisted": len(moves), "budget": budget}
+        t0 = time.time(); nev[0] = 0
+        res["surrogate_top_moves"] = {"J": J(sur), "s": round(time.time() - t0, 2), "evals": nev[0]}
+        for name, pol in (("first_order", 0), ("first_order_plus_exact_polish", 30)):
+            cfg.polish = pol
+            t0 = time.time()
+            r = sug.suggest(cfg)
+            res[name] = {"J": J(r["use"]), "s": round(time.time() - t0, 2), "changes": int(len(r["changed"]))}
+        cfg.polish = 0
+        # Greedy with exact evaluation over the shortlist
+        t0 = time.time(); nev[0] = 0
+        cur, curJ, used = e.base_use.copy(), J(e.base_use), set()
+        for _ in range(budget):
+            best = None
+            for p_, u_ in moves:
+                if p_ in used:
+                    continue
+                t = cur.copy(); t[p_] = u_
+                v = J(t)
+                if best is None or v > best[0]:
+                    best = (v, p_, u_)
+            if best is None or best[0] <= curJ:
+                break
+            curJ, cur[best[1]] = best[0], best[2]
+            used.add(best[1])
+        res["greedy_exact"] = {"J": curJ, "s": round(time.time() - t0, 2), "evals": nev[0]}
+        # Simulated annealing over subsets of the shortlist (exact evaluations), several seeds
+        sa = []
+        for sd in seeds:
+            rng = np.random.default_rng(sd)
+            t0 = time.time(); nev[0] = 0
+            plan = {}
+            curJ = J(e.base_use)
+            bestJ = curJ
+            T0 = 0.05
+            for k in range(sa_evals):
+                prop = dict(plan)
+                p_, u_ = moves[rng.integers(len(moves))]
+                if p_ in prop and rng.random() < 0.5:
+                    prop.pop(p_)
+                elif len(prop) < budget or p_ in prop:
+                    prop[p_] = u_
+                else:
+                    prop.pop(list(prop)[rng.integers(len(prop))]); prop[p_] = u_
+                t = e.base_use.copy()
+                for a, b in prop.items():
+                    t[a] = b
+                v = J(t)
+                T = T0 * (1 - k / sa_evals) + 1e-6
+                if v >= curJ or rng.random() < np.exp((v - curJ) / T):
+                    plan, curJ = prop, v
+                    bestJ = max(bestJ, v)
+            sa.append({"J": bestJ, "s": round(time.time() - t0, 2), "evals": nev[0]})
+        res["simulated_annealing"] = {"J_mean": float(np.mean([x["J"] for x in sa])), "J_sd": float(np.std([x["J"] for x in sa])),
+                                      "s_mean": round(float(np.mean([x["s"] for x in sa])), 2), "evals": sa_evals, "seeds": len(seeds)}
+        # Random restarts: best of N random feasible plans from the shortlist
+        rng = np.random.default_rng(0)
+        t0 = time.time(); nev[0] = 0
+        bestJ = -np.inf
+        for _ in range(50):
+            t = e.base_use.copy()
+            pick = rng.permutation(len(moves))
+            used = set()
+            for idx in pick:
+                p_, u_ = moves[idx]
+                if p_ not in used and len(used) < budget:
+                    t[p_] = u_; used.add(p_)
+            bestJ = max(bestJ, J(t))
+        res["random_restarts_50"] = {"J": bestJ, "s": round(time.time() - t0, 2), "evals": nev[0]}
+        rows.append(res)
+        print(cd, {k: (v.get("J", v.get("J_mean")) if isinstance(v, dict) else v) for k, v in res.items() if isinstance(v, dict)}, flush=True)
+    methods = ["surrogate_top_moves", "first_order", "first_order_plus_exact_polish", "greedy_exact", "simulated_annealing", "random_restarts_50"]
+    val = lambda r, m: r[m].get("J", r[m].get("J_mean"))
+    summary = {}
+    for m in methods:
+        rel = [val(r, m) / max(val(r, mm) for mm in methods) if max(val(r, mm) for mm in methods) > 0 else 1.0 for r in rows]
+        summary[m] = {"median_share_of_best_found": round(float(np.median(rel)), 3),
+                      "districts_where_best": int(sum(abs(val(r, m) - max(val(r, mm) for mm in methods)) < 1e-9 for r in rows)),
+                      "median_seconds": round(float(np.median([r[m].get("s", r[m].get("s_mean")) for r in rows])), 2)}
+    return _save("optimizer_benchmark", {
+        "test": f"Every district, budget {budget} changes, objective = overall score - conversion penalty x changes (GNN term "
+                f"off). Exact-evaluation heuristics search the {n_cand} best first-order moves. No method guarantees a global "
+                "optimum; 'share of best found' compares each method with the best plan any method found.",
+        "summary": summary, "districts": rows})
+
+
 # ----------------------------------------------------------------------------- report
 def report() -> str:
     """Docs are generated by planarena.report from the result files."""
@@ -888,7 +1013,7 @@ def report() -> str:
     return "docs written"
 
 
-STEPS = {"delta_forms": delta_forms, "changes": changes, "emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
+STEPS = {"delta_forms": delta_forms, "changes": changes, "optimizer_benchmark": optimizer_benchmark, "emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
          "soho_noho": soho_noho, "rezonings": rezonings,
          "backtest_lgbm": backtest_lgbm, "backtest_eval": backtest_eval, "units": units,
          "east_harlem": east_harlem, "optimizer": optimizer, "report": report}

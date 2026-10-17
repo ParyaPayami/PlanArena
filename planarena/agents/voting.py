@@ -342,7 +342,7 @@ def robustness(evaluations, stakeholders, seats: np.ndarray, samples: int = 200,
 
 
 # ----------------------------------------------------------------------------- residents' referendum
-def resident_electorate(engine, uses: list[np.ndarray], mask: np.ndarray, weights: dict):
+def resident_electorate(engine, uses: list[np.ndarray], mask: np.ndarray, weights: dict, jnd: float = None):
     """Utility of each precinct (tax block) for each plan. Voters are today's residents."""
     e = engine
     base_st = e.baseline_state
@@ -365,7 +365,10 @@ def resident_electorate(engine, uses: list[np.ndarray], mask: np.ndarray, weight
         homes = np.clip(100 * (float(st["homes"][mask].sum()) - homes_base) / homes_base, -100, 100)
         L[a] = u
         U[a] = u + weights.get("homes", 0.0) * homes
-    return np.round(U / JND) * JND, Wp, ids, np.round(L / JND) * JND
+    j = JND if jnd is None else jnd
+    if j <= 0:
+        return U, Wp, ids, L
+    return np.round(U / j) * j, Wp, ids, np.round(L / j) * j
 
 
 # ----------------------------------------------------------------------------- parcel-by-parcel ballot
@@ -663,3 +666,102 @@ def vote_all_districts(samples: int = 200, out=None) -> dict:
 if __name__ == "__main__":
     s = vote_all_districts()
     print({k: v for k, v in s.items() if k != "by_district"})
+
+
+# ----------------------------------------------------------------------------- sensitivity of the simulated scenario (R6)
+def sensitivity(sug: Suggester, stakeholders, scope: str, draws: int = 200, n_random: int = 10, seed: int = 0) -> dict:
+    """How much the simulated outcome depends on its assumptions, in one district.
+
+    1. utility weights: each stakeholder's indicator weights drawn from a Dirichlet centred on the assumed weights
+    2. candidate generation: random feasible plans (not built from the stakeholder utilities) added to the ballot
+    3. residents' indifference threshold (JND) swept
+    4. seat allocations: equal seats, then each stakeholder with three seats
+    """
+    rng = np.random.default_rng(seed)
+    base = hold_vote(sug, stakeholders, scope=scope, samples=0, residents=True)
+    plans, ids = base["plans"], [p.id for p in base["plans"]]
+    W0 = base["decision"]["plan"]
+    evals = [p.evaluation for p in plans]
+    keys, d, lo, hi, b, direction, share = _score_table(evals)
+    S = _scores(d, b, direction, share)
+    sv = np.ones(len(stakeholders))
+    out = {"scope": scope, "winner": W0, "candidates": len(ids)}
+    # 1. utility weights
+    Wst = np.array([[s.normalized()[k] for s in stakeholders] for k in keys])
+    same = 0
+    for _ in range(draws):
+        Wp = np.stack([rng.dirichlet(Wst[:, j] * 20 + 0.05) for j in range(len(stakeholders))], axis=1)
+        same += ids[_winner("schulze", S @ Wp, sv)] == W0
+    out["winner_unchanged_under_weight_draws"] = round(same / draws, 3)
+    # 2. independent candidates: random feasible plans with the same change budget
+    e = sug.e
+    cfg = SuggestConfig(scope=scope)
+    _, eligible, allowed = sug.feasible(cfg, e.base_use)
+    el = np.nonzero(eligible)[0]
+    budget = max(1, int(cfg.max_change_share * len(el)))
+    rand_plans = []
+    for k in range(n_random):
+        use = e.base_use.copy()
+        for p_ in rng.choice(el, size=min(budget, len(el)), replace=False):
+            opts = np.nonzero(allowed[p_])[0]
+            opts = opts[opts != use[p_]]
+            if len(opts):
+                use[p_] = rng.choice(opts)
+        rand_plans.append(Plan(f"random-{k}", f"Random plan {k + 1}", "random", use, e.evaluate(use, scope=scope)))
+    allp = plans + rand_plans
+    Ua = utility_matrix(stakeholders, [p.evaluation for p in allp])
+    win_all = [p.id for p in allp][_winner("schulze", Ua, sv)]
+    P = pairwise(Ua, sv)
+    wi = [p.id for p in allp].index(W0)
+    out["random_candidates"] = n_random
+    out["winner_with_random_candidates"] = win_all
+    out["winner_unchanged_with_random_candidates"] = bool(win_all == W0)
+    out["winner_beats_every_random_plan"] = bool(all(P[wi, len(plans) + k] > P[len(plans) + k, wi] for k in range(n_random)))
+    # 3. residents' indifference threshold
+    weights = next((s_.normalized() for s_ in stakeholders if s_.key == "residents"), None)
+    mask = e.scope_mask(e.base_use, scope)
+    jres = {}
+    for j in (0.0, 0.005, 0.01, 0.05, 0.1):
+        UR, WR, _, _ = resident_electorate(e, [p.use for p in plans], mask, weights, jnd=j)
+        jres[str(j)] = ids[_winner("schulze", UR, WR)] if len(WR) else None
+    out["residents_winner_by_jnd"] = jres
+    out["residents_winner_stable_across_jnd"] = len(set(jres.values())) == 1
+    # 4. seat allocations
+    seat_res = {"equal": W0}
+    for j, s_ in enumerate(stakeholders):
+        w = np.ones(len(stakeholders))
+        w[j] = 3
+        seat_res[f"{s_.key} x3"] = ids[_winner("schulze", utility_matrix(stakeholders, evals), w)]
+    out["winner_by_seats"] = seat_res
+    out["share_of_seat_allocations_with_same_winner"] = round(sum(v == W0 for v in seat_res.values()) / len(seat_res), 3)
+    return out
+
+
+def sensitivity_all_districts(out=None) -> dict:
+    import json
+
+    from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
+    from planarena.config import PROCESSED, ROOT
+    from planarena.indicators.engine import load_engine
+    from planarena.models.gnn import attach_value_model
+
+    e = load_engine()
+    attach_value_model(e)
+    suit = np.load(PROCESSED / "suitability.npy") if (PROCESSED / "suitability.npy").exists() else None
+    sug = Suggester(e, suit)
+    rows = []
+    for cd in range(101, 113):
+        r = sensitivity(sug, DEFAULT_STAKEHOLDERS, f"cd:{cd}")
+        rows.append(r)
+        print(cd, {k: v for k, v in r.items() if not isinstance(v, dict)}, flush=True)
+    summary = {
+        "median_winner_unchanged_under_weight_draws": float(np.median([r["winner_unchanged_under_weight_draws"] for r in rows])),
+        "districts_winner_unchanged_with_random_candidates": int(sum(r["winner_unchanged_with_random_candidates"] for r in rows)),
+        "districts_winner_beats_every_random_plan": int(sum(r["winner_beats_every_random_plan"] for r in rows)),
+        "districts_residents_winner_stable_across_jnd": int(sum(r["residents_winner_stable_across_jnd"] for r in rows)),
+        "median_share_of_seat_allocations_with_same_winner": float(np.median([r["share_of_seat_allocations_with_same_winner"] for r in rows])),
+        "districts": len(rows)}
+    res = {"test": sensitivity.__doc__.strip(), "summary": summary, "by_district": rows}
+    path = out or ROOT / "results" / "validation" / "vote_sensitivity.json"
+    path.write_text(json.dumps(res, indent=2, default=str))
+    return res

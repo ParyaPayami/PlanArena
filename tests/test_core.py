@@ -281,3 +281,16 @@ def test_hybrid_density_change_keeps_the_parcels_own_mix(engine):
     base = engine.baseline_state
     assert abs(st["jobs"][i] - 2 * base["jobs"][i]) < 1e-6 * max(1.0, base["jobs"][i])
     assert abs(st["fa_total"][i] - 2 * engine.bldg[i]) < 1e-6 * engine.bldg[i]
+
+
+def test_precedent_table_only_uses_earlier_periods():
+    """R5: precedents for a decision year never include later conversions."""
+    from planarena.models import history, transition
+
+    if not all((history.snapshot_dir(y) / "parcels.parquet").exists() for y in history.RELEASES):
+        pytest.skip("annual snapshots not built (python -I -m planarena.models.history)")
+    early = transition.precedent(as_of=2018, write=False)
+    late = transition.precedent(as_of=2025, write=False)
+    assert all(int(p.split("->")[1]) <= 2018 for p in early["pairs"])
+    assert (np.array(early["counts"]) <= np.array(late["counts"])).all()
+    assert early["total_changes"] < late["total_changes"]

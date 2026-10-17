@@ -379,23 +379,29 @@ def size_class(bldg_area: np.ndarray) -> np.ndarray:
     return np.where(bldg_area <= 0, 0, 1 + np.searchsorted(SIZE_BINS[1:], bldg_area, side="right"))
 
 
-def precedent() -> dict:
-    """Observed land-use changes in Manhattan, 2015-2020 and 2020-2025, by existing building size class.
-
-    Used as an empirical plausibility test for conversions of existing buildings (see planarena/indicators/engine.py).
-    Counts include some PLUTO reclassifications, so the test is permissive: it flags only conversions never seen.
+def precedent(as_of: int = 2025, write: bool = True) -> dict:
+    """Observed land-use changes in Manhattan between consecutive annual snapshots that ended by ``as_of``, by
+    existing building size class. Date-aware, so an evaluation at decision year t can use precedent(as_of=t) and never
+    sees later conversions. Counts include some PLUTO reclassifications, so the test is permissive: it flags only
+    conversions never seen. Requires the annual snapshots (python -I -m planarena.models.history).
     """
+    from planarena.models.history import RELEASES, snapshot_dir
+    from planarena.models.rolling import _y
+
+    years = sorted(y for y in RELEASES if y <= as_of)
+    pairs = [(a, b) for a, b in zip(years, years[1:])]
     counts = np.zeros((N_USES, N_USES, len(SIZE_LABELS)), int)
-    for name in PERIODS:
-        y = pd.read_parquet(WORK / f"y_{name}.parquet")
-        p = pd.read_parquet(PERIODS[name][0] / "parcels.parquet")
+    for y0, y1 in pairs:
+        y = _y(y0, y1)
+        p = pd.read_parquet(snapshot_dir(y0) / "parcels.parquet")
         m = (y.matched & (y.use0 >= 0) & (y.dest >= 0) & (y.use0 != y.dest)).to_numpy()
         np.add.at(counts, (y.use0.to_numpy()[m], y.dest.to_numpy()[m], size_class(p.bldg_area.to_numpy()[m])), 1)
-    out = {"source": "MapPLUTO 15v1 -> 20v8 -> 25v3.1, Manhattan, lots matched by geometry; any recorded use change",
-           "uses": list(USE_KEYS), "size_labels": SIZE_LABELS, "size_bins_sqft": SIZE_BINS,
-           "counts": counts.tolist(), "total_changes": int(counts.sum())}
-    (PROCESSED / "conversion_precedent.json").write_text(json.dumps(out))
-    return {"total_changes": out["total_changes"]}
+    out = {"source": "Consecutive annual MapPLUTO snapshots, Manhattan, lots matched by geometry; any recorded use change",
+           "as_of": as_of, "pairs": [f"{a}->{b}" for a, b in pairs], "uses": list(USE_KEYS), "size_labels": SIZE_LABELS,
+           "size_bins_sqft": SIZE_BINS, "counts": counts.tolist(), "total_changes": int(counts.sum())}
+    if write:
+        (PROCESSED / "conversion_precedent.json").write_text(json.dumps(out))
+    return out
 
 
 if __name__ == "__main__":
@@ -406,7 +412,7 @@ if __name__ == "__main__":
             subprocess.run(py + [s], check=True, cwd=ROOT)
         print(json.dumps(evaluate(), indent=1)[:3000])
         print(deploy())
-        print(precedent())
+        print({k: v for k, v in precedent().items() if k != "counts"})
     else:
-        {"prepare": prepare, "lgbm": fit_lgbm, "gnn": fit_gnn, "precedent": lambda: print(precedent()),
+        {"prepare": prepare, "lgbm": fit_lgbm, "gnn": fit_gnn, "precedent": lambda: print({k: v for k, v in precedent().items() if k != "counts"}),
          "eval": lambda: print(json.dumps(evaluate(), indent=1)), "deploy": lambda: print(deploy())}[step]()

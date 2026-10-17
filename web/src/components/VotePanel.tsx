@@ -188,13 +188,14 @@ export default function VotePanel() {
               </tbody>
             </table>
             <button className="mt" onClick={async () => setPoa(await api.priceOfAnarchy(area))}>
-              Price of anarchy
+              Cost of fragmented control
             </button>
             {poa && (
               <div className="poa">
                 If each stakeholder controlled its own parcels and acted alone, total welfare would be{" "}
                 <b>{poa.welfare_fragmented.toFixed(1)}</b>, against <b>{poa.welfare_cooperative.toFixed(1)}</b> when planned
-                together. <b>Price of anarchy: {poa.price_of_anarchy ? poa.price_of_anarchy.toFixed(2) : "n/a"}</b>.
+                together. <b>Cost of fragmented control (heuristic): {poa.price_of_anarchy ? poa.price_of_anarchy.toFixed(2) : "n/a"}</b>. Both
+                plans come from the same heuristic search; this is not a formal price of anarchy (see Methods).
               </div>
             )}
           </div>
