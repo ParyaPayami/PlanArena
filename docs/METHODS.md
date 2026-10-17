@@ -210,3 +210,16 @@ Zoning codes are kept but not interpreted (all uses allowed; context FAR). Distr
 **Land-use model for Tier A** (`planarena/cities/landuse_model.py`). LightGBM on the national features of each built pseudo-lot (`lot_features.parquet`), trained on the Tier B cities and tested on a held-out Tier B city, next to the rules on the same lots. It replaces the rules only if it beats them in every held-out city; the variants tried are listed in the result file.
 
 **Map data for large cities.** Above 100,000 parcels, the web app loads compact parcel points (use, district, position, size) instead of one GeoJSON file. Parcel polygons come as Mapbox vector tiles at zooms 13–15, cut from the twin's own geometry and cached on disk. Selection tools work on the points, so they behave the same in both modes.
+
+## 10. Integration value (retrospective, no human participants)
+
+`planarena/models/replay.py` asks whether combining the impact engine with redevelopment likelihood gives projections closer to what was built than capacity alone. For each Manhattan rezoning:
+- **Sites:** the development-site screen (`rwcds.py`) under the adopted maximum FAR, on the adoption-year snapshot.
+- **Homes added per site:** the engine, at the build-out utilisation.
+- **Capacity projection:** the sum over sites; also pro-rated linearly to 2025 from the review's build year.
+- **Likelihood-weighted projection:** the sum of homes added × the site's probability of redevelopment by 2025.
+  - The probability comes from the redevelopment model trained only on snapshot pairs whose outcome was known by the adoption year.
+  - It is scored with the adopted zoning in the features.
+  - It uses the longest available horizon, extended to 2025 with a constant hazard.
+  - Its range is the 2.5th–97.5th percentile of 20,000 draws, with each site redeveloping independently.
+- **Observed:** homes recorded in 2025 on each site's land, minus those before; and the redevelopment label.

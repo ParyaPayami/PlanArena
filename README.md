@@ -164,6 +164,7 @@ Models are in D and the optimizer in E.
 | A | Jobs rates tested forward (fit 2015, test 2023), block median error | fitted rates 46%; CBECS 45%; flat rate 48% |
 | D | Redevelopment, rolling origin (15 tests, 1-, 3- and 5-year horizons) | AUC 0.847–0.952; above the best simple baseline in every test |
 | D | Labels vs DOB certificates of occupancy (2020→2025) | 55% of labelled lots have a certificate (a lower bound); labels are noisy |
+| C | Homes built by 2025 on the development sites of three rezonings (561) | likelihood-weighted projection 585; capacity 8,423 (pro-rated 5,207); three cases only |
 | D | Redevelopment model moved between cities (new buildings, 3 years) | Milwaukee: trained on Manhattan AUC 0.951 vs own city 0.946; Manhattan: trained on Milwaukee 0.774 vs own city 0.903 (best baseline 0.857) |
 | E | Optimizer vs exhaustive search (15 single-block areas, up to 2 changes) | optimum found in 93% with exact re-scoring; small cases only |
 <!-- END GENERATED: key_results -->

@@ -118,6 +118,34 @@ def _crosscity() -> list[str]:
     return L
 
 
+def _integration() -> list[str]:
+    ir = load("integration_replay")
+    if not ir:
+        return []
+    L = ["Does weighting each development site by its probability of redevelopment bring a rezoning's projected homes "
+         "closer to what was built than capacity-based analysis? Sites come from PlanArena's development-site screen "
+         "under the adopted FAR; probabilities come from the redevelopment model trained only on outcomes known by the "
+         "adoption year, scored with the adopted zoning (`planarena/models/replay.py`).", "",
+         "| Rezoning | Sites | Built by 2025 (homes on the sites) | Capacity | Capacity pro-rated to 2025 | Likelihood-weighted (model 95% range) | Sites redeveloped: observed / expected |",
+         "|---|---:|---:|---:|---:|---:|---:|"]
+    for n, r in ir["rezonings"].items():
+        a, s = r["homes_added_by_2025"], r["sites_redeveloped_by_2025"]
+        lo, hi = a["likelihood_weighted_95pct"]
+        L.append(f"| {n} | {r['sites']} | {num(a['observed'])} | {num(a['capacity'])} | {num(a['capacity_prorated_to_2025'])} | "
+                 f"{num(a['likelihood_weighted'])} ({num(lo)} to {num(hi)}) | {s['observed']} / {s['expected_from_probabilities']} |")
+    t = ir["total_three_rezonings"]
+    L.append(f"| **All three** | | {num(t['observed'])} | {num(t['capacity'])} | {num(t['capacity_prorated_to_2025'])} | {num(t['likelihood_weighted'])} | |")
+    inside = sum(ir["observed_within_model_interval"].values())
+    L += ["", f"Observed homes fall inside the model's 95% range in {inside} of {len(ir['rezonings'])} rezonings.", "",
+          "Model used for each rezoning (training pairs known by the adoption year; extended to 2025 with a constant hazard): "
+          + "; ".join(f"{n}: {r['model']['horizon_years']}-year model on {', '.join(r['model']['training_pairs'])}, "
+                      f"mean site probability {r['mean_probability_adopted_vs_prior_zoning'][0]:.3f} with the adopted zoning vs "
+                      f"{r['mean_probability_adopted_vs_prior_zoning'][1]:.3f} before"
+                      for n, r in ir["rezonings"].items()) + ".", ""]
+    L += [f"- {c}" for c in ir["caveats"]]
+    return L
+
+
 def _tiers() -> list[str]:
     """Tier A (national open data) scored against Tier B parcel records in the same city."""
     rows = []
@@ -385,6 +413,8 @@ def render_validation() -> str:
               f"| One stakeholder given three seats (each in turn) | same winner in a median {pct(x['median_share_of_seat_allocations_with_same_winner'])} of seat allocations |", ""]
     if _tiers():
         L += ["## G. Any US city: Tier A against Tier B", ""] + _tiers() + [""]
+    if _integration():
+        L += ["## H. Integration value: likelihood-weighted vs capacity-based projections", ""] + _integration() + [""]
     return "\n".join(L).rstrip() + "\n"
 
 
@@ -463,6 +493,12 @@ def readme_blocks() -> dict[str, str]:
         la = ro.get("label_audit", {}).get("2020->2025")
         if la:
             rows.append(f"| D | Labels vs DOB certificates of occupancy (2020→2025) | {pct(la['precision_vs_new_building_or_alteration_certificate'])} of labelled lots have a certificate (a lower bound); labels are noisy |")
+    ir = load("integration_replay")
+    if ir:
+        t3 = ir["total_three_rezonings"]
+        rows.append(f"| C | Homes built by 2025 on the development sites of three rezonings ({num(t3['observed'])}) | "
+                    f"likelihood-weighted projection {num(t3['likelihood_weighted'])}; capacity {num(t3['capacity'])} "
+                    f"(pro-rated {num(t3['capacity_prorated_to_2025'])}); three cases only |")
     cc = load("crosscity_redevelopment")
     if cc:
         mk, mh = cc["tests"]["milwaukee"]["models"], cc["tests"]["manhattan"]["models"]

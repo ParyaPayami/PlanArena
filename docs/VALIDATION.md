@@ -285,3 +285,22 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 
 Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities.
 A land-use model trained on the other Tier B cities and tested on each held-out one beat the rules in every held-out city, so Tier A uses the model (3 model variants tried; `results/validation/landuse_model.json`).
+
+## H. Integration value: likelihood-weighted vs capacity-based projections
+
+Does weighting each development site by its probability of redevelopment bring a rezoning's projected homes closer to what was built than capacity-based analysis? Sites come from PlanArena's development-site screen under the adopted FAR; probabilities come from the redevelopment model trained only on outcomes known by the adoption year, scored with the adopted zoning (`planarena/models/replay.py`).
+
+| Rezoning | Sites | Built by 2025 (homes on the sites) | Capacity | Capacity pro-rated to 2025 | Likelihood-weighted (model 95% range) | Sites redeveloped: observed / expected |
+|---|---:|---:|---:|---:|---:|---:|
+| East Harlem (2017) | 127 | 288 | 4,117 | 3,294 | 234 (79 to 489) | 7 / 13.3 |
+| Inwood (2018) | 47 | 270 | 2,859 | 1,334 | 213 (0 to 652) | 2 / 2.4 |
+| SoHo/NoHo (2021) | 77 | 3 | 1,447 | 579 | 138 (8 to 304) | 1 / 4.1 |
+| **All three** | | 561 | 8,423 | 5,207 | 585 | |
+
+Observed homes fall inside the model's 95% range in 2 of 3 rezonings.
+
+Model used for each rezoning (training pairs known by the adoption year; extended to 2025 with a constant hazard): East Harlem (2017): 1-year model on 2015->2016, 2016->2017, mean site probability 0.018 with the adopted zoning vs 0.012 before; Inwood (2018): 3-year model on 2015->2018, mean site probability 0.022 with the adopted zoning vs 0.006 before; SoHo/NoHo (2021): 3-year model on 2015->2018, 2016->2019, 2017->2020, 2018->2021, mean site probability 0.041 with the adopted zoning vs 0.028 before.
+
+- Three rezonings; few sites were redeveloped by 2025, so site-level rankings are not informative where fewer than five were.
+- Capacity projections describe full build-out by the review's build year; the comparison is with what was built by 2025, which is the near-term question.
+- Homes are counted from MapPLUTO units on each site's land; Mandatory Inclusionary Housing bonus floor area is not modelled.
