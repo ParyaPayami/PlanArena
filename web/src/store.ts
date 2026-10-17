@@ -9,6 +9,9 @@ export interface CityData {
   lon: Float32Array;
   lat: Float32Array;
   cd: Int16Array;
+  /** Large city: polygons come from vector tiles; features is empty and radius sizes the zoomed-out points. */
+  tiled?: boolean;
+  radius?: Float32Array;
 }
 
 export type Tab = "impact" | "ai" | "agents" | "studies" | "desk" | "data";
@@ -256,8 +259,24 @@ export function startAutoEvaluate() {
   if (s.data) scheduleEvaluate();
 }
 
-export async function loadCity(url = "/data/parcels.geojson", onProgress?: (p: number) => void) {
-  const [meta, geo] = await Promise.all([api.meta(), fetchWithProgress(url, onProgress)]);
+export async function loadCity(url = "/data/parcels.geojson", onProgress?: (p: number) => void, allowTiles = false) {
+  const meta = await api.meta();
+  if (allowTiles && meta.map === "tiles") {
+    // Large city: parcel points now, polygons from vector tiles as the map asks for them.
+    const buf = await api.points();
+    const n = meta.n_parcels;
+    onProgress?.(1);
+    return {
+      meta,
+      data: {
+        features: [], n, tiled: true,
+        baseUse: new Int16Array(buf.slice(0, 2 * n)), cd: new Int16Array(buf.slice(2 * n, 4 * n)),
+        lon: new Float32Array(buf.slice(4 * n, 8 * n)), lat: new Float32Array(buf.slice(8 * n, 12 * n)),
+        radius: new Float32Array(buf.slice(12 * n, 16 * n)),
+      } as CityData,
+    };
+  }
+  const geo = await fetchWithProgress(url, onProgress);
   const features = (geo as GeoJSON.FeatureCollection).features;
   const n = meta.n_parcels;
   const baseUse = new Int16Array(n).fill(-1);

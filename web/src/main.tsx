@@ -14,7 +14,7 @@ function Boot() {
   const ready = useStore((s) => !!s.data);
   useEffect(() => {
     if (isPlay) return;
-    loadCity(cityDataUrl("parcels.geojson"), setProgress)
+    loadCity(cityDataUrl("parcels.geojson"), setProgress, true)
       .then(({ meta, data }) => {
         useStore.getState().init(meta, data);
         startAutoEvaluate();

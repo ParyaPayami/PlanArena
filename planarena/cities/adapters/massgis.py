@@ -25,7 +25,7 @@ import pandas as pd
 import pyogrio
 import shapely
 
-from planarena.cities.common import finish_twin
+from planarena.cities.common import finish_twin, reconcile_lot_area
 from planarena.cities.registry import city_dir, register
 from planarena.cities.tier_a import _districts, local_crs
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
@@ -178,7 +178,7 @@ def build(target: str) -> dict:
 
     use_a = p.use.map(U).fillna(-1).astype(int).to_numpy()
     fa = p.bldg_area.fillna(0).to_numpy()
-    lot = np.where(p.lot_acres.fillna(0) > 0, p.lot_acres.fillna(0) * 43560.0, p.geometry.area).astype(float)
+    lot, n_lot_fixed = reconcile_lot_area(p.lot_acres.fillna(0).to_numpy() * 43560.0, p.geometry.area.to_numpy())
     res_area = np.where(use_a == U["res"], fa, np.where(use_a == U["mix"], np.clip(p.res_area.fillna(0), 0, fa), 0.0))
     res_area = np.where((use_a == U["mix"]) & (res_area <= 0), 0.7 * fa, res_area)  # mixed without RES_AREA: assumption
     nonres = fa - res_area
@@ -222,7 +222,7 @@ def build(target: str) -> dict:
         "data_quality": {"missing_land_use": int((df.use < 0).sum()), "assessment_records": int(len(a)),
                          "condo_parcels": int((p.n_records.fillna(0) > 1).sum()),
                          "parcels_without_assessment": int(p.code.isna().sum()),
-                         "zero_building_area": int((df.bldg_area <= 0).sum()),
+                         "zero_building_area": int((df.bldg_area <= 0).sum()), "lot_area_from_polygon": n_lot_fixed,
                          "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
         "columns": {"lot boundaries": "observed (assessors' parcels)", "floor area": "observed (BLD_AREA)",
                     "land use": "observed (DOR use code)", "homes": "observed (UNITS on residential and mixed records)",

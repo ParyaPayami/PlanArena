@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import shapely
 
-from planarena.cities.common import finish_twin
+from planarena.cities.common import finish_twin, reconcile_lot_area
 from planarena.cities.registry import city_dir, register
 from planarena.cities.tier_a import local_crs
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
@@ -130,7 +130,7 @@ def build() -> dict:
 
     use_a = p.use.to_numpy()
     fa = p.bldg_area.to_numpy()
-    lot = np.where(p.lot_area > 0, p.lot_area, p.geometry.area).astype(float)
+    lot, n_lot_fixed = reconcile_lot_area(p.lot_area.to_numpy().astype(float), p.geometry.area.to_numpy())
     res = np.isin(use_a, [U["res"]])
     mix = use_a == U["mix"]
     MIX_RES = 0.7  # assumption, as for Tier A: MPROP has no residential/commercial split
@@ -177,7 +177,7 @@ def build() -> dict:
         "source_url": "https://data.milwaukee.gov/dataset/mprop",
         "data_quality": {"missing_land_use": int((df.use < 0).sum()), "tax_keys": int(len(g)),
                          "condo_parcels": int((p.n_keys > 1).sum()), "zero_building_area": int((df.bldg_area <= 0).sum()),
-                         "lots_outside_census_blocks": int(miss.sum()), "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
+                         "lots_outside_census_blocks": int(miss.sum()), "lot_area_from_polygon": n_lot_fixed, "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
         "columns": {"lot boundaries": "observed (city parcels)", "floor area": "observed (MPROP BLDG_AREA)",
                     "land use": "observed (MPROP land-use group)",
                     "homes": "observed (MPROP NR_UNITS on residential and mixed parcels only)",

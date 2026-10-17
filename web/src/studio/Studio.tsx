@@ -148,6 +148,7 @@ export default function Studio() {
       </aside>
       <main className="center">
         <CityMap
+          tileZoom={meta.tile_zoom}
           data={data}
           landUses={meta.land_uses}
           use={s.use}

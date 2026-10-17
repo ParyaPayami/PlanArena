@@ -50,3 +50,30 @@ def test_studies_stay_with_their_city(client):
     assert any(x["id"] == s["id"] for x in client.get("/api/scenarios", headers=h).json())
     assert not any(x["id"] == s["id"] for x in client.get("/api/scenarios").json())
     assert client.get(f"/api/scenarios/{s['id']}").status_code == 404
+
+
+TIER_B_MA = "2501711000"  # Cambridge, MA
+
+
+@pytest.mark.skipif(not registry.exists(TIER_B_MA), reason="Cambridge not built")
+def test_vector_tiles_and_points(client, tmp_path):
+    import math
+
+    import mapbox_vector_tile
+
+    from planarena.cities.tiles import TileSource
+
+    h = {"X-PlanArena-City": TIER_B_MA}
+    m = client.get("/api/meta", headers=h).json()
+    n = m["n_parcels"]
+    assert len(client.get("/api/points", headers=h).content) == 16 * n
+    src = TileSource(registry.city_dir(TIER_B_MA), tmp_path)
+    lon, lat = (m["bbox"][0] + m["bbox"][2]) / 2, (m["bbox"][1] + m["bbox"][3]) / 2
+    z = 14
+    x = int((lon + 180) / 360 * 2 ** z)
+    y = int((1 - math.log(math.tan(math.radians(lat)) + 1 / math.cos(math.radians(lat))) / math.pi) / 2 * 2 ** z)
+    t = mapbox_vector_tile.decode(src.tile(z, x, y))
+    feats = t["parcels"]["features"]
+    assert feats and all(0 <= f["properties"]["i"] < n for f in feats)
+    assert (tmp_path / str(z) / str(x) / f"{y}.pbf").exists()  # cached
+    assert client.get(f"/city-tiles/{TIER_B_MA}/3/0/0.pbf").status_code == 404  # outside the served zooms

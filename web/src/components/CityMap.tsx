@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DeckGL, { type DeckGLRef } from "@deck.gl/react";
-import { GeoJsonLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { MVTLayer } from "@deck.gl/geo-layers";
 import { FlyToInterpolator, LinearInterpolator, type MapViewState, type PickingInfo } from "@deck.gl/core";
 import Map from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { CITY } from "../api";
 import type { CityData, Highlight } from "../store";
 import type { LandUse } from "../types";
 
@@ -48,6 +50,7 @@ interface Props {
   onBox?: (idx: number[], additive: boolean) => void;
   onBlock?: (i: number, additive: boolean) => void;
   suggestionOverlay?: { top: number[]; p: number[] } | null;
+  tileZoom?: [number, number];
 }
 
 export default function CityMap(props: Props) {
@@ -90,7 +93,24 @@ export default function CityMap(props: Props) {
   const baseW = viewState.zoom >= 15 ? 0.35 : viewState.zoom >= 14 ? 0.2 : 0;
   const changedAt = (i: number) => use[i] !== base[i] || (far !== undefined && !Number.isNaN(far[i]));
 
-  const layer = new GeoJsonLayer({
+  const fillAt = (i: number): [number, number, number, number] => {
+    const pv = preview?.get(i);
+    if (pv !== undefined) {
+      const c = colors[pv];
+      return [c[0], c[1], c[2], 245];
+    }
+    if (props.suggestionOverlay) {
+      const a = Math.round(60 + 195 * props.suggestionOverlay.p[i]);
+      const t = colors[props.suggestionOverlay.top[i]];
+      return [t[0], t[1], t[2], a];
+    }
+    const u = use[i];
+    if (u < 0) return [90, 96, 110, 120];
+    const c = colors[u];
+    return [c[0], c[1], c[2], changedAt(i) ? 250 : preview || highlight ? 80 : 190];
+  };
+  const fillTriggers = [version, preview, props.suggestionOverlay, highlight?.key];
+  const polygonProps = {
     id: "parcels",
     data: features as unknown as GeoJSON.FeatureCollection["features"],
     pickable: true,
@@ -101,23 +121,7 @@ export default function CityMap(props: Props) {
     lineWidthUnits: "pixels",
     autoHighlight: true,
     highlightColor: [255, 255, 255, 70],
-    getFillColor: (f: GeoJSON.Feature) => {
-      const i = (f.properties as { i: number }).i;
-      const pv = preview?.get(i);
-      if (pv !== undefined) {
-        const c = colors[pv];
-        return [c[0], c[1], c[2], 245];
-      }
-      if (props.suggestionOverlay) {
-        const a = Math.round(60 + 195 * props.suggestionOverlay.p[i]);
-        const t = colors[props.suggestionOverlay.top[i]];
-        return [t[0], t[1], t[2], a];
-      }
-      const u = use[i];
-      if (u < 0) return [90, 96, 110, 120];
-      const c = colors[u];
-      return [c[0], c[1], c[2], changedAt(i) ? 250 : preview || highlight ? 80 : 190];
-    },
+    getFillColor: (f: GeoJSON.Feature) => fillAt((f.properties as { i: number }).i),
     getLineColor: (f: GeoJSON.Feature) => {
       const i = (f.properties as { i: number }).i;
       if (selected.has(i)) return [255, 255, 255, 255];
@@ -145,16 +149,46 @@ export default function CityMap(props: Props) {
     },
     material: { ambient: 0.35, diffuse: 0.55, shininess: 18, specularColor: [40, 44, 50] },
     updateTriggers: {
-      getFillColor: [version, preview, props.suggestionOverlay, highlight?.key],
+      getFillColor: fillTriggers,
       getLineColor: [version, selVersion, preview, highlight?.key],
       getLineWidth: [version, selVersion, preview, highlight?.key, selW, baseW],
       getElevation: [version, preview],
     },
     transitions: { getFillColor: 220, getElevation: 400 },
-  });
+    };
+  const tz = props.tileZoom ?? [13, 15];
+  const tilesOn = !!data.tiled && viewState.zoom >= tz[0] - 0.5;
+  const layers = data.tiled
+    ? [
+        new MVTLayer({
+          ...polygonProps,
+          id: "parcels",
+          data: `/city-tiles/${CITY}/{z}/{x}/{y}.pbf`,
+          minZoom: tz[0],
+          maxZoom: tz[1],
+          binary: false,
+          uniqueIdProperty: "i",
+          visible: tilesOn,
+        } as never),
+        new ScatterplotLayer({
+          id: "parcel-points",
+          data: { length: data.n },
+          visible: !tilesOn,
+          pickable: true,
+          radiusUnits: "meters",
+          radiusMinPixels: 0.8,
+          getPosition: (_: unknown, o: { index: number }) => [data.lon[o.index], data.lat[o.index]],
+          getRadius: (_: unknown, o: { index: number }) => data.radius![o.index],
+          getFillColor: (_: unknown, o: { index: number }) => fillAt(o.index),
+          updateTriggers: { getFillColor: fillTriggers },
+        }),
+      ]
+    : [new GeoJsonLayer({ ...polygonProps, id: "parcels", data: features as unknown as GeoJSON.FeatureCollection["features"] } as never)];
 
   const pickIndex = (info: PickingInfo) =>
-    info.object ? ((info.object as GeoJSON.Feature).properties as { i: number }).i : null;
+    info.layer?.id === "parcel-points"
+      ? info.index >= 0 ? info.index : null
+      : info.object ? ((info.object as GeoJSON.Feature).properties as { i: number }).i : null;
   const additiveOf = (ev: { srcEvent?: MouseEvent }) =>
     !!(ev.srcEvent && (ev.srcEvent.shiftKey || ev.srcEvent.metaKey || ev.srcEvent.ctrlKey));
 
@@ -171,9 +205,13 @@ export default function CityMap(props: Props) {
 
   const selectInBounds = (test: (x: number, y: number) => boolean, additive: boolean) => {
     const out: number[] = [];
-    for (const f of features) {
-      const i = (f.properties as { i: number }).i;
-      if (test(data.lon[i], data.lat[i])) out.push(i);
+    if (data.tiled) {
+      for (let i = 0; i < data.n; i++) if (test(data.lon[i], data.lat[i])) out.push(i);
+    } else {
+      for (const f of features) {
+        const i = (f.properties as { i: number }).i;
+        if (test(data.lon[i], data.lat[i])) out.push(i);
+      }
     }
     props.onBox?.(out, additive);
   };
@@ -188,7 +226,7 @@ export default function CityMap(props: Props) {
         viewState={viewState}
         onViewStateChange={({ viewState: v }) => setViewState(v as MapViewState)}
         controller={controller}
-        layers={[layer]}
+        layers={layers}
         onClick={onClick as never}
         onDragStart={(info: PickingInfo, ev: { deltaX?: number; deltaY?: number }) => {
           if (mode === "box" && info.coordinate) {
@@ -249,9 +287,9 @@ export default function CityMap(props: Props) {
         getCursor={({ isHovering }) =>
           mode === "paint" || mode === "box" || mode === "lasso" ? "crosshair" : isHovering ? "pointer" : "grab"
         }
-        getTooltip={({ object }) => {
-          if (!object || mode === "paint") return null;
-          const i = ((object as GeoJSON.Feature).properties as { i: number }).i;
+        getTooltip={(info: PickingInfo) => {
+          const i = pickIndex(info);
+          if (i === null || mode === "paint") return null;
           const u = use[i];
           const label = u >= 0 ? landUses[u].label : "Unclassified";
           const was = base[i] !== u && base[i] >= 0 ? ` (was ${landUses[base[i]].label})` : "";

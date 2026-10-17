@@ -16,6 +16,14 @@ from planarena.national import census, energy
 from planarena.twin.build import FLOOR_HEIGHT_M, _polygonal, add_grid, build_graph
 
 
+def reconcile_lot_area(recorded: np.ndarray, polygon: np.ndarray) -> tuple[np.ndarray, int]:
+    """Recorded lot area where it agrees with the parcel polygon within a factor of 3, else the polygon's area
+    (assessor files carry some lot areas that are off by orders of magnitude). Returns the areas and how many were
+    replaced."""
+    ok = (recorded > 0) & (recorded <= 3 * polygon) & (recorded >= polygon / 3)
+    return np.where(ok, recorded, polygon).astype(float), int((~ok).sum())
+
+
 def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: float, jobs_block: np.ndarray,
                 blk: np.ndarray, log, meta: dict, t0: float | None = None) -> dict:
     """Write a built city: parcels, geometry, graph, web layers, calibrated.yaml and twin_meta.json.

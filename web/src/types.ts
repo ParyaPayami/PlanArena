@@ -39,6 +39,8 @@ export interface Meta {
   tier: "A" | "B";
   columns?: Record<string, string>;
   missing_indicators: string[];
+  map: "tiles" | "geojson";
+  tile_zoom: [number, number];
   source: string;
   n_parcels: number;
   bbox: [number, number, number, number];

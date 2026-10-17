@@ -53,6 +53,11 @@ export interface BuildJob { geoid: string; label?: string; status: "running" | "
 
 export const api = {
   cities: () => get<CityEntry[]>("/api/cities"),
+  points: async () => {
+    const r = await fetch("/api/points", { headers: CITY_HEADER });
+    if (!r.ok) throw new Error(`/api/points: ${r.status}`);
+    return r.arrayBuffer();
+  },
   places: (q: string) => get<PlaceHit[]>(`/api/places?q=${encodeURIComponent(q)}`),
   buildCity: (geoid: string) => send<BuildJob>("POST", `/api/cities/${geoid}/build`),
   buildStatus: (geoid: string) => get<BuildJob>(`/api/cities/${geoid}/build`),

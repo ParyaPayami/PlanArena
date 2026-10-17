@@ -206,3 +206,5 @@ Zoning codes are kept but not interpreted (all uses allowed; context FAR). Distr
 - in Manhattan, building emissions against LL84.
 
 **Land-use model for Tier A** (`planarena/cities/landuse_model.py`). LightGBM on the national features of each built pseudo-lot (`lot_features.parquet`), trained on the Tier B cities and tested on a held-out Tier B city, next to the rules on the same lots. It replaces the rules only if it beats them in every held-out city; the variants tried are listed in the result file.
+
+**Map data for large cities.** Above 100,000 parcels, the web app loads compact parcel points (use, district, position, size) instead of one GeoJSON file. Parcel polygons come as Mapbox vector tiles at zooms 13–15, cut from the twin's own geometry and cached on disk. Selection tools work on the points, so they behave the same in both modes.

@@ -29,7 +29,7 @@ from planarena.agents.negotiation import Plan, generate_candidates, negotiate, p
 from planarena.agents.voting import hold_vote
 from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
 from planarena.api import planio, store
-from planarena.cities import registry
+from planarena.cities import registry, tiles
 from planarena.config import LAND_USES, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
 from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
 from planarena.optimize.pareto import pareto as run_pareto
@@ -294,6 +294,7 @@ def meta():
     base = e.evaluate(e.base_use, scope="city")
     return {
         "version": ENGINE_VERSION, "city": e.meta["city"], "city_id": r["city"], "tier": e.meta.get("tier", "B"),
+        "map": tiles.map_mode(e.n), "tile_zoom": [tiles.MIN_ZOOM, tiles.MAX_ZOOM],
         "columns": e.meta.get("columns"), "missing_indicators": e.meta.get("missing_indicators", []),
         "source": e.meta["source"],
         "source_sha256": e.meta.get("source_sha256"), "source_url": e.meta.get("source_url"),
@@ -816,6 +817,23 @@ def build_status(geoid: str):
     log = registry.city_dir(geoid) / "build.log"
     tail = log.read_text().strip().splitlines()[-1:] if log.exists() else []
     return job | {"step": tail[0] if tail else "starting", "elapsed": round(time.time() - job["started"])}
+
+
+@app.get("/api/points")
+def parcel_points():
+    """Compact parcel points of the current city (see planarena.cities.tiles.points)."""
+    return Response(tiles.points(runtime()["engine"]), media_type="application/octet-stream")
+
+
+@app.get("/city-tiles/{city}/{z}/{x}/{y}.pbf")
+def city_tile(city: str, z: int, x: int, y: int):
+    """Vector tile of a built city's parcels (zoom 13-15)."""
+    if not registry.exists(city):
+        raise HTTPException(404, "city not built")
+    if not (tiles.MIN_ZOOM <= z <= tiles.MAX_ZOOM) or not (0 <= x < 1 << z) or not (0 <= y < 1 << z):
+        raise HTTPException(404, "tile out of range")
+    return Response(tiles.tile(city, z, x, y), media_type="application/x-protobuf",
+                    headers={"Cache-Control": "max-age=3600"})
 
 
 @app.get("/city-data/{geoid}/{path:path}")
