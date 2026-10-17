@@ -315,10 +315,17 @@ def evaluate() -> dict:
     prior = prior.div(prior.sum(axis=1), axis=0)
     glob = np.bincount(ytr.dest.to_numpy()[tr_rows], minlength=N_USES) + 1.0
     Pz = np.stack([prior.loc[f].to_numpy() if f in prior.index else glob / glob.sum() for f in fam])
-    Psame = np.eye(N_USES)[np.clip(use0[dmask], 0, None)] + 1e-6
+    # Persistence baseline as a full ranking, built without test outcomes: the same use first, then the
+    # destinations observed in the training period for that use, then a seeded random tie-break.
+    T = np.zeros((N_USES, N_USES)) + 1e-3
+    np.add.at(T, (ytr.use0.to_numpy()[tr_rows], ytr.dest.to_numpy()[tr_rows]), 1.0)
+    T = T / T.sum(axis=1, keepdims=True)
+    u0d = np.clip(use0[dmask], 0, None)
+    Psame = 10.0 * np.eye(N_USES)[u0d] + T[u0d] + np.random.default_rng(SEED).uniform(0, 1e-9, (len(u0d), N_USES))
     cands = {"GNN": pg["q"][rows][dmask], "LightGBM": pl["q"][rows][dmask],
              "GNN + LightGBM (mean)": (pg["q"][rows][dmask] + pl["q"][rows][dmask]) / 2,
-             "Zoning-family prior (training period)": Pz, "Same use as before": Psame}
+             "Zoning-family prior (training period)": Pz,
+             "Same use, then training-period transitions": Psame}
     dst = {}
     chg = dest != use0[dmask]
     for k, Q in cands.items():

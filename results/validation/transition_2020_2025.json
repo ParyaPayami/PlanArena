@@ -77,9 +77,9 @@
       "top3": 0.867,
       "top1_when_use_changed": 0.334
     },
-    "Same use as before": {
+    "Same use, then training-period transitions": {
       "top1": 0.394,
-      "top3": 1.0,
+      "top3": 0.862,
       "top1_when_use_changed": 0.0
     }
   },
