@@ -36,7 +36,8 @@ Write notes anywhere and send them to me; screenshots help.
 ## Other cities
 
 12. Click the city name at the top left (next to the Tier badge). Open **Milwaukee, WI** (Tier B: the city's own parcel records) or **Wauwatosa, WI** (Tier A: estimated from national data). Paint a few parcels and check that the scoreboard reacts.
-13. In the same dialog, search for any US town (a small one builds in a few minutes) and click **Build twin**. Note how long it took, and whether the land-use map looks right to you for a place you know.
+13. In the same dialog, search for any US town (a small one builds in a few minutes) and click **Build twin**. Massachusetts and Florida places are built from their assessors' parcels (Tier B; try Cambridge, MA or Gainesville, FL); other places from national data (Tier A). Note how long it took, and whether the land-use map looks right to you for a place you know.
+14. In Milwaukee (a large city), zoom out: parcels become dots; zoom in: parcel shapes load piece by piece. Selecting and painting should work at both zooms.
 
 In a Tier A city, lots are estimated from buildings within census blocks, land use and floor area are inferred, and there is no zoning or assessed value. How far off that is, measured in Manhattan and Milwaukee, is in docs/VALIDATION.md, section G.
 
