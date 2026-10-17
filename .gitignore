@@ -11,3 +11,5 @@ results/train.log
 data/reference/
 data/*.sqlite3*
 .Rhistory
+data/raw/
+data/processed_*/

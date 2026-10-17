@@ -141,6 +141,7 @@ class SuggestRequest(Strict):
     allow_demolition: bool = False
     parcels: list[int] | None = None
     changes: dict[str, Change] = Field(default_factory=dict)
+    polish: int = Field(30, ge=0, le=200, description="exact re-scoring of the top-K moves (0 = first order only)")
 
 
 class NegotiateRequest(Strict):
@@ -335,7 +336,7 @@ def evaluate(req: EvalRequest):
 def _suggest_config(req: SuggestRequest) -> SuggestConfig:
     cfg = SuggestConfig(scope=req.scope, max_change_share=req.max_change_share,
                         respect_zoning=req.respect_zoning, allow_demolition=req.allow_demolition,
-                        candidate_parcels=np.array(req.parcels) if req.parcels else None)
+                        candidate_parcels=np.array(req.parcels) if req.parcels else None, polish=req.polish)
     if req.pillar_weights:
         cfg.pillar_weights = req.pillar_weights
     if req.mode == "consensus":

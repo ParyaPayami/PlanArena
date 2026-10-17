@@ -1,0 +1,24 @@
+{
+  "test": "Modelled baseline jobs (CBECS floorspace per worker, scaled to QCEW 2024) against LEHD LODES8 workplace jobs, 2023, Manhattan, by 2020 census block and tract",
+  "lodes_total_jobs": 2504522,
+  "modelled_total_jobs": 2480984,
+  "parcels_without_block": 0,
+  "source": "https://lehd.ces.census.gov/data/lodes/LODES8/ny/wac/ny_wac_S000_JT00_2023.csv.gz",
+  "source_sha256": "0274b2c3eabac9272c83674666e63d28690619a8111faf08531ecc54226d08c0",
+  "block": {
+    "units": 3390,
+    "log_log_r": 0.704,
+    "n_both_positive": 2841,
+    "spearman": 0.701,
+    "median_abs_pct_error_where_observed_ge_100": 0.551,
+    "share_of_observed_jobs_in_units_with_modelled_jobs": 0.971
+  },
+  "tract": {
+    "units": 310,
+    "log_log_r": 0.816,
+    "n_both_positive": 309,
+    "spearman": 0.819,
+    "median_abs_pct_error_where_observed_ge_100": 0.397,
+    "share_of_observed_jobs_in_units_with_modelled_jobs": 1.0
+  }
+}

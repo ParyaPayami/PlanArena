@@ -1,0 +1,177 @@
+{
+  "test": "Models trained on MapPLUTO 15v1 (2015) only. Each parcel is predicted while hidden. Outcome: land use in MapPLUTO 25v3.1 for parcels matched by BBL.",
+  "matched_parcels": 41020,
+  "changed": 2808,
+  "base_rate": 0.0685,
+  "change_detection": {
+    "gnn": {
+      "auc": 0.746,
+      "precision_top5pct": 0.24,
+      "lift_top5pct": 3.51
+    },
+    "lgbm": {
+      "auc": 0.688,
+      "precision_top5pct": 0.283,
+      "lift_top5pct": 4.13
+    },
+    "zoning": {
+      "auc": 0.76,
+      "precision_top5pct": 0.295,
+      "lift_top5pct": 4.32
+    },
+    "underbuilt (1 - built/max FAR)": {
+      "auc": 0.614,
+      "precision_top5pct": 0.228,
+      "lift_top5pct": 3.33
+    }
+  },
+  "destination_of_changed_parcels": {
+    "gnn": {
+      "top1": 0.514,
+      "top3": 0.833
+    },
+    "lgbm": {
+      "top1": 0.517,
+      "top3": 0.791
+    },
+    "zoning": {
+      "top1": 0.519,
+      "top3": 0.769
+    },
+    "chance": {
+      "top1": 0.125,
+      "top3": 0.375
+    }
+  },
+  "physical_change": {
+    "n": 773,
+    "base_rate": 0.0188,
+    "change_detection": {
+      "gnn": {
+        "auc": 0.707,
+        "precision_top5pct": 0.053,
+        "lift_top5pct": 2.79
+      },
+      "lgbm": {
+        "auc": 0.637,
+        "precision_top5pct": 0.077,
+        "lift_top5pct": 4.06
+      },
+      "zoning": {
+        "auc": 0.765,
+        "precision_top5pct": 0.103,
+        "lift_top5pct": 5.49
+      },
+      "underbuilt (1 - built/max FAR)": {
+        "auc": 0.78,
+        "precision_top5pct": 0.078,
+        "lift_top5pct": 4.17
+      }
+    },
+    "destination": {
+      "gnn": {
+        "top1": 0.285,
+        "top3": 0.505
+      },
+      "lgbm": {
+        "top1": 0.276,
+        "top3": 0.595
+      },
+      "zoning": {
+        "top1": 0.376,
+        "top3": 0.668
+      }
+    }
+  },
+  "transitions": {
+    "com": {
+      "com": 3824,
+      "ind": 10,
+      "mix": 266,
+      "prk": 5,
+      "pub": 31,
+      "res": 46,
+      "tra": 1,
+      "vac": 65
+    },
+    "ind": {
+      "com": 341,
+      "ind": 171,
+      "mix": 294,
+      "prk": 4,
+      "pub": 11,
+      "res": 20,
+      "vac": 14
+    },
+    "mix": {
+      "com": 124,
+      "ind": 4,
+      "mix": 10473,
+      "prk": 1,
+      "pub": 16,
+      "res": 162,
+      "tra": 1,
+      "vac": 62
+    },
+    "opn": {
+      "com": 2,
+      "opn": 342,
+      "pub": 5,
+      "res": 3,
+      "tra": 11,
+      "vac": 16
+    },
+    "prk": {
+      "com": 26,
+      "ind": 10,
+      "mix": 20,
+      "opn": 2,
+      "prk": 452,
+      "pub": 6,
+      "res": 23,
+      "tra": 10,
+      "vac": 15
+    },
+    "pub": {
+      "com": 26,
+      "ind": 1,
+      "mix": 21,
+      "opn": 3,
+      "prk": 2,
+      "pub": 2228,
+      "res": 35,
+      "vac": 32
+    },
+    "res": {
+      "com": 27,
+      "mix": 526,
+      "pub": 19,
+      "res": 19841,
+      "vac": 37
+    },
+    "tra": {
+      "com": 19,
+      "ind": 4,
+      "mix": 6,
+      "opn": 2,
+      "prk": 12,
+      "pub": 3,
+      "res": 2,
+      "tra": 361,
+      "vac": 5
+    },
+    "vac": {
+      "com": 24,
+      "ind": 1,
+      "mix": 27,
+      "opn": 232,
+      "prk": 45,
+      "pub": 15,
+      "res": 45,
+      "tra": 10,
+      "vac": 520
+    }
+  },
+  "caveat": "Some recorded changes are reclassifications in PLUTO rather than physical change.",
+  "source_sha256_15v1": "643ca3af5c20dfeca621450a79000d410eb8fdb91ca31bb209d3c4302dd4227e"
+}

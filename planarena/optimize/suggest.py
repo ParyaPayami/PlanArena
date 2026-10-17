@@ -47,6 +47,8 @@ class SuggestConfig:
     min_gain: float = 1e-6
     candidate_parcels: np.ndarray | None = None  # restrict to these parcel indices
     unanimity_weights: list | None = None  # consensus mode: list of agent indicator-weight dicts
+    polish: int = 0  # exact re-scoring of the top-K first-order moves after the rounds (0 = off)
+    polish_passes: int = 2
 
 
 class Suggester:
@@ -218,7 +220,60 @@ class Suggester:
             take = cand[np.argsort(-bgain[cand])][: max(1, remaining // max(1, cfg.rounds - rnd))]
             use[take] = best[take]
             history.append({"round": rnd + 1, "changed": int(len(take)), "est_gain": float(bgain[take].sum())})
+        if cfg.polish and not cfg.unanimity_weights and "gain" in locals():
+            use = self._polish(cfg, use, start, gain, budget)
         ev = e.evaluate(use, scope=cfg.scope, pillar_weights=cfg.pillar_weights)
         changed = np.nonzero(use != start)[0]
         return {"use": use, "changed": changed, "evaluation": ev, "history": history,
                 "budget": budget, "eligible": int(eligible.sum())}
+
+    def _polish(self, cfg: SuggestConfig, use: np.ndarray, start: np.ndarray, gain: np.ndarray,
+                budget: int) -> np.ndarray:
+        """Exact local search: try the top-K first-order moves (add, or swap out the weakest change) and
+        dropping changes, re-scored by the full engine; keep the best improvement, up to polish_passes times.
+
+        The first-order gains miss saturating access effects on very large parcels; this step corrects
+        them at the cost of a few hundred exact evaluations.
+        """
+        e = self.e
+        g = gain.copy()
+        g[np.arange(e.n), start] = -np.inf
+        flat = np.argsort(-g, axis=None)[: cfg.polish]
+        moves = [(int(i // N_USES), int(i % N_USES)) for i in flat if np.isfinite(g.flat[i])]
+
+        def J(u: np.ndarray) -> float:
+            ev = e.evaluate(u, scope=cfg.scope, pillar_weights=cfg.pillar_weights)
+            if cfg.indicator_weights is not None:
+                val = sum(cfg.indicator_weights.get(r["key"], 0.0) * r["score"] for r in ev["indicators"])
+            else:
+                val = ev["overall"]
+            return val - cfg.conversion_penalty * int((u != start).sum())
+
+        cur = J(use)
+        for _ in range(cfg.polish_passes):
+            changed = np.nonzero(use != start)[0]
+            best_val, best_use = cur, None
+            for q in sorted(changed, key=lambda q: gain[q, use[q]])[:15]:  # the 15 weakest changes
+                t = use.copy()
+                t[q] = start[q]
+                v = J(t)
+                if v > best_val + 1e-9:
+                    best_val, best_use = v, t
+            for p, u in moves:
+                if use[p] == u:
+                    continue
+                t = use.copy()
+                t[p] = u
+                if int((t != start).sum()) > budget:
+                    rest = [q for q in changed if q != p]
+                    if not rest:
+                        continue
+                    weakest = min(rest, key=lambda q: gain[q, use[q]])
+                    t[weakest] = start[weakest]
+                v = J(t)
+                if v > best_val + 1e-9:
+                    best_val, best_use = v, t
+            if best_use is None:
+                break
+            use, cur = best_use, best_val
+        return use

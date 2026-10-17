@@ -215,3 +215,13 @@ def test_full_vote_is_consistent(suggester):
     assert pb["changed"] <= pb["budget"] and pb["changed"] <= pb["passed"]
     assert all(pb["support"][pb["parcels"].index(i)] > 0.5 for i in pb["chosen"])
     assert r["residents"]["precincts"] > 0
+
+
+def test_exact_polish_never_worse_and_fixes_large_parcel_case(engine):
+    """Block 1006 (CD 105): first-order gains underrate a saturating access effect on a 1.4M sq ft lot."""
+    s = Suggester(engine, None)
+    cand = np.nonzero((engine.p.block.to_numpy() == 1006) & (engine.cd == 105))[0]
+    base = dict(scope="cd:105", candidate_parcels=cand, w_fit=0.0, max_change_share=0.4, rounds=2)
+    plain = s.suggest(SuggestConfig(**base))["evaluation"]["overall"]
+    polished = s.suggest(SuggestConfig(polish=30, **base))["evaluation"]["overall"]
+    assert polished >= plain - 1e-9 and polished > plain + 0.1

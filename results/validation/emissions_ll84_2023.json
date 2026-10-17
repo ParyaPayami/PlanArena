@@ -1,0 +1,11 @@
+{
+  "test": "Out of sample: EUIs and fuel mix fitted on LL84 calendar 2024; tested on calendar 2023 metered energy x LL97 factors",
+  "n_buildings": 6238,
+  "log_log_r": 0.795,
+  "median_abs_pct_error": 0.369,
+  "aggregate_ratio_modelled_to_observed": 1.07,
+  "observed_mt": 4.784,
+  "modelled_mt": 5.119,
+  "source": "NYC Open Data 5zyy-y8am, report_year 2023, Manhattan",
+  "source_sha256": "9bb01081f4ce316d9f989a27c2f4bd029214ee15afaa3dfb23f0eacdf0b58343"
+}

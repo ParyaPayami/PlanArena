@@ -168,10 +168,11 @@ def write_web(g: gpd.GeoDataFrame, df: pd.DataFrame, web_dir=WEB_DATA) -> None:
                          engine="pyogrio", layer_options=opts)
 
 
-def build(out_dir=PROCESSED, web_dir=WEB_DATA) -> dict:
+def build(out_dir=PROCESSED, web_dir=WEB_DATA, pluto_path=PLUTO_PATH, web: bool = True) -> dict:
+    """Build the twin from a MapPLUTO file. Historical releases (for backtests) use web=False."""
     t0 = time.time()
     out_dir.mkdir(parents=True, exist_ok=True)
-    g = load_pluto()
+    g = load_pluto(pluto_path)
     df = tabulate(g)
     grid = add_grid(df)
     graph = build_graph(g, df)
@@ -179,10 +180,11 @@ def build(out_dir=PROCESSED, web_dir=WEB_DATA) -> dict:
     gpd.GeoDataFrame({"i": np.arange(len(df))}, geometry=g.geometry.values,
                      crs=PROJECTED_CRS).to_parquet(out_dir / "parcels.geoparquet")
     np.savez_compressed(out_dir / "graph.npz", **graph)
-    write_web(g, df, web_dir)
+    if web:
+        write_web(g, df, web_dir)
     bounds = gpd.GeoSeries(g.geometry, crs=PROJECTED_CRS).to_crs(WEB_CRS).total_bounds
     h = hashlib.sha256()
-    with open(PLUTO_PATH, "rb") as fh:
+    with open(pluto_path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     quality = {
@@ -194,7 +196,7 @@ def build(out_dir=PROCESSED, web_dir=WEB_DATA) -> dict:
     meta = {
         "city": CITY_NAME,
         "source": f"NYC DCP MapPLUTO {g['Version'].iloc[0]}",
-        "source_path": str(PLUTO_PATH),
+        "source_path": str(pluto_path),
         "source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change",
         "source_sha256": h.hexdigest(),
         "data_quality": quality,
@@ -210,7 +212,8 @@ def build(out_dir=PROCESSED, web_dir=WEB_DATA) -> dict:
         "build_seconds": round(time.time() - t0, 1),
     }
     (out_dir / "twin_meta.json").write_text(json.dumps(meta, indent=2))
-    (web_dir / "twin_meta.json").write_text(json.dumps(meta, indent=2))
+    if web:
+        (web_dir / "twin_meta.json").write_text(json.dumps(meta, indent=2))
     return meta
 
 
