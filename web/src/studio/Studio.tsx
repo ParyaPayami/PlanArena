@@ -31,6 +31,19 @@ const TOOLS: { key: MapMode; label: string; icon: string; tip: string }[] = [
   { key: "block", label: "Block", icon: "▦", tip: "Click to select a whole tax block (K)" },
 ];
 
+/** Opening view of a city other than Manhattan: centred on the middle 90% of its parcels, so outlying annexes
+ * (an airport, say) do not pull the view off the city. */
+function parcelView(data: { lon: Float32Array; lat: Float32Array; n: number }, bbox: number[]) {
+  const q = (a: Float32Array, f: number) => {
+    const s = Array.from(a).filter(Number.isFinite).sort((x, y) => x - y);
+    return s.length ? s[Math.floor(f * (s.length - 1))] : NaN;
+  };
+  let [x0, y0, x1, y1] = [q(data.lon, 0.05), q(data.lat, 0.05), q(data.lon, 0.95), q(data.lat, 0.95)];
+  if (![x0, y0, x1, y1].every(Number.isFinite)) [x0, y0, x1, y1] = bbox;
+  const zoom = Math.min(15, Math.log2(360 / Math.max(x1 - x0, (y1 - y0) * 1.4, 1e-4)) + 0.5);
+  return { longitude: (x0 + x1) / 2, latitude: (y0 + y1) / 2, zoom, pitch: 0, bearing: 0 };
+}
+
 export default function Studio() {
   const s = useStore();
   const [mode, setMode] = useState<MapMode>("select");
@@ -76,7 +89,7 @@ export default function Studio() {
     () =>
       meta.city_id === "manhattan"
         ? { longitude: (w + ea) / 2 + 0.012, latitude: (so + no) / 2 - 0.035, zoom: 12.4, pitch: 0, bearing: -29 }
-        : { longitude: (w + ea) / 2, latitude: (so + no) / 2, zoom: Math.min(15, Math.log2(360 / Math.max(ea - w, (no - so) * 1.4)) + 0.6), pitch: 0, bearing: 0 },
+        : parcelView(data, [w, so, ea, no]),
     [],
   );
 
