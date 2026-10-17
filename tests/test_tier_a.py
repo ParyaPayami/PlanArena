@@ -78,3 +78,22 @@ def test_massachusetts_use_codes():
              ("", ""): "unknown"}
     for (code, desc), want in cases.items():
         assert use_of(code, desc) == want, (code, desc)
+
+
+def test_florida_use_codes():
+    from planarena.cities.adapters.florida import use_of
+
+    cases = {"001": "res", "004": "res", "003": "res", "000": "vac", "012": "mix", "017": "com", "039": "com",
+             "028": "prk", "048": "ind", "041": "ind", "071": "pub", "083": "pub", "082": "opn", "060": "opn",
+             "091": "tra", "094": "tra", "099": "vac", "": "unknown", None: "unknown"}
+    for code, want in cases.items():
+        assert use_of(code) == want, code
+
+
+def test_implausible_floor_area_is_dropped():
+    import numpy as np
+
+    from planarena.cities.common import plausible_floor_area
+
+    fa, n = plausible_floor_area(np.array([268_563_964.0, 50_000.0]), np.array([26_524.0, 10_000.0]))
+    assert n == 1 and fa[0] == 0 and fa[1] == 50_000

@@ -1,7 +1,7 @@
 """Build any US place with the best data available for it.
 
-Tier B where an adapter covers the place (Milwaukee: MPROP; every Massachusetts city and town: MassGIS L3), Tier A
-(national open data) everywhere else.
+Tier B where an adapter covers the place (Milwaukee: MPROP; every Massachusetts city and town: MassGIS L3; every
+Florida place: DOR parcel maps and tax roll), Tier A (national open data) everywhere else.
 
 Run:  python -I -m planarena.cities.build <GEOID or "City, ST">
 """
@@ -17,7 +17,7 @@ MILWAUKEE = "5553000"
 
 def tier_for(geoid: str) -> str:
     pl = places.place(geoid)
-    return "B" if geoid == MILWAUKEE or pl["state"] == "MA" else "A"
+    return "B" if geoid == MILWAUKEE or pl["state"] in ("MA", "FL") else "A"
 
 
 def build(target: str) -> dict:
@@ -36,6 +36,10 @@ def build(target: str) -> dict:
             return massgis.build(geoid)
         except SystemExit as e:  # no L3 file for this place (e.g. a CDP inside a town): fall back to Tier A
             print(f"MassGIS: {e}; building Tier A instead", flush=True)
+    if hit[0]["state"] == "FL":
+        from planarena.cities.adapters import florida
+
+        return florida.build(geoid)
     from planarena.cities.tier_a import build_city
 
     return build_city(geoid)

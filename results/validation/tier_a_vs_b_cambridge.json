@@ -116,8 +116,8 @@
   },
   "floor_area_by_block": {
     "n": 919,
-    "total_ratio": 1.318,
-    "pearson_r": 0.555,
+    "total_ratio": 1.322,
+    "pearson_r": 0.552,
     "log_r": 0.874,
     "median_abs_pct_error": 0.364
   },
@@ -141,7 +141,7 @@
     "tier_b": {
       "n": 919,
       "total_ratio": 1.0,
-      "pearson_r": 0.475,
+      "pearson_r": 0.476,
       "log_r": 0.597,
       "median_abs_pct_error": 1.0
     },

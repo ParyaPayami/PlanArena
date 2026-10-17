@@ -1,5 +1,5 @@
 {
-  "test": "Tier A pseudo-lots from Census blocks and Overture buildings are scored against the city's parcel records (land use,\nfloor area, homes) and LODES 2023 (jobs), and in Manhattan against LL84 2023 (building emissions), next to the\nTier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1) and Milwaukee (MPROP).\nWrites results/validation/tier_a_vs_b_<city>.json.",
+  "test": "Tier A pseudo-lots from Census blocks and Overture buildings are scored against the city's parcel records (land use,\nfloor area, homes) and LODES 2023 (jobs), and in Manhattan against LL84 2023 (building emissions), next to the\nTier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1), Milwaukee (MPROP) and Massachusetts towns (MassGIS L3).\nWrites results/validation/tier_a_vs_b_<city>.json.",
   "city": "Milwaukee",
   "tier_a": {
     "n_parcels": 165024,

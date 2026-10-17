@@ -217,7 +217,21 @@ def lot_features(lots, bldg_lot, bldg, poi_lot, pois, lu_at_lot, blocks, rule_us
 
 
 # ----------------------------------------------------------------------------- build
-def build_city(target: str, out_dir: Path | None = None, area: dict | None = None, use_model: bool = True) -> dict:
+def floor_area_correction() -> tuple[float, list[str]]:
+    """Median Tier A / Tier B floor-area ratio over the comparison cities (planarena.cities.compare), or 1."""
+    from planarena.config import ROOT
+
+    rs, names = [], []
+    for f in sorted((ROOT / "results" / "validation").glob("tier_a_vs_b_*.json")):
+        r = json.loads(f.read_text())["floor_area_by_block"].get("total_ratio")
+        if r:
+            rs.append(r)
+            names.append(f.stem[len("tier_a_vs_b_"):])
+    return (float(np.median(rs)), names) if rs else (1.0, [])
+
+
+def build_city(target: str, out_dir: Path | None = None, area: dict | None = None, use_model: bool = True,
+               correct_floor_area: bool = True) -> dict:
     """Build a place by GEOID or name, or any area given as {"id", "label", "state", "boundary" (EPSG:4326)}
     (used to run Tier A inside a Tier B city for the accuracy comparison)."""
     t0 = time.time()
@@ -289,6 +303,8 @@ def build_city(target: str, out_dir: Path | None = None, area: dict | None = Non
     lots["accessory_sqft"] = agg.acc.sum().reindex(lots.index, fill_value=0.0)
     lots["footprint_sqft"] = agg.foot.sum().reindex(lots.index, fill_value=0.0)
     lots["bldg_area"] = agg.fa.sum().reindex(lots.index, fill_value=0.0)
+    fa_corr, fa_cities = floor_area_correction() if correct_floor_area else (1.0, [])
+    lots["bldg_area"] = lots.bldg_area / fa_corr  # footprint x floors overstates floor area (measured in Tier B cities)
     lots["floors"] = agg.floors.max().reindex(lots.index, fill_value=0.0)
     lots["height_m"] = agg.h.max().reindex(lots.index, fill_value=0.0)
     lots["num_bldgs"] = agg.size().reindex(lots.index, fill_value=0).astype(float)
@@ -397,7 +413,9 @@ def build_city(target: str, out_dir: Path | None = None, area: dict | None = Non
                          "use_confidence": {str(c): int((conf == c).sum()) for c in (0, 1, 2, 3)},
                          "housing_units_unallocated": round(unalloc, 1), "jobs_lodes": int(round(jobs_block.sum()))},
         "columns": {"lot boundaries": "estimated (building cells within census blocks)",
-                    "floor area": "estimated (footprint x floors from height)",
+                    "floor area": (f"estimated (footprint x floors from height, divided by {fa_corr:.2f}, the median "
+                                   f"Tier A/Tier B ratio in {', '.join(fa_cities)})" if fa_cities else
+                                   "estimated (footprint x floors from height)"),
                     "land use": ("estimated (model trained on Tier B cities; rules for lots without buildings)"
                                  if land_use_method == "model" else "estimated (rules)"),
                     "homes": "observed by block (Census 2020), allocated to lots", "jobs": "observed by block (LODES), modelled by floor area",

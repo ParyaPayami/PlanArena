@@ -3,23 +3,24 @@
   "held_out": {
     "cambridge": {
       "trained_on": [
+        "gainesville",
         "manhattan",
         "milwaukee"
       ],
       "n": 12179,
       "model": {
-        "accuracy": 0.882,
-        "macro_f1": 0.336,
+        "accuracy": 0.891,
+        "macro_f1": 0.316,
         "recall_by_use": {
-          "res": 0.962,
-          "mix": 0.489,
-          "com": 0.701,
-          "ind": 0.026,
-          "tra": 0.182,
-          "pub": 0.673,
-          "opn": 0.174,
-          "prk": 0.025,
-          "vac": 0.014
+          "res": 0.972,
+          "mix": 0.114,
+          "com": 0.788,
+          "ind": 0.035,
+          "tra": 0.091,
+          "pub": 0.752,
+          "opn": 0.13,
+          "prk": 0.0,
+          "vac": 0.061
         }
       },
       "rules": {
@@ -39,25 +40,65 @@
       },
       "majority_class_accuracy": 0.82
     },
+    "gainesville": {
+      "trained_on": [
+        "cambridge",
+        "manhattan",
+        "milwaukee"
+      ],
+      "n": 34794,
+      "model": {
+        "accuracy": 0.849,
+        "macro_f1": 0.286,
+        "recall_by_use": {
+          "res": 0.985,
+          "mix": 0.146,
+          "com": 0.778,
+          "ind": 0.117,
+          "tra": 0.061,
+          "pub": 0.49,
+          "opn": 0.022,
+          "prk": 0.0,
+          "vac": 0.009
+        }
+      },
+      "rules": {
+        "accuracy": 0.842,
+        "macro_f1": 0.288,
+        "recall_by_use": {
+          "res": 0.971,
+          "mix": 0.024,
+          "com": 0.841,
+          "ind": 0.207,
+          "tra": 0.163,
+          "pub": 0.484,
+          "opn": 0.0,
+          "prk": 0.0,
+          "vac": 0.0
+        }
+      },
+      "majority_class_accuracy": 0.781
+    },
     "manhattan": {
       "trained_on": [
         "cambridge",
+        "gainesville",
         "milwaukee"
       ],
       "n": 39067,
       "model": {
-        "accuracy": 0.634,
-        "macro_f1": 0.301,
+        "accuracy": 0.598,
+        "macro_f1": 0.244,
         "recall_by_use": {
-          "res": 0.93,
-          "mix": 0.279,
-          "com": 0.585,
-          "ind": 0.036,
-          "tra": 0.037,
-          "pub": 0.303,
-          "opn": 0.306,
-          "prk": 0.0,
-          "vac": 0.021
+          "res": 0.964,
+          "mix": 0.065,
+          "com": 0.562,
+          "ind": 0.041,
+          "tra": 0.002,
+          "pub": 0.431,
+          "opn": 0.076,
+          "prk": 0.003,
+          "vac": 0.076
         }
       },
       "rules": {
@@ -80,22 +121,23 @@
     "milwaukee": {
       "trained_on": [
         "cambridge",
+        "gainesville",
         "manhattan"
       ],
       "n": 143416,
       "model": {
         "accuracy": 0.913,
-        "macro_f1": 0.326,
+        "macro_f1": 0.3,
         "recall_by_use": {
-          "res": 0.993,
-          "mix": 0.014,
-          "com": 0.462,
-          "ind": 0.484,
-          "tra": 0.145,
-          "pub": 0.6,
-          "opn": 0.167,
-          "prk": 0.002,
-          "vac": 0.041
+          "res": 0.991,
+          "mix": 0.001,
+          "com": 0.515,
+          "ind": 0.534,
+          "tra": 0.07,
+          "pub": 0.707,
+          "opn": 0.046,
+          "prk": 0.0,
+          "vac": 0.011
         }
       },
       "rules": {
@@ -119,7 +161,9 @@
   "variants_tried": [
     "LightGBM with balanced class weights (2026-10-17): worse than the rules in both held-out cities (Manhattan accuracy 0.455, Milwaukee 0.372)",
     "LightGBM unweighted with two Tier B cities (2026-10-17): worse than the rules in Milwaukee (0.595 vs 0.908), not deployed",
-    "LightGBM unweighted with all Tier B cities with a Tier A test twin (reported here)"
+    "LightGBM unweighted with three Tier B cities (Cambridge, Manhattan, Milwaukee; 2026-10-17): beat the rules in each and was deployed",
+    "The same with Gainesville added as a fourth city (2026-10-17): worse than the rules in Milwaukee (0.815 vs 0.908) and Gainesville (0.834 vs 0.842); withdrawn",
+    "Within-city percentile ranks for continuous features and equal weight per city, all Tier B cities with a Tier A test twin (reported here)"
   ],
-  "model_beats_rules_everywhere": true
+  "model_beats_rules_everywhere": false
 }

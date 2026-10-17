@@ -266,25 +266,35 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Manhattan | Lots | 45,808 pseudo-lots | 42,075 parcels |
 | Manhattan | Land use of built lots (accuracy; macro F1) | 63%; 0.274 (majority class 50%) | records |
 | Manhattan | Floor area by census block (total; log r; median error) | 1.22×; 0.797; 18% | records |
+| Manhattan | Floor area total after the correction learned from the other cities | 0.88× | records |
 | Manhattan | Homes by census block, Census 2020 vs city records (total; r) | 0.92×; 0.765 | records |
 | Manhattan | Jobs by census block vs LODES (r; in-sample) | 0.517 | 0.647 |
 | Manhattan | Building emissions vs LL84 2023, 5,638 buildings (total; median error) | 0.69×; 42% | 0.82×; 33% |
 | Cambridge | Lots | 13,045 pseudo-lots | 12,933 parcels |
 | Cambridge | Land use of built lots (accuracy; macro F1) | 87%; 0.306 (majority class 82%) | records |
 | Cambridge | Floor area by census block (total; log r; median error) | 1.32×; 0.874; 36% | records |
+| Cambridge | Floor area total after the correction learned from the other cities | 0.96× | records |
 | Cambridge | Homes by census block, Census 2020 vs city records (total; r) | 1.10×; 0.772 | records |
-| Cambridge | Jobs by census block vs LODES (r; in-sample) | 0.769 | 0.475 |
+| Cambridge | Jobs by census block vs LODES (r; in-sample) | 0.769 | 0.476 |
+| Gainesville | Lots | 37,275 pseudo-lots | 37,345 parcels |
+| Gainesville | Land use of built lots (accuracy; macro F1) | 84%; 0.286 (majority class 78%) | records |
+| Gainesville | Floor area by census block (total; log r; median error) | 1.38×; 0.719; 62% | records |
+| Gainesville | Floor area total after the correction learned from the other cities | 1.05× | records |
+| Gainesville | Homes by census block, Census 2020 vs city records (total; r) | 1.04×; 0.601 | records |
+| Gainesville | Jobs by census block vs LODES (r; in-sample) | 0.162 | 0.217 |
 | Milwaukee | Lots | 165,024 pseudo-lots | 148,042 parcels |
 | Milwaukee | Land use of built lots (accuracy; macro F1) | 91%; 0.286 (majority class 88%) | records |
 | Milwaukee | Floor area by census block (total; log r; median error) | 1.55×; 0.684; 25% | records |
+| Milwaukee | Floor area total after the correction learned from the other cities | 1.17× | records |
 | Milwaukee | Homes by census block, Census 2020 vs city records (total; r) | 0.94×; 0.872 | records |
 | Milwaukee | Jobs by census block vs LODES (r; in-sample) | 0.628 | 0.567 |
-| Cambridge | Land use from a model trained on Manhattan, Milwaukee (accuracy; macro F1) | 88%; 0.336 (rules 87%; 0.311) | records |
-| Manhattan | Land use from a model trained on Cambridge, Milwaukee (accuracy; macro F1) | 63%; 0.301 (rules 63%; 0.274) | records |
-| Milwaukee | Land use from a model trained on Cambridge, Manhattan (accuracy; macro F1) | 91%; 0.326 (rules 91%; 0.287) | records |
+| Cambridge | Land use from a model trained on Gainesville, Manhattan, Milwaukee (accuracy; macro F1) | 89%; 0.316 (rules 87%; 0.311) | records |
+| Gainesville | Land use from a model trained on Cambridge, Manhattan, Milwaukee (accuracy; macro F1) | 85%; 0.286 (rules 84%; 0.288) | records |
+| Manhattan | Land use from a model trained on Cambridge, Gainesville, Milwaukee (accuracy; macro F1) | 60%; 0.244 (rules 63%; 0.274) | records |
+| Milwaukee | Land use from a model trained on Cambridge, Gainesville, Manhattan (accuracy; macro F1) | 91%; 0.300 (rules 91%; 0.287) | records |
 
 Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities.
-A land-use model trained on the other Tier B cities and tested on each held-out one beat the rules in every held-out city, so Tier A uses the model (3 model variants tried; `results/validation/landuse_model.json`).
+A land-use model trained on the other Tier B cities and tested on each held-out one did not beat the rules in every held-out city, so Tier A uses the rules (5 model variants tried; `results/validation/landuse_model.json`).
 
 ## H. Integration value: likelihood-weighted vs capacity-based projections
 

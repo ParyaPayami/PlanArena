@@ -31,10 +31,23 @@ META = NATIONAL / "landuse_model.json"
 OUT = ROOT / "results" / "validation" / "landuse_model.json"
 
 
+FLAGS = ("bsub_", "lus_", "luc_", "rule_", "poi_hospital", "height_observed")
+
+
+def normalise(f: pd.DataFrame) -> pd.DataFrame:
+    """Continuous features as percentile ranks within the city (all of its lots), so that a model learned in some
+    cities is applied on the same scale in another; indicator columns are kept as they are."""
+    f = f.copy()
+    for c in f.columns:
+        if not c.startswith(FLAGS) and c != "rule_confidence":
+            f[c] = f[c].rank(pct=True)
+    return f
+
+
 def dataset(city: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     """Features, Tier B label and rule label of the built pseudo-lots of the Tier A twin of a Tier B city."""
     work = DATA / "cities" / f"tierA_{city}"
-    f = pd.read_parquet(work / "lot_features.parquet")
+    f = normalise(pd.read_parquet(work / "lot_features.parquet"))
     pa = pd.read_parquet(work / "parcels.parquet")
     from planarena.cities.compare import config
 
@@ -50,13 +63,18 @@ def dataset(city: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     return f[keep].reset_index(drop=True), truth[keep], rule[keep]
 
 
-def _fit(X: pd.DataFrame, y: np.ndarray):
+def _fit(X: pd.DataFrame, y: np.ndarray, w: np.ndarray | None = None):
     import lightgbm as lgb
 
     m = lgb.LGBMClassifier(n_estimators=400, learning_rate=0.05, num_leaves=63, min_child_samples=30, subsample=0.8,
                            subsample_freq=1, colsample_bytree=0.8, verbose=-1, random_state=SEED)
-    m.fit(X, y)
+    m.fit(X, y, sample_weight=w)
     return m
+
+
+def _city_weights(parts: list[np.ndarray]) -> np.ndarray:
+    """Each training city carries the same total weight."""
+    return np.concatenate([np.full(len(y), 1.0 / len(y)) for y in parts]) * sum(len(y) for y in parts) / len(parts)
 
 
 def _scores(y: np.ndarray, p: np.ndarray) -> dict:
@@ -76,14 +94,19 @@ def evaluate() -> dict:
                               "cities (Manhattan accuracy 0.455, Milwaukee 0.372)",
                               "LightGBM unweighted with two Tier B cities (2026-10-17): worse than the rules in Milwaukee "
                               "(0.595 vs 0.908), not deployed",
-                              "LightGBM unweighted with all Tier B cities with a Tier A test twin (reported here)"]}
+                              "LightGBM unweighted with three Tier B cities (Cambridge, Manhattan, Milwaukee; 2026-10-17): "
+                              "beat the rules in each and was deployed",
+                              "The same with Gainesville added as a fourth city (2026-10-17): worse than the rules in "
+                              "Milwaukee (0.815 vs 0.908) and Gainesville (0.834 vs 0.842); withdrawn",
+                              "Within-city percentile ranks for continuous features and equal weight per city, all Tier B "
+                              "cities with a Tier A test twin (reported here)"]}
     for test in data:
         train = [c for c in data if c != test]
         if not train:
             continue
         X = pd.concat([data[c][0] for c in train], ignore_index=True)
         y = np.concatenate([data[c][1] for c in train])
-        m = _fit(X, y)
+        m = _fit(X, y, _city_weights([data[c][1] for c in train]))
         Xt, yt, rt = data[test]
         pred = m.classes_[m.predict_proba(Xt[X.columns]).argmax(1)]
         res["held_out"][test] = {"trained_on": train, "n": int(len(yt)),
@@ -96,7 +119,7 @@ def evaluate() -> dict:
     if res["model_beats_rules_everywhere"]:
         X = pd.concat([d[0] for d in data.values()], ignore_index=True)
         y = np.concatenate([d[1] for d in data.values()])
-        m = _fit(X, y)
+        m = _fit(X, y, _city_weights([d[1] for d in data.values()]))
         m.booster_.save_model(str(MODEL))
         META.write_text(json.dumps({"features": list(X.columns), "classes": [int(c) for c in m.classes_],
                                     "trained_on": list(data), "evaluation": str(OUT.relative_to(ROOT))}, indent=2))
@@ -114,7 +137,7 @@ def predict(feats: pd.DataFrame) -> np.ndarray | None:
 
     meta = json.loads(META.read_text())
     b = lgb.Booster(model_file=str(MODEL))
-    p = b.predict(feats.reindex(columns=meta["features"], fill_value=0.0).to_numpy())
+    p = b.predict(normalise(feats).reindex(columns=meta["features"], fill_value=0.0).to_numpy())
     return np.array(meta["classes"])[p.argmax(1)]
 
 

@@ -77,7 +77,7 @@ def build_tier_a(city: str) -> Path:
         outline = shapely.union_all(g.geometry.buffer(80).values).buffer(-80)  # close the streets between lots
         bnd = gpd.GeoSeries([outline], crs=g.crs).to_crs(4326).iloc[0]
         build_city("", out_dir=work, area={"id": f"tierA_{city}", "label": f"{c['label']} (Tier A test)",
-                                          "state": c["state"], "boundary": bnd}, use_model=False)
+                                          "state": c["state"], "boundary": bnd}, use_model=False, correct_floor_area=False)
     return work
 
 

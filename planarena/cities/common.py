@@ -24,6 +24,16 @@ def reconcile_lot_area(recorded: np.ndarray, polygon: np.ndarray) -> tuple[np.nd
     return np.where(ok, recorded, polygon).astype(float), int((~ok).sum())
 
 
+MAX_PLAUSIBLE_FAR = 50.0  # above any US building (the tallest Manhattan towers are near FAR 30-40 on their lots)
+
+
+def plausible_floor_area(floor_area: np.ndarray, lot_area: np.ndarray) -> tuple[np.ndarray, int]:
+    """Floor area above MAX_PLAUSIBLE_FAR times the lot is a recording error (one Florida record lists 268 million
+    sq ft on a 26,524 sq ft lot); it is treated as unrecorded (0). Returns the areas and how many were dropped."""
+    bad = (floor_area > MAX_PLAUSIBLE_FAR * np.maximum(lot_area, 1.0))
+    return np.where(bad, 0.0, floor_area), int(bad.sum())
+
+
 def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: float, jobs_block: np.ndarray,
                 blk: np.ndarray, log, meta: dict, t0: float | None = None, minimal: bool = False) -> dict:
     """Write a built city: parcels, geometry, graph, web layers, calibrated.yaml and twin_meta.json.

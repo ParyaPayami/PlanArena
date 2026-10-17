@@ -12,6 +12,8 @@ import json
 import re
 import sys
 
+import numpy as np
+
 from planarena.config import PROCESSED, ROOT
 
 RES = ROOT / "results"
@@ -171,11 +173,14 @@ def _tiers() -> list[str]:
         if not t:
             continue
         lu, fa, hb, jb = t["land_use"], t["floor_area_by_block"], t["homes_by_block"], t["jobs_by_block"]
+        others = [load(f"tier_a_vs_b_{c}")["floor_area_by_block"]["total_ratio"] for c in names if c != city]
+        corr = fa["total_ratio"] / float(np.median(others)) if others else None
         rows += [f"| {t['city']} | Lots | {num(t['tier_a']['n_parcels'])} pseudo-lots | {num(t['tier_b_parcels'])} parcels |",
                  f"| {t['city']} | Land use of built lots (accuracy; macro F1) | {pct(lu['accuracy'])}; {r3(lu['macro_f1'])} "
                  f"(majority class {pct(lu['majority_class_accuracy'])}) | records |",
                  f"| {t['city']} | Floor area by census block (total; log r; median error) | {times(fa['total_ratio'])}; "
                  f"{r3(fa['log_r'])}; {pct(fa['median_abs_pct_error'])} | records |",
+                 f"| {t['city']} | Floor area total after the correction learned from the other cities | {times(corr)} | records |",
                  f"| {t['city']} | Homes by census block, Census 2020 vs city records (total; r) | {times(hb['total_ratio'])}; "
                  f"{r3(hb['pearson_r'])} | records |",
                  f"| {t['city']} | Jobs by census block vs LODES (r; in-sample) | {r3(jb['tier_a']['pearson_r'])} | {r3(jb['tier_b']['pearson_r'])} |"]

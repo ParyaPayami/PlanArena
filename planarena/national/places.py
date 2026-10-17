@@ -91,3 +91,10 @@ def boundary(geoid: str):
         if len(g):
             return g.set_crs(4326, allow_override=True).geometry.union_all()
     raise KeyError(f"no boundary for {geoid}")
+
+
+@lru_cache(maxsize=1)
+def counties() -> pd.DataFrame:
+    """US counties (2024 gazetteer): GEOID (5 digits), name, state."""
+    c = _gaz("2024_Gaz_counties_national.zip")
+    return c[["GEOID", "NAME", "USPS"]].rename(columns={"GEOID": "geoid", "NAME": "name", "USPS": "state"})

@@ -58,9 +58,11 @@ cities:
 	$(RUN) planarena.cities.tier_a "Wauwatosa, WI"
 	$(RUN) planarena.cities.tier_a "Shorewood, WI"
 	$(RUN) planarena.cities.adapters.massgis Cambridge
+	$(RUN) planarena.cities.adapters.florida Gainesville
 	$(RUN) planarena.cities.compare milwaukee
 	$(RUN) planarena.cities.compare manhattan
 	$(RUN) planarena.cities.compare cambridge
+	$(RUN) planarena.cities.compare gainesville
 	$(RUN) planarena.cities.landuse_model
 	$(RUN) planarena.cities.mke_history
 	$(RUN) planarena.models.crosscity
