@@ -54,6 +54,11 @@ def runtime() -> dict:
         f = ROOT / "results" / f"{name}.json"
         if f.exists():
             model_info[name.replace("gnn_cv", "cv_summary")] = json.loads(f.read_text()).get("cv_summary")
+    redev = None
+    if (PROCESSED / "redevelopment.npz").exists():
+        z = np.load(PROCESSED / "redevelopment.npz")
+        redev = {"p": z["p"], "q": z["q"]}
+        model_info["redevelopment"] = json.loads((PROCESSED / "redevelopment_meta.json").read_text())
     vf = ROOT / "results" / "validation_emissions_ll84.json"
     if vf.exists():
         model_info["emissions_validation"] = json.loads(vf.read_text())
@@ -63,7 +68,8 @@ def runtime() -> dict:
     with store.connect() as db:
         store.audit(db, "service_started", {"engine_version": ENGINE_VERSION, "source_sha256": engine.meta.get("source_sha256")})
     return {"engine": engine, "suggester": sug, "suitability": suit, "model_info": model_info,
-            "soft_sites": engine.soft_site_mask(), "startup_seconds": round(time.time() - t0, 2), "geoms": None}
+            "soft_sites": engine.soft_site_mask(), "startup_seconds": round(time.time() - t0, 2), "geoms": None,
+            "redevelopment": redev}
 
 
 def _geoms():
@@ -191,6 +197,16 @@ class ScenarioIn(Strict):
     checklist: list[dict] | None = None
 
 
+class ChecklistItem(Strict):
+    label: str = Field(..., min_length=1, max_length=200)
+    done: bool = False
+
+
+class RezoningTestRequest(Strict):
+    changes: dict[str, Change] = Field(default_factory=dict, description="parcels with a FAR = proposed zoning maximum")
+    year: int = Field(2025, ge=2000, le=2100)
+
+
 class ScenarioPatch(Strict):
     name: str | None = Field(None, min_length=1, max_length=120)
     description: str | None = Field(None, max_length=4000)
@@ -198,7 +214,7 @@ class ScenarioPatch(Strict):
     status: str | None = None
     hearing_date: str | None = None
     changes: dict[str, Change] | None = None
-    checklist: list[dict] | None = None
+    checklist: list[ChecklistItem] | None = Field(None, max_length=50)
 
 
 class ExportRequest(Strict):
@@ -266,6 +282,32 @@ def parcel(i: int):
     }
     if r["suitability"] is not None:
         out["suitability"] = {USE_KEYS[u]: float(r["suitability"][i, u]) for u in range(len(USE_KEYS))}
+    if r["redevelopment"] is not None:
+        rd = r["redevelopment"]
+        pct = float((rd["p"] < rd["p"][i]).mean())
+        out["redevelopment"] = {"p": float(rd["p"][i]), "percentile": round(pct, 3),
+                                "likely_use": USE_KEYS[int(rd["q"][i].argmax())],
+                                "q": {USE_KEYS[u]: round(float(rd["q"][i, u]), 3) for u in range(len(USE_KEYS))}}
+    return out
+
+
+_WORD_NUM = {"FIRST": "1", "SECOND": "2", "THIRD": "3", "FOURTH": "4", "FIFTH": "5", "SIXTH": "6",
+             "SEVENTH": "7", "EIGHTH": "8", "NINTH": "9", "TENTH": "10", "ELEVENTH": "11", "TWELFTH": "12"}
+_ABBR = {"AVE": "AVENUE", "AV": "AVENUE", "ST": "STREET", "STR": "STREET", "E": "EAST", "W": "WEST",
+         "N": "NORTH", "S": "SOUTH", "BLVD": "BOULEVARD", "PL": "PLACE", "DR": "DRIVE", "RD": "ROAD",
+         "PKWY": "PARKWAY", "SQ": "SQUARE", "TER": "TERRACE", "LN": "LANE", "HWY": "HIGHWAY"}
+
+
+def normalize_address(q: str) -> list[str]:
+    """User address text -> MapPLUTO address tokens ("350 Fifth Ave" -> ["350", "5", "AVENUE"])."""
+    t = re.sub(r"[.,#]", " ", q.upper())
+    t = re.sub(r"\b(\d+)(ST|ND|RD|TH)\b", r"\1", t)  # ordinals: 5th -> 5
+    out = []
+    for k, tok in enumerate(t.split()):
+        tok = _WORD_NUM.get(tok, tok)
+        # "ST" after a house number is "SAINT" in some names; elsewhere it is STREET
+        tok = _ABBR.get(tok, tok) if not (tok == "ST" and k == 1) else "ST"
+        out.append(tok)
     return out
 
 
@@ -280,7 +322,7 @@ def search(q: str, limit: int = 12):
         hits = np.nonzero(e.p.bbl.astype(str).str.startswith(q).to_numpy())[0][:limit]
     else:
         addr = e.p.address.str.upper()
-        tokens = [t for t in re.split(r"\s+", q.upper()) if t]
+        tokens = normalize_address(q)
         m = np.ones(e.n, bool)
         for t in tokens:
             m &= addr.str.contains(rf"\b{re.escape(t)}\b", regex=True).to_numpy()
@@ -313,6 +355,18 @@ def suitability():
     if s is None:
         raise HTTPException(404, "GNN not trained yet")
     return {"top": s.argmax(1).astype(int).tolist(), "p": np.round(s.max(1), 3).tolist()}
+
+
+@app.get("/api/redevelopment")
+def redevelopment():
+    """Five-year redevelopment likelihood (transition model) and the most likely new use, per parcel."""
+    rd = runtime()["redevelopment"]
+    if rd is None:
+        raise HTTPException(404, "transition model not trained (python -I -m planarena.models.transition all)")
+    p = rd["p"]
+    rank = (np.argsort(np.argsort(p)) / max(len(p) - 1, 1))
+    return {"p": np.round(p, 4).tolist(), "rank": np.round(rank, 3).tolist(),
+            "top": rd["q"].argmax(1).astype(int).tolist(), "meta": runtime()["model_info"]["redevelopment"]}
 
 
 @app.get("/api/soft-sites")
@@ -431,6 +485,31 @@ async def vote_route(req: VoteRequest):
                     "rule": res["decision"]["rule"], "double_majority": res["decision"]["double_majority"],
                     "candidates": [c["id"] for c in res["candidates"]]})
     return res
+
+
+@app.post("/api/rezoning-test")
+def rezoning_test(req: RezoningTestRequest):
+    """CEQR-style development-site screen: FAR values in the plan are treated as the proposed zoning maximum."""
+    from planarena.indicators import rwcds
+
+    e: ImpactEngine = runtime()["engine"]
+    use, far = _arrays(req.changes)
+    if far is None or not np.isfinite(far).any():
+        raise HTTPException(400, "set a floor area ratio on the parcels to rezone (Density: Set floor area ratio)")
+    area = np.isfinite(far)
+    new_max = np.where(area, far, e.p["max_far"].to_numpy())
+    res_ok = np.isin(use, [USE_INDEX["res"], USE_INDEX["mix"]]) | np.array(
+        [bool((a >> USE_INDEX["res"]) & 1) for a in e.allowed])
+    sites = rwcds.screen(e, new_max, area, req.year)
+    full = rwcds.project(e, sites, new_max, res_ok, 1.0)
+    util = e.coef["assumptions"]["buildout_utilization"]["value"]
+    part = rwcds.project(e, sites, new_max, res_ok, util)
+    idx = np.nonzero(sites)[0]
+    _audit("rezoning_test", {"rezoned": int(area.sum()), "sites": int(len(idx)), "homes": round(full["homes_increment"])})
+    return {"rezoned_parcels": int(area.sum()), "sites": idx.tolist(), "n_sites": int(len(idx)),
+            "homes_increment": round(full["homes_increment"]), "homes_increment_at_utilisation": round(part["homes_increment"]),
+            "utilisation": util, "floor_area_increment_sqft": round(full["floor_area_increment_sqft"]),
+            "criteria": rwcds.__doc__.strip(), "min_far_increase": rwcds.MIN_FAR_INCREASE}
 
 
 @app.post("/api/price-of-anarchy")

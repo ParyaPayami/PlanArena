@@ -130,3 +130,20 @@ def test_report_includes_vote_summary(client):
             "n_candidates": 3, "rules": {"Schulze": "Balanced"}}
     html = client.post("/api/report", json={"changes": {"10": "res"}, "title": "T", "vote": vote}).text
     assert "Stakeholder vote" in html and "&lt;b&gt;4&lt;/b&gt;" in html  # escaped, never raw HTML
+
+
+def test_rezoning_test_screens_sites(client):
+    blk = client.get("/api/block/2000").json()["parcels"]
+    changes = {str(i): {"use": "mix", "far": 10.0} for i in blk}
+    r = client.post("/api/rezoning-test", json={"changes": changes})
+    assert r.status_code == 200, r.text
+    v = r.json()
+    assert v["rezoned_parcels"] == len(blk) and v["n_sites"] == len(v["sites"])
+    assert set(v["sites"]) <= set(blk) and v["homes_increment_at_utilisation"] <= v["homes_increment"]
+    assert client.post("/api/rezoning-test", json={"changes": {"10": "res"}}).status_code == 400
+
+
+def test_search_understands_common_address_forms(client):
+    hits = client.get("/api/search", params={"q": "14 W 4th St"}).json()
+    assert hits and hits[0]["address"] == "14 WEST 4 STREET"
+    assert client.get("/api/search", params={"q": "350 Fifth Ave"}).json()[0]["address"].endswith("5 AVENUE")

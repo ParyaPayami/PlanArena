@@ -98,6 +98,8 @@ export default function DeskPanel() {
         )}
       </div>
 
+      <RezoningTest />
+
       <div className="card mt">
         <div className="eyebrow">Staff report draft</div>
         <input className="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
@@ -113,6 +115,58 @@ export default function DeskPanel() {
           vote, and data provenance. Print it to PDF from the browser.
         </div>
       </div>
+    </div>
+  );
+}
+
+function RezoningTest() {
+  const setHighlight = useStore((s) => s.setHighlight);
+  const notify = useStore((s) => s.notify);
+  const [res, setRes] = useState<null | Awaited<ReturnType<typeof api.rezoningTest>>>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try {
+      const r = await api.rezoningTest(useStore.getState().changes());
+      setRes(r);
+      setHighlight({ key: `rz-${Date.now()}`, parcels: new Set(r.sites), color: [255, 214, 10], label: "Development sites" });
+    } catch (e) {
+      notify(String(e).replace(/^Error: /, ""), "bad");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card mt">
+      <div className="eyebrow">Rezoning test (environmental-review method)</div>
+      <div className="muted small">
+        Treats the floor area ratios you set in your plan as the proposed zoning maximum. Finds likely development
+        sites with the criteria DCP uses in environmental reviews (underused lots of 2,000 sq ft or more; excludes recent
+        buildings, civic uses, landmarks and pre-1974 buildings with six or more homes), then projects new homes.
+      </div>
+      <button className="primary wide mt" onClick={run} disabled={busy}>
+        {busy ? "Screening…" : "Screen development sites"}
+      </button>
+      {res && (
+        <div className="kv mt">
+          <span>Parcels rezoned in your plan</span>
+          <b>{res.rezoned_parcels.toLocaleString()}</b>
+          <span>Development sites found</span>
+          <b>{res.n_sites.toLocaleString()} (highlighted)</b>
+          <span>New homes if all are built to the new maximum</span>
+          <b>{res.homes_increment.toLocaleString()}</b>
+          <span>At {Math.round(res.utilisation * 100)}% build-out</span>
+          <b>{res.homes_increment_at_utilisation.toLocaleString()}</b>
+          <span>Added floor area (all uses)</span>
+          <b>{(res.floor_area_increment_sqft / 1e6).toFixed(2)}M sq ft</b>
+        </div>
+      )}
+      {res && (
+        <div className="muted small">
+          Checked against three Manhattan rezonings in docs/VALIDATION.md. Environmental reviews split sites into
+          “projected” and “potential”; this screen finds both, so it tends to be higher than a review's projected total.
+        </div>
+      )}
     </div>
   );
 }

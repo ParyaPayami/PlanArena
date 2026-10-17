@@ -46,6 +46,28 @@ Totals: modelled 2,480,984 (scaled to QCEW) vs LODES 2,504,522.
 
 Caveat: Some recorded changes are reclassifications in PLUTO rather than physical change.
 
+## Redevelopment-transition model (temporal holdout)
+
+Trained on 2015 features and 2015–2020 outcomes (1,814 redeveloped lots), tested on 2020 features and 2020–2025 outcomes (569 of 42,170; base rate 1.35%).
+
+| Will the lot be redeveloped within 5 years? | AUC | Average precision | Precision, top 1% | Recall, top 5% |
+|---|---:|---:|---:|---:|
+| GNN | 0.809 | 0.109 | 18.3% | 38.0% |
+| LightGBM | 0.847 | 0.139 | 26.4% | 39.2% |
+| GNN + LightGBM (mean) | 0.831 | 0.136 | 24.0% | 41.3% |
+| Underbuilt share of zoning capacity | 0.749 | 0.068 | 10.5% | 38.8% |
+| Land-value share of assessed value | 0.754 | 0.075 | 12.6% | 40.6% |
+
+| Into what use? (558 redeveloped lots) | Top-1 | Top-3 | Top-1 when the use changed |
+|---|---:|---:|---:|
+| GNN | 57.9% | 92.5% | 41.1% |
+| LightGBM | 57.9% | 90.3% | 41.4% |
+| GNN + LightGBM (mean) | 59.7% | 92.5% | 43.2% |
+| Zoning-family prior (training period) | 40.5% | 86.7% | 33.4% |
+| Same use as before | 39.4% | 100.0% | 0.0% |
+
+Model selection used a spatial hold-out inside the training period only. Accuracy there (average precision about 0.54) is far above the later period: redevelopment patterns shifted after 2020.
+
 ## Homes: replay of 2015–2025 development
 
 295 developed parcels, 20,516 homes recorded in 2025. Given the observed use and floor area, PlanArena estimates 22,333 (ratio **1.089**, median error 28%, log–log r 0.894). Reference, CEQR 900 sq ft per unit on the observed residential floor area: ratio 1.099.
@@ -65,6 +87,22 @@ FEIS projected development sites parsed: 68 (matched to 2015 parcels: 68).
 
 By 2025, 12% of the FEIS increment of 3,484 homes is recorded on the projected sites (FEIS analysis year 2027).
 
+## SoHo/NoHo (2021) replay, site level
+
+FEIS Appendix A2 projected sites parsed: 26 (total 1,861 homes, matching the appendix total; the FEIS text reports 1,858). On the 23 sites matched to 2020 lots, PlanArena with the FEIS floor area and use gives 1,820 homes against the FEIS's 1,752 (**1.039×**, site-level log r 0.976). Homes recorded on those sites: 13 in 2020 and 13 in 2025 (FEIS analysis year 2031).
+
+## Three rezonings, area level
+
+PlanArena's own CEQR-style development-site screen (`planarena/indicators/rwcds.py`), applied to the lots whose zoning changed, against the city's projection and what was built by 2025.
+
+| Rezoning | Screened sites | FEIS increment | PlanArena at max FAR | PlanArena at 0.8 × max | Built by 2025 (all rezoned lots) | Share of FEIS increment |
+|---|---:|---:|---:|---:|---:|---:|
+| East Harlem (2017) | 131 | 3,488 (to 2027) | 5,950 (1.706×) | 4,705 | +319 | 9% |
+| Inwood (2018) | 48 | 3,908 (to 2033) | 3,668 (0.938×) | 2,934 | +565 | 14% |
+| SoHo/NoHo (2021) | 78 | 1,826 (to 2031) | 2,449 (1.341×) | 1,942 | -51 | -3% |
+
+The FEIS selects 'projected' sites more narrowly than PlanArena's screen, which also captures sites the FEIS treats as 'potential'. Mandatory Inclusionary Housing bonus FAR is not modelled.
+
 ## Optimizer against exhaustive search
 
-20 small study areas (16 with a positive optimum). The optimizer found the exact optimum in **69%** of them; median gap 0.0%, mean gap 22.4%. With the exact polish step (top 30 moves re-scored), it found the optimum in **100%** (mean gap 0.0%; median 0.39 s).
+20 small study areas (16 with a positive optimum). The optimizer found the exact optimum in **69%** of them; median gap 0.0%, mean gap 19.1%. With the exact polish step (top 30 moves re-scored), it found the optimum in **100%** (mean gap 0.0%; median 0.29 s).

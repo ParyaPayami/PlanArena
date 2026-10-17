@@ -50,6 +50,7 @@ export interface Meta {
     gnn: boolean;
     cv_summary?: Record<string, Record<string, { mean: number; sd: number }>>;
     emissions_validation?: Record<string, number | string>;
+    redevelopment?: Record<string, number | string>;
   };
 }
 
@@ -211,6 +212,7 @@ export interface ParcelInfo {
   allowed_uses: string[];
   per_use: Record<string, Record<string, number>>;
   suitability?: Record<string, number>;
+  redevelopment?: { p: number; percentile: number; likely_use: string; q: Record<string, number> };
 }
 
 export interface RuleResult {

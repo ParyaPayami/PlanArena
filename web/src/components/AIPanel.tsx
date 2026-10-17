@@ -23,19 +23,22 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
   const [zoning, setZoning] = useState(true);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ changes: Record<string, ChangeValue>; evaluation: Evaluation; ms: number } | null>(null);
+  const [startPlan, setStartPlan] = useState<Record<string, ChangeValue>>({});
 
   const run = async () => {
     setBusy(true);
     try {
       const sel = area === "selection" ? [...selected] : undefined;
       const scope = area === "selection" ? "affected" : area;
+      const start = useStore.getState().changes();
+      setStartPlan(start);
       const r = await api.suggest({
-        scope, mode, changes: useStore.getState().changes(), parcels: sel,
+        scope, mode, changes: start, parcels: sel,
         max_change_share: budget / 100, respect_zoning: zoning,
       });
       setResult(r);
       setPreview({ label: "AI optimal plan", changes: r.changes, evaluation: r.evaluation });
-      notify(`AI suggests ${Object.keys(r.changes).length} changes`, "good");
+      notify(`AI suggests ${Object.keys(r.changes).filter((k) => JSON.stringify(start[k]) !== JSON.stringify(r.changes[k])).length} changes`, "good");
     } catch (e) {
       notify(String(e), "bad");
     } finally {
@@ -43,12 +46,17 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
     }
   };
 
+  // The optimizer starts from the current plan, so its result includes the planner's own edits.
+  const userChanges = result ? startPlan : {};
+  const aiOnly = result
+    ? Object.fromEntries(Object.entries(result.changes).filter(([k, v]) => JSON.stringify(userChanges[k]) !== JSON.stringify(v)))
+    : {};
   const transitions = (() => {
     if (!result) return [];
-    const base = useStore.getState().data!.baseUse;
+    const cur = useStore.getState().use;
     const m = new Map<string, number>();
-    for (const [k, v] of Object.entries(result.changes)) {
-      const b = base[Number(k)];
+    for (const [k, v] of Object.entries(aiOnly)) {
+      const b = cur[Number(k)];
       const key = `${b >= 0 ? meta.land_uses[b].key : "unk"}→${typeof v === "string" ? v : v.use}`;
       m.set(key, (m.get(key) ?? 0) + 1);
     }
@@ -56,6 +64,20 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
   })();
   const lu = Object.fromEntries(meta.land_uses.map((u) => [u.key, u]));
   const cv = meta.models.cv_summary;
+  const rd = meta.models.redevelopment;
+  const overlay = useStore((s) => s.overlay);
+  const setOverlay = useStore((s) => s.setOverlay);
+  const toggleRedev = async (on: boolean) => {
+    if (!on) return setOverlay(null);
+    try {
+      const r = await api.redevelopment();
+      setSuitOverlay(false);
+      // Brightness by rank: probabilities are small, so the rank shows the gradient across the city.
+      setOverlay({ top: r.top, p: r.rank.map((x) => x ** 4), label: "Redevelopment likelihood (5 yr): colour = likely new use, brightness = likelihood rank" });
+    } catch (e) {
+      notify(String(e), "bad");
+    }
+  };
 
   return (
     <div className="panel-pad">
@@ -104,7 +126,11 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
 
       {result && (
         <div className="card mt">
-          <div className="eyebrow">AI plan · {Object.keys(result.changes).length} changes · {Math.round(result.ms)} ms</div>
+          <div className="eyebrow">
+            AI plan · {Object.keys(aiOnly).length} AI change{Object.keys(aiOnly).length === 1 ? "" : "s"}
+            {Object.keys(userChanges).length ? ` on top of your ${Object.keys(userChanges).length}` : ""} ·{" "}
+            {(result.ms / 1000).toFixed(1)} s
+          </div>
           <PillarCards ev={result.evaluation} />
           <div className="transitions">
             {transitions.map(([k, n]) => {
@@ -148,6 +174,17 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
           Show the AI's best-fit land use for every parcel
         </label>
         <div className="muted small">Brighter colour means a more confident prediction.</div>
+        <label className="check mt">
+          <input type="checkbox" checked={!!overlay && overlay.label.startsWith("Redevelopment")} onChange={(e) => toggleRedev(e.target.checked)} />
+          Show where redevelopment is likely (next 5 years)
+        </label>
+        {rd && (
+          <div className="muted small">
+            Transition model trained on what was actually rebuilt in 2015–2025. On 2020–2025, which it never saw, its
+            top 1% of lots were rebuilt {Math.round(Number(rd.test_precision_top1pct) * 100)}% of the time, against a{" "}
+            {(Number(rd.test_base_rate) * 100).toFixed(1)}% base rate (AUC {rd.test_auc}). Colour = most likely new use.
+          </div>
+        )}
       </div>
 
       {cv && (

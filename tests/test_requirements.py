@@ -85,3 +85,13 @@ def test_every_met_item_has_a_test():
     for item in CODING["items"]:
         if item["status"] == "met":
             assert f"_{item['id']}_" in names, item["id"]
+
+
+def test_G11_staff_can_customise_the_checklist(client, study):
+    s, _ = study
+    got = client.get(f"/api/scenarios/{s['id']}").json()
+    items = got["checklist"] + [{"label": "Community board review", "done": False}]
+    upd = client.patch(f"/api/scenarios/{s['id']}", json={"checklist": items}).json()
+    assert upd["checklist"][-1]["label"] == "Community board review"
+    bad = client.patch(f"/api/scenarios/{s['id']}", json={"checklist": [{"label": "x", "done": False, "owner": "me"}]})
+    assert bad.status_code == 422

@@ -26,10 +26,11 @@ To rebuild everything from raw data:
 .venv/bin/python -m planarena.twin.build     # digital twin: parcels, graph, raster, web layers
 .venv/bin/python -m planarena.calibrate      # coefficients from LL84/LL97/CBECS/QCEW + LL84 validation
 .venv/bin/python -m planarena.models.train   # baselines + GNN spatial CV + final model (~7 min, CPU)
+.venv/bin/python -I -m planarena.models.transition all  # redevelopment-transition model + conversion precedents
 .venv/bin/python -m planarena.agents.voting   # stakeholder vote in all 12 districts -> results/vote_summary.json
 .venv/bin/python -I -m planarena.validate all  # validation against open data -> results/validation, docs/VALIDATION.md
 cd web && npm install && npx vite build      # web app -> web/dist (served by the API)
-.venv/bin/python -m pytest -q                # 42 tests
+.venv/bin/python -m pytest -q                # 46 tests
 ```
 
 `planarena.calibrate` downloads the two LL84 extracts from NYC Open Data into `data/reference/` if they are missing, and records their SHA-256.
@@ -51,6 +52,9 @@ cd web && npm install && npx vite build      # web app -> web/dist (served by th
 | Plan upload and evaluation | `POST /api/import` reads CSV, GeoJSON, zipped shapefile or GeoPackage. It reviews unmatched rows, duplicates, unknown uses, FAR issues and unchanged rows before you apply the plan |
 | Studies and audit | `planarena/api/store.py`: SQLite studies (draft → under review → hearing scheduled → adopted/withdrawn) with a checklist, hearing date, history, and a hash-chained tamper-evident audit log |
 | Outputs | Staff report (HTML), CSV/GeoJSON export, provenance JSON (source hash, coefficients, models, engine version) |
+| Redevelopment likelihood | `planarena/models/transition.py`: five-year likelihood and likely new use for every lot (Optimize tab overlay, parcel inspector) |
+| Rezoning test | `planarena/indicators/rwcds.py`: the development-site screen city environmental reviews use, applied to the FAR values in a plan (Desk tab) |
+| Realism | Conversions of existing buildings never seen in Manhattan 2015–2025 at that size are flagged, and the optimizer skips them |
 | Requirements traceability | `planarena/requirements.py` produces [docs/REQUIREMENTS_TRACEABILITY.md](docs/REQUIREMENTS_TRACEABILITY.md), mapping a de-identified municipal requirements catalogue to features |
 
 ## Coefficients: every value has a source and a range
@@ -77,8 +81,10 @@ Full results are in [docs/VALIDATION.md](docs/VALIDATION.md). They are generated
 | Jobs, where they are | LEHD LODES 2023 workplace jobs | Total 2,480,984 vs 2,504,522; tract r 0.816, block r 0.704 |
 | Homes from floor area | 295 parcels developed 2015–2025 (MapPLUTO 15v1 → 25v3.1) | 1.089× recorded homes; r 0.894; median error 28% |
 | **East Harlem rezoning** (2017) | The city's FEIS, 68 projected development sites | Same sites and FAR: 0.969× the FEIS homes (site r 0.973); from zoning alone: 0.898×. By 2025, 12% of the projected increment was built |
-| Which parcels redevelop (2015 → 2025, physical change) | 773 parcels rebuilt with a new use | AUC: underbuilt ratio 0.78, zoning 0.765, **GNN 0.707**, LightGBM 0.637 |
-| What they become | Same parcels | Top-3: zoning 67%, LightGBM 60%, **GNN 50%** (chance 38%) |
+| **Redevelopment-transition model**, temporal holdout (trained 2015→2020, tested 2020→2025) | 569 lots redeveloped of 42,170 (base rate 1.4%) | LightGBM AUC **0.847**, precision in the top 1% **26%** (19× base); GNN 0.809; best baseline 0.749. New use: top-3 92% (GNN), top-1 60% (average of both) |
+| GNN suitability as a redevelopment predictor (2015 → 2025) | 773 lots rebuilt with a new use | Loses to simple baselines (AUC 0.707 vs 0.78). It describes fit, not change, which is why the transition model was built |
+| **SoHo/NoHo rezoning** (2021) | FEIS Appendix A2, 26 projected sites (parse matches the appendix total) | Same sites and floor area: 1.039× the FEIS homes (site r 0.976). Nothing built on them by 2025 |
+| PlanArena's own rezoning screen, three rezonings | City projections for East Harlem, Inwood, SoHo/NoHo | Inwood 0.938×, SoHo/NoHo 1.341×, East Harlem 1.706× (the screen also counts 'potential' sites). Built by 2025: 9%, 14% and about 0% of the projected increments |
 | Optimizer | Exhaustive search, 16 small areas | Exact optimum found in 69% with first-order search alone; **100% with the exact polish step**, now on by default |
 
 **What this means**
@@ -88,11 +94,15 @@ Full results are in [docs/VALIDATION.md](docs/VALIDATION.md). They are generated
   * Jobs land in the right places (tract r 0.82).
   * Homes from floor area are within 9%.
   * On the East Harlem sites, PlanArena reproduces the city's own environmental impact projection within 3%.
-* **The GNN suitability model is not a redevelopment predictor.**
-  * It learns which use fits today's context, and it does that well (spatial cross-validation below).
-  * For predicting physical redevelopment, simple zoning and underbuilt-ratio baselines beat it.
-  * The next step is a transition model trained on an earlier period (2005/2010 → 2015) and tested on 2015 → 2025.
-* **Planners' projections and real build-out differ in timing.** Only about 12% of East Harlem's projected increment was recorded by 2025. A "likely to happen" layer would help, so that is a thesis contribution.
+* **Where change happens is now predicted with a model built for it.**
+  * The transition model learns from observed redevelopment.
+  * On a later period it never saw, its top 1% of lots were redeveloped 26% of the time, against a 1.4% base rate.
+  * It runs in the app as "Show where redevelopment is likely (next 5 years)", and in the parcel inspector.
+  * Within the training period, accuracy is far higher (average precision about 0.54 against 0.14 later). The redevelopment pattern shifted after 2020; that is a finding, not noise.
+* **The GNN suitability model describes fit, not change.** It is kept for the "best fit" overlay. For redevelopment, simple baselines beat it.
+* **Projections and build-out differ in timing.**
+  * Of the projected increments, only 9% (East Harlem, 2017) and 14% (Inwood, 2018) were built by 2025. SoHo/NoHo (adopted 2021) had nothing yet.
+  * A planning tool should show both "what zoning allows" and "what is likely to happen". PlanArena now does both.
 
 **Spatial cross-validation of the GNN** (whole 600 m tiles held out; the task is reconstructing current use):
 
@@ -154,10 +164,10 @@ Every council winner beats no change among residents, but residents almost alway
 1. **Stakeholder priorities are modelling assumptions.** The vote is only as representative as the weights in `planarena/agents/stakeholders.py`. They can be edited, and seats can be changed in the app.
 2. **LL84 covers only buildings of 25,000 sq ft or more.** Small buildings take the same use-type EUIs.
 3. **Roof share** is estimated as floor area / floors. NYC building footprints would measure it directly.
-4. **Validation still to add.**
-   * A redevelopment-transition model, trained 2005/2010 → 2015 and tested 2015 → 2025.
-   * Replays of the Inwood (2018) and SoHo/NoHo (2021) rezonings.
-   * A realism rule for implausible conversions. The optimizer test found that turning a 1.4M sq ft office tower into a public facility scores highly on facility access.
-5. **GNN.** Try HGT, explicit neighbour-composition inputs, and a GNN + LightGBM ensemble.
+4. **Still open.**
+   * Inwood's site-level FEIS tables are not machine-readable here, so its replay is area level only.
+   * Mandatory Inclusionary Housing bonus FAR is not modelled.
+   * Usability items F9, F12 and F14 in [docs/USABILITY_REVIEW.md](docs/USABILITY_REVIEW.md).
+5. **GNN.** The transition GNN trails LightGBM (AUC 0.81 vs 0.85). Try longer training histories (more PLUTO releases), HGT, and embedding the GNN as a feature for LightGBM.
 6. **Imagery** is not used. NAIP and Sentinel-2 are open and could feed a vision branch; Google Street View may not be used for training.
 7. **More cities.** The twin builder is city-agnostic once parcels, zoning and land-use codes are mapped.

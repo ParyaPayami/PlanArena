@@ -1,0 +1,44 @@
+{
+  "test": "Area-level replay. Rezoned lots = zoning changed between the release before adoption and MapPLUTO 25v3.1 within the community district (BBL match); homes built are counted on the same land by geometry. PlanArena applies its CEQR-style development-site screen (planarena/indicators/rwcds.py) under the new maximum FAR and projects homes; compared with the FEIS increment and with homes recorded by 2025. Mandatory Inclusionary Housing bonus FAR is not modelled.",
+  "rezonings": {
+    "East Harlem (2017)": {
+      "rezoned_lots_matched": 1036,
+      "screened_sites": 131,
+      "feis_increment_du": 3488,
+      "feis_source": "East Harlem Rezoning FEIS, CEQR 17DCP048M, Table 1-1a",
+      "feis_horizon": 2027,
+      "planarena_increment_du_at_max_far": 5950,
+      "planarena_increment_du_at_utilisation": 4705,
+      "ratio_max_far_to_feis": 1.706,
+      "observed_increment_du_rezoned_lots_to_2025": 319.0,
+      "observed_increment_du_on_screened_sites_to_2025": 133.0,
+      "observed_share_of_feis_increment": 0.091
+    },
+    "Inwood (2018)": {
+      "rezoned_lots_matched": 491,
+      "screened_sites": 48,
+      "feis_increment_du": 3908,
+      "feis_source": "Inwood Rezoning, CEQR 17DME007M, OEC project page (Technical Memorandum 003, 15-year)",
+      "feis_horizon": 2033,
+      "planarena_increment_du_at_max_far": 3668,
+      "planarena_increment_du_at_utilisation": 2934,
+      "ratio_max_far_to_feis": 0.938,
+      "observed_increment_du_rezoned_lots_to_2025": 565.0,
+      "observed_increment_du_on_screened_sites_to_2025": 270.0,
+      "observed_share_of_feis_increment": 0.145
+    },
+    "SoHo/NoHo (2021)": {
+      "rezoned_lots_matched": 830,
+      "screened_sites": 78,
+      "feis_increment_du": 1826,
+      "feis_source": "SoHo/NoHo Neighborhood Plan FEIS (2021), Chapter 1",
+      "feis_horizon": 2031,
+      "planarena_increment_du_at_max_far": 2449,
+      "planarena_increment_du_at_utilisation": 1942,
+      "ratio_max_far_to_feis": 1.341,
+      "observed_increment_du_rezoned_lots_to_2025": -51.0,
+      "observed_increment_du_on_screened_sites_to_2025": 3.0,
+      "observed_share_of_feis_increment": -0.028
+    }
+  }
+}

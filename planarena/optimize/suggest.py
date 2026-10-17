@@ -37,6 +37,7 @@ class SuggestConfig:
     protect_landmarks: bool = True
     protect_homes: bool = True  # never remove existing homes
     allow_demolition: bool = False  # built lots may not become open space, parking or vacant
+    require_precedent: bool = True  # skip conversions of existing buildings never observed in 2015-2025
     protect_parks: bool = True  # existing open space stays (parkland alienation needs state approval in NY)
     protect_public: bool = True  # existing schools, hospitals and civic facilities stay
     protect_infrastructure: bool = True  # transportation and utility lots stay
@@ -177,6 +178,10 @@ class Suggester:
             built = e.bldg > 0
             unbuilt_uses = np.isin(np.arange(N_USES), [U["opn"], U["prk"], U["vac"]])
             allowed[built[:, None] & unbuilt_uses[None, :]] = False
+        if cfg.require_precedent and e.precedent is not None:
+            built = np.nonzero(eligible & (e.bldg > 0))[0]
+            for u in range(N_USES):
+                allowed[built, u] &= e.has_precedent(built, np.full(len(built), u))
         return mask, eligible, allowed
 
     def suggest(self, cfg: SuggestConfig | None = None, use: np.ndarray | None = None) -> dict:

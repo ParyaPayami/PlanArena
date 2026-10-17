@@ -189,9 +189,9 @@ export const useStore = create<State>((set, get) => ({
   },
 
   setScope: (scope) => set({ scope }),
-  setPreview: (preview) => set((s) => ({ preview, version: s.version + 1 })),
+  setPreview: (preview) => set((s) => ({ preview, version: s.version + 1, overlay: preview ? null : s.overlay })),
   setVote: (vote) => set({ vote }),
-  setOverlay: (overlay) => set({ overlay }),
+  setOverlay: (overlay) => set((s) => ({ overlay, preview: overlay ? undefined : s.preview, version: s.version + 1 })),
   setHighlight: (highlight) => set((s) => ({ highlight, selVersion: s.selVersion + 1 })),
   flyTo: (lon, lat, zoom = 17) => set({ focus: { lon, lat, zoom, id: Date.now() } }),
   setTab: (tab) => set({ tab }),

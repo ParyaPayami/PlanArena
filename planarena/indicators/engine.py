@@ -540,6 +540,31 @@ class ImpactEngine:
             out.append(row)
         return out
 
+    # ------------------------------------------------------------- conversion precedent (realism)
+    precedent = None
+
+    def set_precedent(self, table: dict) -> None:
+        """Observed conversions by (from use, to use, building size class); see planarena.models.transition."""
+        c = np.array(table["counts"])
+        # A conversion seen in a larger building class is also plausible in smaller ones.
+        self.precedent = np.flip(np.cumsum(np.flip(c[:, :, 1:], axis=2), axis=2), axis=2)
+        self.precedent_edges = np.array(table["size_bins_sqft"][1:])
+
+    def has_precedent(self, idx: np.ndarray, new_use: np.ndarray) -> np.ndarray:
+        """True when converting the existing building on each parcel to ``new_use`` was observed at least once
+        in Manhattan 2015-2025 at that building size or larger. Unbuilt lots always pass (new construction)."""
+        idx = np.asarray(idx)
+        if self.precedent is None or not len(idx):
+            return np.ones(len(idx), bool)
+        b = self.bldg[idx]
+        cls = np.searchsorted(self.precedent_edges, b, side="right")
+        cur = self.base_use[idx]
+        ok = (b <= 0) | (cur < 0) | (new_use == cur)
+        valid = (cur >= 0) & (new_use >= 0)
+        hits = np.zeros(len(idx), bool)
+        hits[valid] = self.precedent[cur[valid], new_use[valid], cls[valid]] > 0
+        return ok | hits
+
     def warnings(self, use: np.ndarray, far: np.ndarray | None = None) -> list[dict]:
         changed = np.nonzero(self.changed_mask(use, far))[0]
         if not len(changed):
@@ -562,6 +587,12 @@ class ImpactEngine:
         if len(prot):
             w.append({"type": "protected", "count": int(len(prot)), "parcels": prot[:200].tolist(),
                       "message": f"{len(prot)} parcel(s) are landmarks or in historic districts."})
+        if self.precedent is not None and len(use_changed):
+            nop = use_changed[~self.has_precedent(use_changed, use[use_changed])]
+            if len(nop):
+                w.append({"type": "precedent", "count": int(len(nop)), "parcels": nop[:200].tolist(),
+                          "message": f"{len(nop)} conversion(s) of existing buildings have no precedent in Manhattan "
+                                     "2015-2025 at that building size (e.g. a large office tower to a public facility)."})
         if len(lost_homes):
             n_units = int(self.obs_units[lost_homes].sum())
             w.append({"type": "displacement", "count": int(len(lost_homes)), "parcels": lost_homes[:200].tolist(),
@@ -572,4 +603,8 @@ class ImpactEngine:
 def load_engine(processed: Path = PROCESSED) -> ImpactEngine:
     parcels = pd.read_parquet(processed / "parcels.parquet")
     meta = json.loads((processed / "twin_meta.json").read_text())
-    return ImpactEngine(parcels, meta)
+    e = ImpactEngine(parcels, meta)
+    f = processed / "conversion_precedent.json"
+    if f.exists():
+        e.set_precedent(json.loads(f.read_text()))
+    return e

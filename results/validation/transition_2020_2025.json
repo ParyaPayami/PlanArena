@@ -1,0 +1,89 @@
+{
+  "test": "Temporal holdout. Trained on 2015 features with outcomes to end-2020 (MapPLUTO 15v1 -> 20v8); tested on 2020 features with outcomes to 2025 (20v8 -> 25v3.1). Developed = new building completed in the period, or floor area +25% and +2,000 sq ft, on the land of the parcel (geometry match).",
+  "train_parcels": 42623,
+  "train_developed": 1814,
+  "test_parcels": 42170,
+  "test_developed": 569,
+  "test_base_rate": 0.0135,
+  "development": {
+    "GNN": {
+      "auc": 0.809,
+      "average_precision": 0.109,
+      "precision_top1pct": 0.183,
+      "recall_top1pct": 0.135,
+      "precision_top5pct": 0.102,
+      "recall_top5pct": 0.38,
+      "brier": 0.0333,
+      "ece": 0.0829,
+      "mean_predicted": 0.0964
+    },
+    "LightGBM": {
+      "auc": 0.847,
+      "average_precision": 0.139,
+      "precision_top1pct": 0.264,
+      "recall_top1pct": 0.195,
+      "precision_top5pct": 0.106,
+      "recall_top5pct": 0.392,
+      "brier": 0.0136,
+      "ece": 0.0113,
+      "mean_predicted": 0.0247
+    },
+    "GNN + LightGBM (mean)": {
+      "auc": 0.831,
+      "average_precision": 0.136,
+      "precision_top1pct": 0.24,
+      "recall_top1pct": 0.178,
+      "precision_top5pct": 0.111,
+      "recall_top5pct": 0.413,
+      "brier": 0.0193,
+      "ece": 0.047,
+      "mean_predicted": 0.0605
+    },
+    "Underbuilt share of zoning capacity": {
+      "auc": 0.749,
+      "average_precision": 0.068,
+      "precision_top1pct": 0.105,
+      "recall_top1pct": 0.077,
+      "precision_top5pct": 0.105,
+      "recall_top5pct": 0.388
+    },
+    "Land-value share of assessed value": {
+      "auc": 0.754,
+      "average_precision": 0.075,
+      "precision_top1pct": 0.126,
+      "recall_top1pct": 0.093,
+      "precision_top5pct": 0.11,
+      "recall_top5pct": 0.406
+    }
+  },
+  "destination": {
+    "GNN": {
+      "top1": 0.579,
+      "top3": 0.925,
+      "top1_when_use_changed": 0.411
+    },
+    "LightGBM": {
+      "top1": 0.579,
+      "top3": 0.903,
+      "top1_when_use_changed": 0.414
+    },
+    "GNN + LightGBM (mean)": {
+      "top1": 0.597,
+      "top3": 0.925,
+      "top1_when_use_changed": 0.432
+    },
+    "Zoning-family prior (training period)": {
+      "top1": 0.405,
+      "top3": 0.867,
+      "top1_when_use_changed": 0.334
+    },
+    "Same use as before": {
+      "top1": 0.394,
+      "top3": 1.0,
+      "top1_when_use_changed": 0.0
+    }
+  },
+  "destination_n": 558,
+  "destination_n_use_changed": 338,
+  "features": 59
+}

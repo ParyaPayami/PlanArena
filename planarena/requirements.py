@@ -65,7 +65,7 @@ THEMES = {
     "plan_sheets": (r"sheet|markup|stamp|drawing|redline", "Out of scope (thesis agent roster: drawing extraction)",
                     "out of scope"),
 }
-COMPILED = {k: re.compile(v[0], re.I) for k, v in THEMES.items()}
+COMPILED = {k: re.compile(v[0].replace("(", "(?:").replace("(?:?:", "(?:"), re.I) for k, v in THEMES.items()}
 
 
 def load(path: Path) -> pd.DataFrame:

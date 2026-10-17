@@ -43,6 +43,7 @@ export const api = {
   meta: () => get<Meta>("/api/meta"),
   parcel: (i: number) => get<ParcelInfo>(`/api/parcel/${i}`),
   suitability: () => get<{ top: number[]; p: number[] }>("/api/suitability"),
+  redevelopment: () => get<{ p: number[]; rank: number[]; top: number[]; meta: Record<string, number | string> }>("/api/redevelopment"),
   evaluate: (changes: Changes, scope: string) => post<Evaluation>("/api/evaluate", { changes, scope }),
   suggest: (body: {
     scope: string;
@@ -67,6 +68,10 @@ export const api = {
     samples?: number;
     plans?: Record<string, { title: string; changes: Changes }>;
   }) => post<Vote>("/api/vote", body),
+  rezoningTest: (changes: Changes) =>
+    post<{ rezoned_parcels: number; sites: number[]; n_sites: number; homes_increment: number;
+      homes_increment_at_utilisation: number; utilisation: number; floor_area_increment_sqft: number; criteria: string;
+      min_far_increase: number }>("/api/rezoning-test", { changes }),
   priceOfAnarchy: (scope: string) =>
     post<{ welfare_fragmented: number; welfare_cooperative: number; price_of_anarchy: number | null }>(
       "/api/price-of-anarchy",

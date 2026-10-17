@@ -13,3 +13,4 @@ data/*.sqlite3*
 .Rhistory
 data/raw/
 data/processed_*/
+data/transition/

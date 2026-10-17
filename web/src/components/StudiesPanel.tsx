@@ -170,6 +170,20 @@ export default function StudiesPanel() {
                     {c.label}
                   </label>
                 ))}
+                <form
+                  className="row gap add-item"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const inp = (e.currentTarget.elements.namedItem("item") as HTMLInputElement);
+                    const label = inp.value.trim();
+                    if (!label) return;
+                    await patch(s, { checklist: [...s.checklist, { label, done: false }] });
+                    inp.value = "";
+                  }}
+                >
+                  <input name="item" className="text" placeholder="Add a checklist step (e.g. Community board review)" maxLength={200} />
+                  <button type="submit">Add</button>
+                </form>
                 <div className="row gap">
                   <button
                     onClick={async () => {

@@ -17,9 +17,16 @@ PlanArena is a land-use decision-support system on a city's digital twin, with a
         ├── ML MODELS (planarena/models)
         │     relational GraphSAGE (PyG): land-use fit head + value head
         │     LightGBM baselines · spatial-block CV (600 m tiles, 5 folds)
+        │     transition.py: 5-year redevelopment likelihood + likely new use (LightGBM / GNN),
+        │       temporal holdout 2015→2020 / 2020→2025; conversion precedents (realism)
+        │
+        ├── VALIDATION (planarena/validate.py) against LL84 2023, LODES 2023, MapPLUTO 15v1/20v8,
+        │     and the East Harlem, SoHo/NoHo and Inwood rezoning EISs -> docs/VALIDATION.md
         │
         ├── OPTIMIZER (planarena/optimize)
-        │     suggest.py: iterated best response (potential game), protections, consensus mode
+        │     suggest.py: iterated best response (potential game), protections, consensus mode,
+        │       exact polish of the top moves, no conversions without precedent
+        │     indicators/rwcds.py: CEQR-style development-site screen (rezoning test)
         │     pareto.py: NSGA-III over a study area, exact re-scoring, named presets
         │
         └── STAKEHOLDER VOTE + GAME THEORY (planarena/agents)

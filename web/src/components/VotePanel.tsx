@@ -241,6 +241,20 @@ function Results({ vote, short, title }: { vote: Vote; short: (v: Vote, id: stri
         </ul>
       </div>
 
+      <details className="card mt glossary">
+        <summary>How to read this</summary>
+        <ul className="small">
+          <li><b>Ballot</b>: each stakeholder ranks every plan from its own priorities. Nobody types or talks; the ranking follows from the impacts.</li>
+          <li><b>Head to head</b>: plan A beats plan B if more seats rank A above B.</li>
+          <li><b>Condorcet winner</b>: a plan that beats every other plan head to head. It does not always exist; when preferences go in a circle, there is a <b>cycle</b>.</li>
+          <li><b>Smith set</b>: the smallest group of plans that each beat every plan outside the group.</li>
+          <li><b>Schulze</b> (the deciding rule): picks the Condorcet winner when there is one, otherwise the plan with the strongest chain of head-to-head wins. Near-identical plans cannot split its vote.</li>
+          <li><b>Other rules</b> are shown for comparison: plurality (most first choices), Borda (points by rank), instant runoff, Copeland (count of head-to-head wins), Kemeny–Young (the ranking that agrees with the most pairwise preferences), approval (plans better than no change), score (0–10) and majority judgment (median grade).</li>
+          <li><b>Double majority</b>: both council seats and affected residents prefer the plan to no change.</li>
+          <li><b>Robustness</b>: how often the winner still wins when coefficients and seat weights are varied.</li>
+        </ul>
+      </details>
+
       <div className="card mt">
         <div className="eyebrow">Ballots (top three of {ids.length} plans)</div>
         <table className="ballots">

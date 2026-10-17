@@ -398,6 +398,158 @@ def east_harlem() -> dict:
     return _save("east_harlem_rezoning", res)
 
 
+# ----------------------------------------------------------------------------- 5b. SoHo/NoHo (2021) site-level
+P20 = DATA / "processed_20v8"
+
+
+def _soho_tables(txt: str) -> list[pd.DataFrame]:
+    """Appendix A2 tables in order: No Action (projected, potential), With Action (...), Increment (...)."""
+    tables, cur = [], []
+    for line in txt.splitlines():
+        tok = line.split()
+        if tok and tok[0] == "TOTAL":
+            tables.append(pd.DataFrame(cur))
+            cur = []
+            continue
+        grp = [k for k, t_ in enumerate(tok) if t_ in ("Projected", "Potential")]
+        if len(tok) > 10 and grp:
+            g = grp[0]  # existing zoning can span two tokens (split lots), so locate the group column
+            num = lambda t: (0.0 if t == "-" else float(t.replace(",", "")) if re.fullmatch(r"-?[\d,]+(\.\d+)?", t)
+                             else np.nan)
+            cur.append({"dsow": tok[0], "site": tok[1], "lot_area": num(tok[3]), "zone_new": tok[g - 1], "group": tok[g],
+                        "res_zfa": num(tok[g + 1]), "res_gfa": num(tok[g + 2]), "du": num(tok[g + 3]),
+                        "total_gfa": num(tok[-6]) if len(tok) > 30 else np.nan})
+    return tables
+
+
+def soho_noho() -> dict:
+    from planarena.indicators.engine import load_engine
+
+    pdf = RAW / "eis_soho_noho" / "appenda-feis.pdf"
+    txt_f = RAW / "eis_soho_noho" / "appa.txt"
+    if not txt_f.exists():
+        subprocess.run(["pdftotext", "-layout", str(pdf), str(txt_f)], check=True)
+    txt = txt_f.read_text()
+    t = _soho_tables(txt[txt.index("Appendix A2"):txt.index("Appendix A3")])
+    no_action, with_action = t[0], t[2]
+    # Appendix A3: BBL -> DSOW site id
+    a3 = txt[txt.index("Appendix A3"):]
+    bbl_site = {}
+    for line in a3.splitlines():
+        for bbl, dsow in re.findall(r"(1\d{9})\s+\S+\s+(\S+)", line):
+            bbl_site[int(bbl)] = dsow
+    e20 = load_engine(P20)
+    idx20 = {int(b): i for i, b in enumerate(e20.p.bbl)}
+    p25 = pd.read_parquet(PROCESSED / "parcels.parquet")
+    idx25 = {int(b): i for i, b in enumerate(p25.bbl)}
+    use = e20.base_use.copy()
+    far = np.full(e20.n, np.nan)
+    rows = []
+    for _, r in with_action.iterrows():
+        bbls = [b for b, d in bbl_site.items() if d == r.dsow]
+        ii = [idx20[b] for b in bbls if b in idx20]
+        if not ii or not r.total_gfa > 0:
+            continue
+        resid = r.res_gfa / r.total_gfa
+        use[ii] = U["res"] if resid >= 0.9 else U["mix"] if resid > 0 else U["com"]
+        far[ii] = r.total_gfa / r.lot_area
+        na = no_action[no_action.dsow == r.dsow]
+        rows.append({"dsow": r.dsow, "i": ii, "feis_du": r.du, "feis_du_no_action": float(na.du.sum()) if len(na) else 0.0,
+                     "du_2020": float(e20.p.units_res.iloc[ii].sum()),
+                     "du_2025": float(sum(p25.units_res.iloc[idx25[b]] for b in bbls if b in idx25))})
+    st = e20.parcel_state(use, far)
+    for r in rows:
+        r["planarena_du"] = float(st["units"][r["i"]].sum())
+    d = pd.DataFrame(rows)
+    proj = with_action[with_action.group == "Projected"]
+    res = {
+        "test": "SoHo/NoHo Neighborhood Plan FEIS (2021), Appendix A2 projected development sites (BBLs from Appendix A3). "
+                "PlanArena is run on the same sites with the FEIS gross floor area and use; built outcome from MapPLUTO "
+                "25v3.1 (BBL match).",
+        "projected_sites_parsed": int(len(proj)), "sites_matched_2020": int(len(d)),
+        "parse_check": {"appendix_total_projected_du": 1861, "parsed": float(proj.du.sum()),
+                        "note": "Appendix A2 totals 1,861 projected DUs; the FEIS text reports 1,858."},
+        "feis_with_action_du": float(d.feis_du.sum()), "feis_no_action_du": float(d.feis_du_no_action.sum()),
+        "feis_text_with_action_du": 1858, "feis_text_increment_du": 1826, "feis_appendix_total_du": float(proj.du.sum()),
+        "planarena_du_same_gfa": round(float(d.planarena_du.sum())),
+        "ratio_to_feis": round(float(d.planarena_du.sum() / d.feis_du.sum()), 3),
+        "site_log_r": round(_logr(d.feis_du.to_numpy(), d.planarena_du.to_numpy())[0], 3),
+        "du_2020": float(d.du_2020.sum()), "du_2025": float(d.du_2025.sum()),
+        "feis_unit_factor_sf": 850, "feis_analysis_year": 2031, "adopted": "2021-12",
+        "source": "https://www.nyc.gov/assets/planning/download/pdf/applicants/env-review/soho-noho/appenda-feis.pdf",
+        "source_sha256": _sha(pdf),
+    }
+    return _save("soho_noho_rezoning", res)
+
+
+# ----------------------------------------------------------------------------- 5c. area-level replays (all three)
+REZONINGS = {
+    "East Harlem (2017)": {"cd": 111, "before": "15", "year": 2017, "feis_increment_du": 3488, "horizon": 2027,
+                           "feis": "East Harlem Rezoning FEIS, CEQR 17DCP048M, Table 1-1a"},
+    "Inwood (2018)": {"cd": 112, "before": "15", "year": 2018, "feis_increment_du": 3908, "horizon": 2033,
+                      "feis": "Inwood Rezoning, CEQR 17DME007M, OEC project page (Technical Memorandum 003, 15-year)"},
+    "SoHo/NoHo (2021)": {"cd": 102, "before": "20", "year": 2021, "feis_increment_du": 1826, "horizon": 2031,
+                         "feis": "SoHo/NoHo Neighborhood Plan FEIS (2021), Chapter 1"},
+}
+
+
+def rezonings() -> dict:
+    from planarena.indicators import rwcds
+    from planarena.indicators.engine import load_engine
+    from planarena.twin.zoning import allowed_uses
+
+    import geopandas as gpd
+    import shapely
+
+    p25 = pd.read_parquet(PROCESSED / "parcels.parquet")
+    pts25 = gpd.read_parquet(PROCESSED / "parcels.geoparquet").geometry.representative_point().values
+    tree25 = shapely.STRtree(pts25)
+    out = {}
+    for name, cfg in REZONINGS.items():
+        d0 = P15 if cfg["before"] == "15" else P20
+        e0 = load_engine(d0)
+        b = e0.p[["bbl", "zone", "max_far", "units_res", "cd"]].reset_index(names="i0").merge(
+            p25[["bbl", "zone", "max_far", "units_res"]], on="bbl", suffixes=("_0", "_1"))
+        b = b[b.cd == cfg["cd"]]
+        rez = b[b.zone_0 != b.zone_1]
+        new_max = e0.p["max_far"].to_numpy().copy()
+        new_max[rez.i0.to_numpy()] = rez.max_far_1.to_numpy()
+        area = np.zeros(e0.n, bool)
+        area[rez.i0.to_numpy()] = True
+        res_ok = np.zeros(e0.n, bool)
+        res_ok[rez.i0.to_numpy()] = [("res" in allowed_uses(z)) for z in rez.zone_1]
+        sites = rwcds.screen(e0, new_max, area, cfg["year"])
+        full = rwcds.project(e0, sites, new_max, res_ok, 1.0)
+        util = rwcds.project(e0, sites, new_max, res_ok, e0.coef["assumptions"]["buildout_utilization"]["value"])
+        # Observed homes by 2025 on the same land: 2025 lots whose representative point falls inside the
+        # rezoned (or screened) t0 lots, so merged lots of new buildings are followed.
+        g0 = gpd.read_parquet(d0 / "parcels.geoparquet").geometry.values
+        def built_on(idx0):
+            if not len(idx0):
+                return 0.0
+            hit = tree25.query(shapely.union_all(g0[idx0]), predicate="contains")
+            return float(p25.units_res.iloc[hit].sum() - e0.p.units_res.iloc[idx0].sum())
+        observed = built_on(rez.i0.to_numpy())
+        observed_sites = built_on(np.nonzero(sites)[0])
+        out[name] = {
+            "rezoned_lots_matched": int(len(rez)), "screened_sites": full["sites"],
+            "feis_increment_du": cfg["feis_increment_du"], "feis_source": cfg["feis"], "feis_horizon": cfg["horizon"],
+            "planarena_increment_du_at_max_far": round(full["homes_increment"]),
+            "planarena_increment_du_at_utilisation": round(util["homes_increment"]),
+            "ratio_max_far_to_feis": round(full["homes_increment"] / cfg["feis_increment_du"], 3),
+            "observed_increment_du_rezoned_lots_to_2025": observed,
+            "observed_increment_du_on_screened_sites_to_2025": observed_sites,
+            "observed_share_of_feis_increment": round(observed / cfg["feis_increment_du"], 3),
+        }
+    return _save("rezoning_replays", {
+        "test": "Area-level replay. Rezoned lots = zoning changed between the release before adoption and MapPLUTO "
+                "25v3.1 within the community district (BBL match); homes built are counted on the same land by geometry. PlanArena applies its CEQR-style development-site "
+                "screen (planarena/indicators/rwcds.py) under the new maximum FAR and projects homes; compared with the "
+                "FEIS increment and with homes recorded by 2025. Mandatory Inclusionary Housing bonus FAR is not modelled.",
+        "rezonings": out,
+    })
+
+
 # ----------------------------------------------------------------------------- 6. optimizer gap
 def optimizer(n_areas: int = 20, budget: int = 2, seed: int = 0) -> dict:
     import itertools
@@ -527,6 +679,22 @@ def report() -> str:
             L.append(f"| {k} | {v['auc']} | {v['precision_top5pct']:.1%} | {v['lift_top5pct']}× | "
                      + (f"{d['top1']:.1%} | {d['top3']:.1%} |" if d else "– | – |"))
         L += ["", f"Caveat: {bt['caveat']}", ""]
+    tr = load("transition_2020_2025")
+    if tr:
+        L += ["## Redevelopment-transition model (temporal holdout)", "",
+              f"Trained on 2015 features and 2015–2020 outcomes ({tr['train_developed']:,} redeveloped lots), tested on "
+              f"2020 features and 2020–2025 outcomes ({tr['test_developed']:,} of {tr['test_parcels']:,}; base rate "
+              f"{tr['test_base_rate']:.2%}).", "",
+              "| Will the lot be redeveloped within 5 years? | AUC | Average precision | Precision, top 1% | Recall, top 5% |",
+              "|---|---:|---:|---:|---:|"]
+        for k, v in tr["development"].items():
+            L.append(f"| {k} | {v['auc']} | {v['average_precision']} | {v['precision_top1pct']:.1%} | {v['recall_top5pct']:.1%} |")
+        L += ["", f"| Into what use? ({tr['destination_n']} redeveloped lots) | Top-1 | Top-3 | Top-1 when the use changed |",
+              "|---|---:|---:|---:|"]
+        for k, v in tr["destination"].items():
+            L.append(f"| {k} | {v['top1']:.1%} | {v['top3']:.1%} | {v['top1_when_use_changed']:.1%} |")
+        L += ["", "Model selection used a spatial hold-out inside the training period only. Accuracy there (average "
+              "precision about 0.54) is far above the later period: redevelopment patterns shifted after 2020.", ""]
     if un:
         L += ["## Homes: replay of 2015–2025 development", "",
               f"{un['parcels']} developed parcels, {un['observed_homes']:,} homes recorded in 2025. Given the observed "
@@ -545,6 +713,28 @@ def report() -> str:
               f"| Recorded 2025 | {eh['du_2025']:,.0f} |", "",
               f"By 2025, {eh['share_of_feis_increment_built_by_2025']:.0%} of the FEIS increment of "
               f"{eh['feis_increment_du']:,.0f} homes is recorded on the projected sites (FEIS analysis year 2027).", ""]
+    sn, rz = load("soho_noho_rezoning"), load("rezoning_replays")
+    if sn:
+        L += ["## SoHo/NoHo (2021) replay, site level", "",
+              f"FEIS Appendix A2 projected sites parsed: {sn['projected_sites_parsed']} (total {sn['parse_check']['parsed']:,.0f} "
+              f"homes, matching the appendix total; the FEIS text reports {sn['feis_text_with_action_du']:,}). On the "
+              f"{sn['sites_matched_2020']} sites matched to 2020 lots, PlanArena with the FEIS floor area and use gives "
+              f"{sn['planarena_du_same_gfa']:,} homes against the FEIS's {sn['feis_with_action_du']:,.0f} "
+              f"(**{sn['ratio_to_feis']}×**, site-level log r {sn['site_log_r']}). Homes recorded on those sites: "
+              f"{sn['du_2020']:.0f} in 2020 and {sn['du_2025']:.0f} in 2025 (FEIS analysis year 2031).", ""]
+    if rz:
+        L += ["## Three rezonings, area level", "",
+              "PlanArena's own CEQR-style development-site screen (`planarena/indicators/rwcds.py`), applied to the lots "
+              "whose zoning changed, against the city's projection and what was built by 2025.", "",
+              "| Rezoning | Screened sites | FEIS increment | PlanArena at max FAR | PlanArena at 0.8 × max | Built by 2025 (all rezoned lots) | Share of FEIS increment |",
+              "|---|---:|---:|---:|---:|---:|---:|"]
+        for k, v in rz["rezonings"].items():
+            L.append(f"| {k} | {v['screened_sites']} | {v['feis_increment_du']:,} (to {v['feis_horizon']}) | "
+                     f"{v['planarena_increment_du_at_max_far']:,} ({v['ratio_max_far_to_feis']}×) | "
+                     f"{v['planarena_increment_du_at_utilisation']:,} | {v['observed_increment_du_rezoned_lots_to_2025']:+,.0f} | "
+                     f"{v['observed_share_of_feis_increment']:.0%} |")
+        L += ["", "The FEIS selects 'projected' sites more narrowly than PlanArena's screen, which also captures sites the "
+              "FEIS treats as 'potential'. Mandatory Inclusionary Housing bonus FAR is not modelled.", ""]
     if op:
         L += ["## Optimizer against exhaustive search", "",
               f"{op['areas']} small study areas ({op['areas_with_positive_optimum']} with a positive optimum). The optimizer "
@@ -559,12 +749,14 @@ def report() -> str:
 
 
 STEPS = {"emissions": emissions, "jobs": jobs, "backtest": backtest, "backtest_gnn": backtest_gnn,
+         "soho_noho": soho_noho, "rezonings": rezonings,
          "backtest_lgbm": backtest_lgbm, "backtest_eval": backtest_eval, "units": units,
          "east_harlem": east_harlem, "optimizer": optimizer, "report": report}
 
 if __name__ == "__main__":
     step = sys.argv[1] if len(sys.argv) > 1 else "all"
-    todo = ["emissions", "jobs", "backtest", "units", "east_harlem", "optimizer", "report"] if step == "all" else [step]
+    todo = (["emissions", "jobs", "backtest", "units", "east_harlem", "soho_noho", "rezonings", "optimizer", "report"]
+            if step == "all" else [step])
     for s in todo:
         t0 = time.time()
         r = STEPS[s]()

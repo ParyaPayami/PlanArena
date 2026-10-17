@@ -73,7 +73,9 @@ export default function Scoreboard() {
     <div className="scoreboard">
       <div className="overall">
         <div>
-          <div className="eyebrow">Plan score {evaluating && <span className="spinner" />}</div>
+          <div className="eyebrow" title="Totals score as % change; shares (access, mix, green cover) as percentage points. Each pillar is the mean of its indicators; the plan score is the weighted mean of the pillars. Positive is better.">
+            Plan score <span className="help">?</span> {evaluating && <span className="spinner" />}
+          </div>
           <div className={`overall-num ${ev.overall > 0.05 ? "good" : ev.overall < -0.05 ? "bad" : ""}`}>
             {changed ? fmtScore(ev.overall) : "0.0"}
           </div>

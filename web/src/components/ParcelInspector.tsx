@@ -58,7 +58,7 @@ export default function ParcelInspector() {
             </b>
             <span>Homes</span>
             <b>{info.units.toLocaleString()}</b>
-            <span>Tax base</span>
+            <span title="Assessed value, including tax-exempt property; not tax revenue">Assessed value</span>
             <b>${compact(info.assessed_value)}</b>
             {info.year_built > 0 && (
               <>
@@ -67,6 +67,18 @@ export default function ParcelInspector() {
               </>
             )}
           </div>
+          {info.redevelopment && (
+            <div className="redev" title="Transition model trained on observed 2015-2025 redevelopment (see Methods)">
+              <span>Chance of redevelopment, next 5 years</span>
+              <b>
+                {(info.redevelopment.p * 100).toFixed(1)}%{" "}
+                <span className="muted">
+                  (higher than {Math.round(info.redevelopment.percentile * 100)}% of lots) · likely{" "}
+                  {lu[info.redevelopment.likely_use]?.label.split(" ")[0] ?? info.redevelopment.likely_use}
+                </span>
+              </b>
+            </div>
+          )}
           {(info.landmark || info.historic_district) && (
             <div className="tag-row">
               {info.landmark && <span className="tag warn">Landmark</span>}
@@ -105,7 +117,7 @@ export default function ParcelInspector() {
                     <th />
                     <th>Homes</th>
                     <th>Jobs</th>
-                    <th>Tax base</th>
+                    <th title="Assessed value, including tax-exempt property; not tax revenue">Assessed value</th>
                   </tr>
                 </thead>
                 <tbody>

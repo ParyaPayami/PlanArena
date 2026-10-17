@@ -55,6 +55,9 @@ export default function CityMap(props: Props) {
   const colors = useMemo(() => landUses.map((u) => hexToRgb(u.color)), [landUses]);
   const [box, setBox] = useState<null | { x0: number; y0: number; x1: number; y1: number; c0: number[] }>(null);
   const [lasso, setLasso] = useState<null | { screen: number[][]; geo: number[][] }>(null);
+  // Refs mirror the drag state so a fast drag (start and end before a re-render) still selects.
+  const boxRef = useRef<null | { x0: number; y0: number; x1: number; y1: number }>(null);
+  const lassoRef = useRef<number[][]>([]);
   const deckRef = useRef<DeckGLRef>(null);
   const [viewState, setViewState] = useState<MapViewState>(props.initialViewState);
   const features = props.features ?? data.features;
@@ -81,6 +84,8 @@ export default function CityMap(props: Props) {
     }) as MapViewState);
   }, [props.focus?.id]);
 
+  // Selection outline: thin when zoomed out so the new colours of painted parcels stay visible.
+  const selW = viewState.zoom >= 15 ? 2.5 : viewState.zoom >= 13.5 ? 1.6 : 0.9;
   const changedAt = (i: number) => use[i] !== base[i] || (far !== undefined && !Number.isNaN(far[i]));
 
   const layer = new GeoJsonLayer({
@@ -121,7 +126,7 @@ export default function CityMap(props: Props) {
     },
     getLineWidth: (f: GeoJSON.Feature) => {
       const i = (f.properties as { i: number }).i;
-      if (selected.has(i)) return 2.5;
+      if (selected.has(i)) return selW;
       if (highlight?.parcels.has(i)) return 2.2;
       if (preview?.has(i) || changedAt(i)) return 1.4;
       return 0.35;
@@ -140,7 +145,7 @@ export default function CityMap(props: Props) {
     updateTriggers: {
       getFillColor: [version, preview, props.suggestionOverlay, highlight?.key],
       getLineColor: [version, selVersion, preview, highlight?.key],
-      getLineWidth: [version, selVersion, preview, highlight?.key],
+      getLineWidth: [version, selVersion, preview, highlight?.key, selW],
       getElevation: [version, preview],
     },
     transitions: { getFillColor: 220, getElevation: 400 },
@@ -183,37 +188,59 @@ export default function CityMap(props: Props) {
         controller={controller}
         layers={[layer]}
         onClick={onClick as never}
-        onDragStart={(info: PickingInfo) => {
-          if (mode === "box" && info.coordinate)
-            setBox({ x0: info.x, y0: info.y, x1: info.x, y1: info.y, c0: info.coordinate });
-          if (mode === "lasso" && info.coordinate) setLasso({ screen: [[info.x, info.y]], geo: [info.coordinate] });
+        onDragStart={(info: PickingInfo, ev: { deltaX?: number; deltaY?: number }) => {
+          if (mode === "box" && info.coordinate) {
+            // A drag is recognised a few pixels after the press; anchor the box at the press point.
+            const sx = info.x - (ev?.deltaX ?? 0);
+            const sy = info.y - (ev?.deltaY ?? 0);
+            boxRef.current = { x0: sx, y0: sy, x1: info.x, y1: info.y };
+            setBox({ x0: sx, y0: sy, x1: info.x, y1: info.y, c0: info.coordinate });
+          }
+          if (mode === "lasso" && info.coordinate) {
+            lassoRef.current = [info.coordinate];
+            setLasso({ screen: [[info.x, info.y]], geo: [info.coordinate] });
+          }
           if (mode === "paint") {
             const i = pickIndex(info);
             if (i !== null) props.onPaint?.(i);
           }
         }}
         onDrag={(info: PickingInfo) => {
-          if (mode === "box" && box) setBox({ ...box, x1: info.x, y1: info.y });
-          if (mode === "lasso" && lasso && info.coordinate)
-            setLasso({ screen: [...lasso.screen, [info.x, info.y]], geo: [...lasso.geo, info.coordinate] });
+          if (mode === "box" && boxRef.current) {
+            boxRef.current = { ...boxRef.current, x1: info.x, y1: info.y };
+            if (box) setBox({ ...box, x1: info.x, y1: info.y });
+          }
+          if (mode === "lasso" && info.coordinate) {
+            lassoRef.current = [...lassoRef.current, info.coordinate];
+            if (lasso) setLasso({ screen: [...lasso.screen, [info.x, info.y]], geo: [...lasso.geo, info.coordinate] });
+          }
           if (mode === "paint") {
             const i = pickIndex(info);
             if (i !== null) props.onPaint?.(i);
           }
         }}
         onDragEnd={(info: PickingInfo, ev: { srcEvent?: MouseEvent }) => {
-          if (mode === "box" && box && info.coordinate) {
-            const [lo0, la0] = box.c0;
-            const [lo1, la1] = info.coordinate;
-            selectInBounds(
-              (x, y) =>
-                x >= Math.min(lo0, lo1) && x <= Math.max(lo0, lo1) && y >= Math.min(la0, la1) && y <= Math.max(la0, la1),
-              additiveOf(ev),
-            );
+          const start = boxRef.current;
+          if (mode === "box" && start) {
+            // Test in screen space: the map is rotated, so a screen rectangle is not a lon/lat rectangle.
+            const vp = deckRef.current?.deck?.getViewports()[0];
+            // The rectangle the user saw: from the drag start to the farthest of the last drag and end positions.
+            const ex = Math.abs(info.x - start.x0) >= Math.abs(start.x1 - start.x0) ? info.x : start.x1;
+            const ey = Math.abs(info.y - start.y0) >= Math.abs(start.y1 - start.y0) ? info.y : start.y1;
+            const [x0, x1] = [Math.min(start.x0, ex), Math.max(start.x0, ex)];
+            const [y0, y1] = [Math.min(start.y0, ey), Math.max(start.y0, ey)];
+            if (vp && x1 - x0 > 2 && y1 - y0 > 2)
+              selectInBounds((x, y) => {
+                const [sx, sy] = vp.project([x, y]);
+                return sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1;
+              }, additiveOf(ev));
+            boxRef.current = null;
             setBox(null);
           }
-          if (mode === "lasso" && lasso) {
-            if (lasso.geo.length > 2) selectInBounds((x, y) => pointInPolygon(x, y, lasso.geo), additiveOf(ev));
+          if (mode === "lasso") {
+            const geo = info.coordinate ? [...lassoRef.current, info.coordinate] : lassoRef.current;
+            if (geo.length > 2) selectInBounds((x, y) => pointInPolygon(x, y, geo), additiveOf(ev));
+            lassoRef.current = [];
             setLasso(null);
           }
         }}

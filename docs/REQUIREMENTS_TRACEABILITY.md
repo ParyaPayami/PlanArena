@@ -51,7 +51,7 @@ Tagging is a transparent keyword screen (`planarena/requirements.py`). It shows 
 
 Each requirement was read against PlanArena. Every item coded **met** is backed by an automated acceptance test in `tests/test_requirements.py`. Needs are paraphrased in our own words.
 
-**met** 8 · **partial** 10 · **not met** 7 · **out of scope** 4 (of 29)
+**met** 9 · **partial** 9 · **not met** 7 · **out of scope** 4 (of 29)
 
 | ID | Need (paraphrase) | Status | PlanArena feature | Gap |
 |---|---|---|---|---|
@@ -59,6 +59,7 @@ Each requirement was read against PlanArena. Every item coded **met** is backed 
 | G6 | Find and open past amendments and studies | met | Studies list, detail and history |  |
 | G7 | Record information about a study | met | Name, description, study area, hearing date, checklist, changes |  |
 | G8 | Describe location, existing development, current plan and proposed change | met | Parcel record (existing building, zoning, FAR) plus the proposed use and FAR per parcel |  |
+| G11 | Configurable study checklist that staff can customise | met | Default eight-step checklist; staff add their own steps in the Studies tab |  |
 | G12 | Keep a history of study activity | met | Per-study history and a hash-chained, tamper-evident audit log |  |
 | G13 | Track status as staff update the workflow | met | Status changes are recorded in history and the audit log |  |
 | G14 | Quantify the change in development potential from an amendment | met | Zoning capacity, added capacity, soft sites, homes, jobs and floor area, with ranges |  |
@@ -67,9 +68,8 @@ Each requirement was read against PlanArena. Every item coded **met** is backed 
 | G4 | Track the amendment process with a configurable workflow | partial | Fixed status workflow: draft, under review, hearing scheduled, adopted, withdrawn | Workflow steps are not configurable |
 | G5 | Track study status and its documents (staff report, amended text) | partial | Status; staff report generated on demand | No document storage or versioned plan text |
 | G10 | Attach due dates and hearing dates | partial | Hearing date | No other deadlines or statutory clocks |
-| G11 | Configurable study checklist that staff can customise | partial | Default eight-step checklist; items can be ticked | Staff cannot add or edit items in the UI (the API accepts them) |
 | G15 | Track plan amendments that are not site-specific | partial | A study can be saved without parcel changes | No policy-text amendments or citywide policy levers |
-| G16 | Reports that quantify a proposal, including cumulative analysis of density changes | partial | Staff report with impacts, density (FAR) edits and capacity | No cumulative analysis across several studies |
+| G16 | Reports that quantify a proposal, including cumulative analysis of density changes | partial | Staff report with impacts, density (FAR) edits and capacity; rezoning test with the environmental-review site screen | No cumulative analysis across several studies |
 | G21 | Template for recording research, with attachments | partial | Description field and staff report template | No attachments |
 | G26 | Review against code: zoning, temporary uses, special events | partial | Simplified zoning rules-as-code screen | Not a legal determination; no temporary-use or event rules |
 | G29 | Query records by polygon, line or point, e.g. similar uses within a radius | partial | Lasso, box, block and notice-radius queries over parcels and uses | Permit and business records are not included |

@@ -221,7 +221,21 @@ def test_exact_polish_never_worse_and_fixes_large_parcel_case(engine):
     """Block 1006 (CD 105): first-order gains underrate a saturating access effect on a 1.4M sq ft lot."""
     s = Suggester(engine, None)
     cand = np.nonzero((engine.p.block.to_numpy() == 1006) & (engine.cd == 105))[0]
-    base = dict(scope="cd:105", candidate_parcels=cand, w_fit=0.0, max_change_share=0.4, rounds=2)
+    base = dict(scope="cd:105", candidate_parcels=cand, w_fit=0.0, max_change_share=0.4, rounds=2,
+                require_precedent=False)  # the move that exposed the gap is itself unprecedented (see next test)
     plain = s.suggest(SuggestConfig(**base))["evaluation"]["overall"]
     polished = s.suggest(SuggestConfig(polish=30, **base))["evaluation"]["overall"]
     assert polished >= plain - 1e-9 and polished > plain + 0.1
+
+
+def test_conversions_without_precedent_are_flagged_and_skipped(engine, suggester):
+    if engine.precedent is None:
+        pytest.skip("run python -I -m planarena.models.transition precedent")
+    tower = 10506  # 1.44M sq ft office building, CD 105
+    assert not engine.has_precedent(np.array([tower]), np.array([U["pub"]]))[0]
+    assert engine.has_precedent(np.array([tower]), np.array([U["res"]]))[0]  # office-to-residential has precedent
+    use = engine.base_use.copy()
+    use[tower] = U["pub"]
+    assert any(w["type"] == "precedent" for w in engine.evaluate(use, scope="cd:105")["warnings"])
+    _, _, allowed = suggester.feasible(SuggestConfig(scope="cd:105"), engine.base_use)
+    assert not allowed[tower, U["pub"]]

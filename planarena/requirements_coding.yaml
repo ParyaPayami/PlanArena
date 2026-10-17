@@ -1,7 +1,7 @@
 # Hand coding of the long-range planning area (G) of the de-identified requirements catalogue.
 # Coded by reading each requirement against PlanArena v0.3. "need" is a short paraphrase in our own words.
 # status: met (backed by an acceptance test in tests/test_requirements.py) | partial | not met | out of scope
-coded_on: "2026-10-17"
+coded_on: "2026-10-17"  # G11 updated after the usability review
 area: G
 items:
   - {id: G1,  status: met,          need: "Tie a plan amendment or study to its location", feature: "Studies are stored as parcel-level changes on the parcel twin"}
@@ -14,12 +14,12 @@ items:
   - {id: G8,  status: met,          need: "Describe location, existing development, current plan and proposed change", feature: "Parcel record (existing building, zoning, FAR) plus the proposed use and FAR per parcel"}
   - {id: G9,  status: not met,      need: "Link a study to related records (other amendments, zoning applications)", gap: "No record linking"}
   - {id: G10, status: partial,      need: "Attach due dates and hearing dates", feature: "Hearing date", gap: "No other deadlines or statutory clocks"}
-  - {id: G11, status: partial,      need: "Configurable study checklist that staff can customise", feature: "Default eight-step checklist; items can be ticked", gap: "Staff cannot add or edit items in the UI (the API accepts them)"}
+  - {id: G11, status: met,          need: "Configurable study checklist that staff can customise", feature: "Default eight-step checklist; staff add their own steps in the Studies tab"}
   - {id: G12, status: met,          need: "Keep a history of study activity", feature: "Per-study history and a hash-chained, tamper-evident audit log"}
   - {id: G13, status: met,          need: "Track status as staff update the workflow", feature: "Status changes are recorded in history and the audit log"}
   - {id: G14, status: met,          need: "Quantify the change in development potential from an amendment", feature: "Zoning capacity, added capacity, soft sites, homes, jobs and floor area, with ranges"}
   - {id: G15, status: partial,      need: "Track plan amendments that are not site-specific", feature: "A study can be saved without parcel changes", gap: "No policy-text amendments or citywide policy levers"}
-  - {id: G16, status: partial,      need: "Reports that quantify a proposal, including cumulative analysis of density changes", feature: "Staff report with impacts, density (FAR) edits and capacity", gap: "No cumulative analysis across several studies"}
+  - {id: G16, status: partial,      need: "Reports that quantify a proposal, including cumulative analysis of density changes", feature: "Staff report with impacts, density (FAR) edits and capacity; rezoning test with the environmental-review site screen", gap: "No cumulative analysis across several studies"}
   - {id: G17, status: out of scope, need: "Public portal intake of review requests", feature: ""}
   - {id: G18, status: not met,      need: "Enter requests received outside the system", gap: "No request intake records"}
   - {id: G19, status: out of scope, need: "Route applications to internal and external reviewers", feature: ""}

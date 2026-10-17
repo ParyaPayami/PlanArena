@@ -1,0 +1,25 @@
+{
+  "test": "SoHo/NoHo Neighborhood Plan FEIS (2021), Appendix A2 projected development sites (BBLs from Appendix A3). PlanArena is run on the same sites with the FEIS gross floor area and use; built outcome from MapPLUTO 25v3.1 (BBL match).",
+  "projected_sites_parsed": 26,
+  "sites_matched_2020": 23,
+  "parse_check": {
+    "appendix_total_projected_du": 1861,
+    "parsed": 1861.0,
+    "note": "Appendix A2 totals 1,861 projected DUs; the FEIS text reports 1,858."
+  },
+  "feis_with_action_du": 1752.0,
+  "feis_no_action_du": 32.0,
+  "feis_text_with_action_du": 1858,
+  "feis_text_increment_du": 1826,
+  "feis_appendix_total_du": 1861.0,
+  "planarena_du_same_gfa": 1820,
+  "ratio_to_feis": 1.039,
+  "site_log_r": 0.976,
+  "du_2020": 13.0,
+  "du_2025": 13.0,
+  "feis_unit_factor_sf": 850,
+  "feis_analysis_year": 2031,
+  "adopted": "2021-12",
+  "source": "https://www.nyc.gov/assets/planning/download/pdf/applicants/env-review/soho-noho/appenda-feis.pdf",
+  "source_sha256": "1fb8194a622c6650f6c9b5e3b46ca28ea8f1722118a6521733b763b1c36f4497"
+}
