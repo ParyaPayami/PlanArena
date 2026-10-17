@@ -13,6 +13,10 @@
 
 Demo city: Manhattan, 42,075 parcels from NYC DCP MapPLUTO 25v3.1, downloaded from DCP by `planarena.twin.fetch`. The archive's and the extract's SHA-256 are recorded in `twin_meta.json` and in every export.
 
+## Quick start
+
+Double-click **Start PlanArena.command** in this folder. Your browser opens the Studio at http://localhost:8787; the phone game is at /play. **Start PlanArena (phone).command** also serves the game to a phone on the same Wi-Fi. See [TESTING.md](TESTING.md) for what to try.
+
 ## Run it
 
 ```bash

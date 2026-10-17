@@ -30,7 +30,7 @@ from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
 from planarena.optimize.pareto import pareto as run_pareto
 from planarena.optimize.suggest import SuggestConfig, Suggester
 
-ENGINE_VERSION = "0.3.0"
+ENGINE_VERSION = "1.0.0-rc.1"
 app = FastAPI(title="PlanArena API", version=ENGINE_VERSION, default_response_class=ORJSONResponse)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
