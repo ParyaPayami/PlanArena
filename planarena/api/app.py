@@ -5,31 +5,35 @@ Dev:  uvicorn planarena.api.app:app --reload --port 8787
 """
 from __future__ import annotations
 
-import csv
-import io
 import json
+import re
 import time
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Union
 
 import numpy as np
-import yaml
+import pandas as pd
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, ORJSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, ORJSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 
 from planarena.agents.negotiation import generate_candidates, negotiate, price_of_anarchy
 from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
-from planarena.config import LAND_USES, PLUTO_TO_USE, PROCESSED, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
+from planarena.api import planio, store
+from planarena.config import LAND_USES, PROCESSED, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
 from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
+from planarena.optimize.pareto import pareto as run_pareto
 from planarena.optimize.suggest import SuggestConfig, Suggester
 
-app = FastAPI(title="PlanArena API", version="0.1.0", default_response_class=ORJSONResponse)
+ENGINE_VERSION = "0.2.0"
+app = FastAPI(title="PlanArena API", version=ENGINE_VERSION, default_response_class=ORJSONResponse)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+                   allow_methods=["*"], allow_headers=["*"])
 STAKE = {s.key: s for s in DEFAULT_STAKEHOLDERS}
 
 
@@ -43,13 +47,20 @@ def runtime() -> dict:
         suit = np.load(PROCESSED / "suitability.npy")
         model_info["gnn"] = True
         _attach_value_model(engine)
-    cv = ROOT / "results" / "gnn_cv.json"
-    if cv.exists():
-        model_info["cv_summary"] = json.loads(cv.read_text()).get("cv_summary")
+    for name in ("gnn_cv", "ensemble_cv"):
+        f = ROOT / "results" / f"{name}.json"
+        if f.exists():
+            model_info[name.replace("gnn_cv", "cv_summary")] = json.loads(f.read_text()).get("cv_summary")
+    vf = ROOT / "results" / "validation_emissions_ll84.json"
+    if vf.exists():
+        model_info["emissions_validation"] = json.loads(vf.read_text())
     sug = Suggester(engine, suit)
     sug.per_use_values()
+    engine.evaluate(engine.base_use, ranges=True)  # warms the sensitivity-variant caches
+    with store.connect() as db:
+        store.audit(db, "service_started", {"engine_version": ENGINE_VERSION, "source_sha256": engine.meta.get("source_sha256")})
     return {"engine": engine, "suggester": sug, "suitability": suit, "model_info": model_info,
-            "startup_seconds": round(time.time() - t0, 2)}
+            "soft_sites": engine.soft_site_mask(), "startup_seconds": round(time.time() - t0, 2), "geoms": None}
 
 
 def _attach_value_model(engine: ImpactEngine) -> None:
@@ -69,81 +80,166 @@ def _attach_value_model(engine: ImpactEngine) -> None:
     def value_fn(use: np.ndarray, idx: np.ndarray) -> np.ndarray:
         i = torch.as_tensor(idx, dtype=torch.long)
         u = torch.as_tensor(np.clip(use[idx], 0, None), dtype=torch.long)
-        log_psf = model.value(ctx[i], u).numpy()
-        return np.expm1(log_psf) * lot[idx]
+        return np.expm1(model.value(ctx[i], u).numpy()) * lot[idx]
 
     engine.value_model = value_fn
 
 
-def _use_array(changes: dict[str, str] | None) -> np.ndarray:
+def _geoms():
+    r = runtime()
+    if r["geoms"] is None:
+        import geopandas as gpd
+        r["geoms"] = gpd.read_parquet(PROCESSED / "parcels.geoparquet").geometry.values
+    return r["geoms"]
+
+
+Change = Union[str, dict]
+
+
+def _arrays(changes: dict[str, Change] | None) -> tuple[np.ndarray, np.ndarray | None]:
+    """Changes {index: use_key | {use, far}} -> (use array, FAR array or None)."""
     e: ImpactEngine = runtime()["engine"]
     use = e.base_use.copy()
+    far = None
     for k, v in (changes or {}).items():
-        i = int(k)
+        try:
+            i = int(k)
+        except ValueError:
+            raise HTTPException(400, f"bad parcel index: {k}") from None
         if not 0 <= i < e.n:
             raise HTTPException(400, f"parcel index out of range: {k}")
-        if v not in USE_INDEX:
-            raise HTTPException(400, f"unknown land use: {v}")
-        use[i] = USE_INDEX[v]
-    return use
+        key, f = (v, None) if isinstance(v, str) else (v.get("use"), v.get("far"))
+        if key not in USE_INDEX:
+            raise HTTPException(400, f"unknown land use: {key}")
+        use[i] = USE_INDEX[key]
+        if f is not None:
+            try:
+                f = float(f)
+            except (TypeError, ValueError):
+                raise HTTPException(400, f"FAR must be a number (parcel {k})") from None
+            if not (0 <= f <= 30) or not np.isfinite(f):
+                raise HTTPException(400, f"FAR must be between 0 and 30 (parcel {k})")
+            if far is None:
+                far = np.full(e.n, np.nan)
+            far[i] = f
+    return use, far
 
 
-def _changes_of(use: np.ndarray) -> dict[str, str]:
+def _changes_of(use: np.ndarray, far: np.ndarray | None = None) -> dict[str, Change]:
     e: ImpactEngine = runtime()["engine"]
-    idx = np.nonzero(use != e.base_use)[0]
-    return {str(int(i)): USE_KEYS[int(use[i])] for i in idx}
+    out: dict[str, Change] = {}
+    for i in np.nonzero(e.changed_mask(use, far))[0]:
+        u = USE_KEYS[int(use[i])]
+        out[str(int(i))] = u if far is None or not np.isfinite(far[i]) else {"use": u, "far": float(far[i])}
+    return out
+
+
+def _audit(action: str, body: dict) -> None:
+    with store.connect() as db:
+        store.audit(db, action, body)
 
 
 # ----------------------------------------------------------------------------- models
-class EvalRequest(BaseModel):
-    changes: dict[str, str] = Field(default_factory=dict, description="parcel index -> land-use key")
+class Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class EvalRequest(Strict):
+    changes: dict[str, Change] = Field(default_factory=dict, description="parcel index -> land-use key or {use, far}")
     scope: str = "affected"
     pillar_weights: dict[str, float] | None = None
+    ranges: bool = True
 
 
-class SuggestRequest(BaseModel):
+class SuggestRequest(Strict):
     scope: str = "city"
     mode: str = "balanced"  # balanced | consensus | <stakeholder key>
     pillar_weights: dict[str, float] | None = None
-    max_change_share: float = 0.05
+    max_change_share: float = Field(0.05, gt=0, le=0.5)
     respect_zoning: bool = True
     allow_demolition: bool = False
-    parcels: list[int] | None = None  # restrict suggestions to these parcels
-    changes: dict[str, str] = Field(default_factory=dict)  # start from the user's plan
+    parcels: list[int] | None = None
+    changes: dict[str, Change] = Field(default_factory=dict)
 
 
-class NegotiateRequest(BaseModel):
+class NegotiateRequest(Strict):
     scope: str = "cd:103"
     parcels: list[int] | None = None
-    changes: dict[str, str] = Field(default_factory=dict)
-    max_change_share: float = 0.05
+    changes: dict[str, Change] = Field(default_factory=dict)
+    max_change_share: float = Field(0.05, gt=0, le=0.5)
 
 
-# ----------------------------------------------------------------------------- routes
+class ParetoRequest(Strict):
+    parcels: list[int] = Field(min_length=1, max_length=300)
+    respect_zoning: bool = True
+    allow_demolition: bool = False
+    seed: int = Field(42, ge=0, le=2**31 - 1)
+    generations: int = Field(120, ge=10, le=300)
+    changes: dict[str, Change] = Field(default_factory=dict)
+
+
+class RadiusRequest(Strict):
+    parcels: list[int] = Field(min_length=1, max_length=5000)
+    feet: float = Field(500, gt=0, le=5280)
+
+
+class ScenarioIn(Strict):
+    name: str = Field("Untitled study", min_length=1, max_length=120)
+    description: str = Field("", max_length=4000)
+    study_area: str = Field("", max_length=200)
+    hearing_date: str | None = None
+    changes: dict[str, Change] = Field(default_factory=dict)
+    checklist: list[dict] | None = None
+
+
+class ScenarioPatch(Strict):
+    name: str | None = Field(None, min_length=1, max_length=120)
+    description: str | None = Field(None, max_length=4000)
+    study_area: str | None = Field(None, max_length=200)
+    status: str | None = None
+    hearing_date: str | None = None
+    changes: dict[str, Change] | None = None
+    checklist: list[dict] | None = None
+
+
+class ExportRequest(Strict):
+    changes: dict[str, Change] = Field(default_factory=dict)
+    title: str = Field("PlanArena study", max_length=120)
+    description: str = Field("", max_length=4000)
+    scope: str = "affected"
+    negotiation: dict | None = None
+
+
+# ----------------------------------------------------------------------------- core routes
 @app.get("/api/health")
 def health():
     r = runtime()
-    return {"ok": True, "startup_seconds": r["startup_seconds"], "gnn": r["model_info"]["gnn"]}
+    with store.connect() as db:
+        chain = store.verify(db)
+    return {"ok": True, "version": ENGINE_VERSION, "startup_seconds": r["startup_seconds"],
+            "gnn": r["model_info"]["gnn"], "source_sha256": r["engine"].meta.get("source_sha256"), "audit": chain}
 
 
 @app.get("/api/meta")
 def meta():
     r = runtime()
     e: ImpactEngine = r["engine"]
-    coef = yaml.safe_load((ROOT / "planarena/indicators/coefficients.yaml").read_text())
-    provenance = {k: {"status": v.get("status"), "source": v.get("source")}
-                  for k, v in coef.items() if isinstance(v, dict) and "status" in v}
+    coef = e.coef  # provisional defaults merged with planarena/indicators/calibrated.yaml
     base = e.evaluate(e.base_use, scope="city")
     return {
-        "city": e.meta["city"], "source": e.meta["source"], "n_parcels": e.n,
-        "bbox": e.meta["bbox_wgs84"], "levels": e.meta["levels"],
+        "version": ENGINE_VERSION, "city": e.meta["city"], "source": e.meta["source"],
+        "source_sha256": e.meta.get("source_sha256"), "source_url": e.meta.get("source_url"),
+        "data_quality": e.meta.get("data_quality"), "n_parcels": e.n, "bbox": e.meta["bbox_wgs84"],
+        "levels": e.meta["levels"],
         "land_uses": [{"key": u.key, "label": u.label, "color": u.color, "built": u.built} for u in LAND_USES],
         "indicators": [{"key": i.key, "label": i.label, "unit": i.unit, "pillar": i.pillar,
-                        "direction": i.direction, "kind": i.kind, "provisional": i.provisional} for i in INDICATORS],
+                        "direction": i.direction, "kind": i.kind, "provisional": e.provisional[i.key]} for i in INDICATORS],
         "baseline_city": {row["key"]: row["baseline"] for row in base["indicators"]},
+        "capacity_city": base["capacity"]["baseline"],
         "stakeholders": [s.to_dict() for s in DEFAULT_STAKEHOLDERS],
-        "derived": e.derived_summary(), "provenance": provenance,
-        "zoning_rules": e.meta["zoning_rules"], "models": r["model_info"],
+        "derived": e.derived_summary() | {"sensitivity_multipliers": {"unit_size": e.mult_unit, "value": e.mult_value}},
+        "coefficients": coef, "zoning_rules": e.meta["zoning_rules"], "models": r["model_info"],
+        "statuses": list(store.STATUSES),
     }
 
 
@@ -157,17 +253,58 @@ def parcel(i: int):
     allowed = [USE_KEYS[k] for k in range(len(USE_KEYS)) if (int(row.allowed) >> k) & 1]
     pu = r["suggester"].per_use_values()
     out = {
-        "i": i, "bbl": int(row.bbl), "address": row.address, "cd": int(row.cd), "zone": row.zone,
-        "overlay": row.overlay, "special_district": row.special, "use": USE_KEYS[int(row.use)] if row.use >= 0 else None,
+        "i": i, "bbl": int(row.bbl), "address": row.address, "cd": int(row.cd), "block": int(row.block),
+        "zone": row.zone, "overlay": row.overlay, "special_district": row.special,
+        "use": USE_KEYS[int(row.use)] if row.use >= 0 else None, "bldg_class": row.bldg_class,
         "lot_area_sqft": float(row.lot_area), "bldg_area_sqft": float(row.bldg_area), "floors": float(row.floors),
         "units": float(row.units_res), "assessed_value": float(row.assess_tot), "year_built": int(row.year_built),
-        "landmark": bool(row.landmark), "historic_district": bool(row.historic), "allowed_uses": allowed,
+        "built_far": float(row.built_far), "max_far": float(row.max_far), "resid_far": float(row.resid_far),
+        "comm_far": float(row.comm_far), "facil_far": float(row.facil_far),
+        "landmark": bool(row.landmark), "historic_district": bool(row.historic), "soft_site": bool(r["soft_sites"][i]),
+        "allowed_uses": allowed,
         "per_use": {USE_KEYS[u]: {k: float(pu[k][i, u]) for k in ("homes", "jobs", "value", "ghg", "runoff", "green_space")}
                     for u in range(len(USE_KEYS))},
     }
     if r["suitability"] is not None:
         out["suitability"] = {USE_KEYS[u]: float(r["suitability"][i, u]) for u in range(len(USE_KEYS))}
     return out
+
+
+@app.get("/api/search")
+def search(q: str, limit: int = 12):
+    """Find parcels by address fragment or BBL."""
+    e: ImpactEngine = runtime()["engine"]
+    q = q.strip()
+    if len(q) < 2:
+        return []
+    if q.isdigit() and len(q) >= 6:
+        hits = np.nonzero(e.p.bbl.astype(str).str.startswith(q).to_numpy())[0][:limit]
+    else:
+        addr = e.p.address.str.upper()
+        tokens = [t for t in re.split(r"\s+", q.upper()) if t]
+        m = np.ones(e.n, bool)
+        for t in tokens:
+            m &= addr.str.contains(rf"\b{re.escape(t)}\b", regex=True).to_numpy()
+        hits = np.nonzero(m)[0][:limit]
+        if not len(hits) and tokens and tokens[0].isdigit() and len(tokens) > 1:
+            # No exact match: same street, nearest house number (lots are listed by their lowest address).
+            street = " ".join(tokens[1:])
+            same = addr.str.endswith(" " + street).to_numpy()
+            nums = pd.to_numeric(addr.str.extract(r"^(\d+)")[0], errors="coerce").to_numpy()
+            cand = np.nonzero(same & np.isfinite(nums))[0]
+            hits = cand[np.argsort(np.abs(nums[cand] - int(tokens[0])))][:limit]
+    return [{"i": int(i), "bbl": int(e.p.bbl.iloc[i]), "address": e.p.address.iloc[i],
+             "lon": float(e.p.lon.iloc[i]), "lat": float(e.p.lat.iloc[i])} for i in hits]
+
+
+@app.get("/api/block/{i}")
+def block(i: int):
+    """All parcels in the same tax block as parcel ``i``."""
+    e: ImpactEngine = runtime()["engine"]
+    if not 0 <= i < e.n:
+        raise HTTPException(404, "parcel not found")
+    b = e.p.block.iloc[i]
+    return {"block": int(b), "parcels": np.nonzero((e.p.block == b).to_numpy())[0].tolist()}
 
 
 @app.get("/api/suitability")
@@ -179,15 +316,24 @@ def suitability():
     return {"top": s.argmax(1).astype(int).tolist(), "p": np.round(s.max(1), 3).tolist()}
 
 
+@app.get("/api/soft-sites")
+def soft_sites():
+    m = runtime()["soft_sites"]
+    return {"parcels": np.nonzero(m)[0].tolist(),
+            "rule": "built FAR <= 50% of max zoning FAR; lot >= 2,500 sq ft; not landmark/historic, park, civic or infrastructure"}
+
+
 @app.post("/api/evaluate")
 def evaluate(req: EvalRequest):
     e: ImpactEngine = runtime()["engine"]
     t0 = time.time()
-    res = e.evaluate(_use_array(req.changes), scope=req.scope, pillar_weights=req.pillar_weights)
+    use, far = _arrays(req.changes)
+    res = e.evaluate(use, scope=req.scope, pillar_weights=req.pillar_weights, far=far, ranges=req.ranges)
     res["ms"] = round(1000 * (time.time() - t0), 1)
     return res
 
 
+# ----------------------------------------------------------------------------- AI
 def _suggest_config(req: SuggestRequest) -> SuggestConfig:
     cfg = SuggestConfig(scope=req.scope, max_change_share=req.max_change_share,
                         respect_zoning=req.respect_zoning, allow_demolition=req.allow_demolition,
@@ -198,113 +344,225 @@ def _suggest_config(req: SuggestRequest) -> SuggestConfig:
         cfg.unanimity_weights = [s.normalized() for s in DEFAULT_STAKEHOLDERS]
     elif req.mode in STAKE:
         cfg.indicator_weights = STAKE[req.mode].normalized()
+    elif req.mode != "balanced":
+        raise HTTPException(400, f"unknown mode: {req.mode}")
     return cfg
 
 
 @app.post("/api/suggest")
-def suggest(req: SuggestRequest):
+async def suggest(req: SuggestRequest):
     r = runtime()
     t0 = time.time()
-    out = r["suggester"].suggest(_suggest_config(req), use=_use_array(req.changes))
-    return {"changes": _changes_of(out["use"]), "evaluation": out["evaluation"], "history": out["history"],
-            "budget": out["budget"], "eligible": out["eligible"], "ms": round(1000 * (time.time() - t0), 1)}
+    use, _ = _arrays(req.changes)
+    out = await run_in_threadpool(r["suggester"].suggest, _suggest_config(req), use)
+    res = {"changes": _changes_of(out["use"]), "evaluation": out["evaluation"], "history": out["history"],
+           "budget": out["budget"], "eligible": out["eligible"], "ms": round(1000 * (time.time() - t0), 1)}
+    _audit("optimizer_run", {"mode": req.mode, "scope": req.scope, "n_changes": len(res["changes"]),
+                             "overall": out["evaluation"]["overall"]})
+    return res
+
+
+@app.post("/api/pareto")
+async def pareto_route(req: ParetoRequest):
+    r = runtime()
+    use, _ = _arrays(req.changes)
+    cfg = SuggestConfig(scope="affected", respect_zoning=req.respect_zoning, allow_demolition=req.allow_demolition)
+    try:
+        res = await run_in_threadpool(run_pareto, r["suggester"], req.parcels, cfg, use, req.seed, req.generations)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    _audit("pareto_run", {"n_parcels": len(req.parcels), "seed": req.seed, "generations": req.generations,
+                          "front_size": len(res["front"])})
+    return res
 
 
 @app.post("/api/negotiate")
-def negotiate_route(req: NegotiateRequest):
+async def negotiate_route(req: NegotiateRequest):
     r = runtime()
     t0 = time.time()
-    cur = _use_array(req.changes) if req.changes else None
-    plans = generate_candidates(r["suggester"], DEFAULT_STAKEHOLDERS, scope=req.scope,
-                                max_change_share=req.max_change_share, current_use=cur,
-                                candidate_parcels=np.array(req.parcels) if req.parcels else None)
-    res = negotiate(plans, DEFAULT_STAKEHOLDERS)
+    cur = _arrays(req.changes)[0] if req.changes else None
+
+    def run():
+        plans = generate_candidates(r["suggester"], DEFAULT_STAKEHOLDERS, scope=req.scope,
+                                    max_change_share=req.max_change_share, current_use=cur,
+                                    candidate_parcels=np.array(req.parcels) if req.parcels else None)
+        return plans, negotiate(plans, DEFAULT_STAKEHOLDERS)
+
+    plans, res = await run_in_threadpool(run)
     res["plan_changes"] = {p.id: _changes_of(p.use) for p in plans}
     res["plan_evaluations"] = {p.id: p.evaluation for p in plans}
     res["ms"] = round(1000 * (time.time() - t0), 1)
+    _audit("negotiation", {"scope": req.scope, "agreed_plan": res["agreed_plan"], "rounds": res["rounds"],
+                           "by_protocol": res["agreed_by_protocol"], "utilities": res["utilities"]})
     return res
 
 
 @app.post("/api/price-of-anarchy")
-def poa(req: NegotiateRequest):
-    return price_of_anarchy(runtime()["suggester"], DEFAULT_STAKEHOLDERS, req.scope, req.max_change_share)
+async def poa(req: NegotiateRequest):
+    return await run_in_threadpool(price_of_anarchy, runtime()["suggester"], DEFAULT_STAKEHOLDERS,
+                                   req.scope, req.max_change_share)
 
 
-def _parse_use(value) -> str | None:
-    v = str(value).strip()
-    if v in USE_INDEX:
-        return v
-    v2 = v.zfill(2)
-    if v2 in PLUTO_TO_USE:
-        return USE_KEYS[PLUTO_TO_USE[v2]]
-    for u in LAND_USES:
-        if v.lower() in (u.label.lower(), u.key):
-            return u.key
-    return None
+# ----------------------------------------------------------------------------- planner's desk
+@app.post("/api/radius")
+def radius(req: RadiusRequest):
+    """Parcels within a notice radius of the selected parcels (polygon-to-polygon distance)."""
+    from shapely import STRtree, union_all
+
+    e: ImpactEngine = runtime()["engine"]
+    g = _geoms()
+    idx = [i for i in req.parcels if 0 <= i < e.n]
+    zone = union_all(g[idx]).buffer(req.feet)
+    hits = STRtree(g).query(zone, predicate="intersects")
+    hits = sorted(set(int(h) for h in hits) - set(idx))
+    rows = [{"i": h, "bbl": int(e.p.bbl.iloc[h]), "address": e.p.address.iloc[h],
+             "use": USE_KEYS[int(e.base_use[h])] if e.base_use[h] >= 0 else None} for h in hits]
+    _audit("notice_radius", {"n_selected": len(idx), "feet": req.feet, "n_notified": len(rows)})
+    return {"feet": req.feet, "selected": len(idx), "count": len(rows), "parcels": rows}
+
+
+# ----------------------------------------------------------------------------- scenarios & audit
+@app.get("/api/scenarios")
+def scenarios():
+    with store.connect() as db:
+        return store.list_scenarios(db)
+
+
+@app.post("/api/scenarios", status_code=201)
+def create_scenario(body: ScenarioIn):
+    e: ImpactEngine = runtime()["engine"]
+    use, far = _arrays(body.changes)
+    data = body.model_dump()
+    ev = e.evaluate(use, far=far)
+    data["summary"] = {"overall": ev["overall"], "pillars": ev["pillars"], "n_changed": ev["n_changed"]}
+    with store.connect() as db:
+        return store.create(db, data, e.meta.get("source_sha256", ""))
+
+
+@app.get("/api/scenarios/{sid}")
+def get_scenario(sid: str):
+    with store.connect() as db:
+        s = store.get(db, sid)
+    if s is None:
+        raise HTTPException(404, "scenario not found")
+    return s
+
+
+@app.patch("/api/scenarios/{sid}")
+def patch_scenario(sid: str, patch: ScenarioPatch):
+    data = {k: v for k, v in patch.model_dump().items() if v is not None}
+    if "changes" in data:
+        use, far = _arrays(data["changes"])
+        ev = runtime()["engine"].evaluate(use, far=far)
+        data["summary"] = {"overall": ev["overall"], "pillars": ev["pillars"], "n_changed": ev["n_changed"]}
+    try:
+        with store.connect() as db:
+            s = store.update(db, sid, data)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if s is None:
+        raise HTTPException(404, "scenario not found")
+    return s
+
+
+@app.delete("/api/scenarios/{sid}")
+def delete_scenario(sid: str):
+    with store.connect() as db:
+        if not store.delete(db, sid):
+            raise HTTPException(404, "scenario not found")
+    return {"deleted": sid}
+
+
+@app.get("/api/scenarios/{sid}/history")
+def scenario_history(sid: str):
+    with store.connect() as db:
+        return store.history(db, sid)
+
+
+@app.get("/api/audit")
+def audit_log(limit: int = 200):
+    with store.connect() as db:
+        rows = [{"id": i, "timestamp": t, "action": a, "body": json.loads(b), "row_hash": h}
+                for i, t, a, b, h in db.execute(
+                    "SELECT id, timestamp, action, body, row_hash FROM audit ORDER BY id DESC LIMIT ?", (limit,))]
+        return {"verify": store.verify(db), "rows": rows}
+
+
+# ----------------------------------------------------------------------------- import / export / report
+@app.post("/api/import")
+async def import_plan(file: UploadFile = File(...)):
+    """Read and validate a plan. Returns a review and proposed changes; nothing is applied."""
+    e: ImpactEngine = runtime()["engine"]
+    raw = await file.read(planio.MAX_BYTES + 1)
+    try:
+        rows = await run_in_threadpool(planio.read_rows, file.filename or "", raw)
+        rev = planio.review(rows, e.p.bbl.to_numpy(), e.base_use)
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(422, f"Could not read plan: {str(exc)[:300]}") from exc
+    except Exception as exc:  # malformed GIS files raise library-specific errors
+        raise HTTPException(422, f"Could not read plan: {type(exc).__name__}: {str(exc)[:200]}") from exc
+    rev["filename"] = file.filename
+    _audit("plan_import_reviewed", {"filename": file.filename, "rows": rev["rows"], "valid_changes": rev["valid_changes"],
+                                    "unmatched": rev["unmatched"], "duplicates": rev["duplicates"]})
+    return rev
 
 
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...), scope: Literal["affected", "city"] = "affected"):
-    """Evaluate an uploaded plan: GeoJSON features or CSV rows with a parcel id (bbl or i) and a land use."""
-    e: ImpactEngine = runtime()["engine"]
-    raw = await file.read()
-    name = (file.filename or "").lower()
-    rows = []
-    try:
-        if name.endswith((".geojson", ".json")):
-            gj = json.loads(raw)
-            rows = [f.get("properties", {}) for f in gj.get("features", [])]
-        elif name.endswith(".csv"):
-            rows = list(csv.DictReader(io.StringIO(raw.decode("utf-8-sig"))))
-        else:
-            raise HTTPException(400, "Upload a .geojson, .json or .csv file")
-    except (ValueError, UnicodeDecodeError) as exc:
-        raise HTTPException(400, f"Could not read file: {exc}") from exc
-    bbl_to_i = {int(b): i for i, b in enumerate(e.p.bbl.to_numpy())}
-    use = e.base_use.copy()
-    matched, unmatched, bad_use = 0, [], []
-    for r in rows:
-        low = {str(k).lower(): v for k, v in r.items()}
-        luv = next((low[k] for k in ("land_use", "landuse", "use", "proposed_use", "lu") if k in low), None)
-        key = _parse_use(luv) if luv is not None else None
-        idx = None
-        if "i" in low and str(low["i"]).strip().isdigit():
-            idx = int(low["i"])
-        elif "bbl" in low:
-            try:
-                idx = bbl_to_i.get(int(float(low["bbl"])))
-            except (TypeError, ValueError):
-                idx = None
-        if idx is None or not 0 <= idx < e.n:
-            unmatched.append(low.get("bbl") or low.get("i"))
-            continue
-        if key is None:
-            bad_use.append(luv)
-            continue
-        use[idx] = USE_INDEX[key]
-        matched += 1
-    res = e.evaluate(use, scope=scope)
-    res["upload"] = {"rows": len(rows), "matched": matched, "unmatched": len(unmatched),
-                     "unmatched_examples": unmatched[:10], "unknown_uses": sorted({str(b) for b in bad_use})[:10]}
-    res["changes"] = _changes_of(use)
+    """One-step import and evaluate (kept for scripts). The UI uses /api/import, then confirmation."""
+    rev = await import_plan(file)
+    use, far = _arrays(rev["changes"])
+    res = runtime()["engine"].evaluate(use, scope=scope, far=far, ranges=True)
+    res["upload"] = {k: rev[k] for k in ("rows", "valid_changes", "unmatched", "duplicates", "unknown_uses", "far_issues")}
+    res["upload"]["matched"] = rev["valid_changes"]
+    res["changes"] = rev["changes"]
     return res
+
+
+def _prov() -> dict:
+    r = runtime()
+    e: ImpactEngine = r["engine"]
+    return planio.provenance(e.meta, e.coef,
+                             e.derived_summary() | {"sensitivity_multipliers": {"unit_size": e.mult_unit, "value": e.mult_value}},
+                             r["model_info"], ENGINE_VERSION)
+
+
+@app.post("/api/export/{fmt}")
+def export(fmt: Literal["csv", "geojson", "provenance"], req: ExportRequest):
+    e: ImpactEngine = runtime()["engine"]
+    _arrays(req.changes)  # validate
+    _audit("export", {"format": fmt, "n_changes": len(req.changes)})
+    if fmt == "csv":
+        text = planio.export_csv(req.changes, e.p.bbl.to_numpy(), e.p.address.to_numpy(), e.base_use)
+        return Response(text, media_type="text/csv",
+                        headers={"Content-Disposition": "attachment; filename=planarena-plan.csv"})
+    if fmt == "geojson":
+        gj = planio.export_geojson(req.changes, _geoms(), e.p.bbl.to_numpy(), e.p.address.to_numpy())
+        return Response(json.dumps(gj), media_type="application/geo+json",
+                        headers={"Content-Disposition": "attachment; filename=planarena-plan.geojson"})
+    use, far = _arrays(req.changes)
+    body = _prov() | {"title": req.title, "changes": req.changes,
+                      "evaluation": e.evaluate(use, scope=req.scope, far=far, ranges=True)}
+    return Response(json.dumps(body, default=float), media_type="application/json",
+                    headers={"Content-Disposition": "attachment; filename=planarena-report.json"})
+
+
+@app.post("/api/report", response_class=HTMLResponse)
+def report(req: ExportRequest):
+    e: ImpactEngine = runtime()["engine"]
+    use, far = _arrays(req.changes)
+    ev = e.evaluate(use, scope=req.scope, far=far, ranges=True)
+    _audit("staff_report", {"title": req.title, "n_changes": ev["n_changed"]})
+    return planio.staff_report(req.title, req.description, ev, req.changes, _prov(), req.negotiation)
 
 
 @app.get("/api/sample-plan.csv")
 def sample_plan():
-    """A small example upload: the first 40 parking lots in Lower Manhattan, turned residential."""
+    """Example upload: 40 Lower Manhattan parking lots turned residential at FAR 6."""
     e: ImpactEngine = runtime()["engine"]
     idx = np.nonzero((e.base_use == USE_INDEX["prk"]) & (e.cd == 103))[0][:40]
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(["bbl", "land_use"])
-    for i in idx:
-        w.writerow([int(e.p.bbl.iloc[i]), "res"])
-    return _csv_response(buf.getvalue())
-
-
-def _csv_response(text: str):
-    return Response(text, media_type="text/csv",
+    lines = ["bbl,land_use,far"] + [f"{int(e.p.bbl.iloc[i])},res,6" for i in idx]
+    return Response("\n".join(lines) + "\n", media_type="text/csv",
                     headers={"Content-Disposition": "attachment; filename=planarena-sample-plan.csv"})
 
 
@@ -317,7 +575,8 @@ if DIST.exists():
 
     @app.get("/{path:path}")
     def spa(path: str):
-        f = DIST / path
-        if path and f.is_file():
-            return FileResponse(f)
-        return FileResponse(DIST / "index.html")
+        f = (DIST / path).resolve()
+        if path and f.is_file() and f.is_relative_to(DIST.resolve()):
+            return FileResponse(f, headers={"Cache-Control": "no-cache"})
+        # The page names the hashed bundles, so it must be revalidated after every rebuild.
+        return FileResponse(DIST / "index.html", headers={"Cache-Control": "no-cache"})

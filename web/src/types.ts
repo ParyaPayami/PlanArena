@@ -27,6 +27,13 @@ export interface Stakeholder {
 }
 
 export interface Meta {
+  version: string;
+  source_sha256: string;
+  source_url: string;
+  data_quality: Record<string, number>;
+  capacity_city: Capacity;
+  coefficients: Record<string, unknown>;
+  statuses: string[];
   city: string;
   source: string;
   n_parcels: number;
@@ -39,10 +46,25 @@ export interface Meta {
   derived: Record<string, unknown>;
   provenance: Record<string, { status: string; source?: string }>;
   zoning_rules: string;
-  models: { gnn: boolean; cv_summary?: Record<string, Record<string, { mean: number; sd: number }>> };
+  models: {
+    gnn: boolean;
+    cv_summary?: Record<string, Record<string, { mean: number; sd: number }>>;
+    emissions_validation?: Record<string, number | string>;
+  };
+}
+
+export interface Capacity {
+  zoning_capacity_sqft: number;
+  built_sqft: number;
+  unused_capacity_sqft: number;
+  soft_sites: number;
+  soft_site_rule: string;
+  plan_added_capacity_sqft: number;
+  plan_added_capacity_homes: number;
 }
 
 export interface IndicatorResult extends IndicatorMeta {
+  range?: [number, number];
   baseline: number;
   scenario: number;
   delta: number;
@@ -83,9 +105,59 @@ export interface Evaluation {
   overall: number;
   by_use: ByUse[];
   warnings: Warning[];
+  capacity?: { baseline: Capacity; scenario: Capacity };
   ms?: number;
-  upload?: { rows: number; matched: number; unmatched: number; unmatched_examples: unknown[]; unknown_uses: string[] };
-  changes?: Record<string, string>;
+  changes?: Record<string, ChangeValue>;
+}
+
+export type ChangeValue = string | { use: string; far: number };
+
+export interface ImportReview {
+  filename: string;
+  rows: number;
+  valid_changes: number;
+  unchanged_rows: number;
+  unmatched: number;
+  duplicates: number;
+  unknown_uses: number;
+  far_issues: number;
+  issues: Record<string, { row: number; id?: unknown; value?: unknown; first_row?: number }[]>;
+  changes: Record<string, ChangeValue>;
+}
+
+export interface Study {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  hearing_date: string | null;
+  study_area: string;
+  changes: Record<string, ChangeValue>;
+  checklist: { label: string; done: boolean }[];
+  summary?: { overall: number; pillars: Record<Pillar, number>; n_changed: number };
+  created_at: string;
+  updated_at: string;
+  source_sha256: string;
+}
+
+export interface ParetoPlan {
+  changes: Record<string, string>;
+  n_changed: number;
+  pillars: Record<Pillar, number>;
+  overall: number;
+  estimated: number[];
+}
+
+export interface ParetoResult {
+  algorithm: string;
+  seed: number;
+  generations: number;
+  n_parcels: number;
+  n_free: number;
+  front: ParetoPlan[];
+  presets: { name: string; weights: Record<string, number>; index: number }[];
+  study_area_parcels?: number;
+  note?: string;
 }
 
 export interface TranscriptLine {
@@ -120,6 +192,14 @@ export interface ParcelInfo {
   overlay: string;
   special_district: string;
   use: string | null;
+  block: number;
+  bldg_class: string;
+  built_far: number;
+  max_far: number;
+  resid_far: number;
+  comm_far: number;
+  facil_far: number;
+  soft_site: boolean;
   lot_area_sqft: number;
   bldg_area_sqft: number;
   floors: number;

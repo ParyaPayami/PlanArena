@@ -145,6 +145,7 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
     let x = 0, y = 0, n = 0;
     for (const f of s.data.features) {
       const i = (f.properties as { i: number }).i;
+      if (!Number.isFinite(s.data.lon[i]) || !Number.isFinite(s.data.lat[i])) continue;
       x += s.data.lon[i];
       y += s.data.lat[i];
       n++;

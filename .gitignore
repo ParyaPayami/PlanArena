@@ -8,3 +8,5 @@ web/public/data/
 data/processed/
 results/train.log
 .DS_Store
+data/reference/
+data/*.sqlite3*

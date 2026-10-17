@@ -1,5 +1,5 @@
 import { useStore } from "../store";
-import { fmtDelta, fmtScore, fmtValue, PILLAR_COLOR, PILLAR_LABEL } from "../format";
+import { compact, fmtDelta, fmtScore, fmtValue, PILLAR_COLOR, PILLAR_LABEL } from "../format";
 import type { Evaluation, Pillar } from "../types";
 
 function Gauge({ value, color, size = 74 }: { value: number; color: string; size?: number }) {
@@ -119,6 +119,11 @@ export default function Scoreboard() {
                   </div>
                   <div className={`ind-delta ${r.score > 0.01 ? "good" : r.score < -0.01 ? "bad" : "muted"}`}>
                     {fmtDelta(r, r.delta)}
+                    {r.range && Math.abs(r.range[1] - r.range[0]) > 1e-9 && (
+                      <div className="ind-range" title="Sensitivity range from low/high coefficient variants">
+                        {fmtDelta(r, r.range[0]).replace("no change", "0")} … {fmtDelta(r, r.range[1]).replace("no change", "0")}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -126,6 +131,7 @@ export default function Scoreboard() {
         </div>
       ))}
       {changed > 0 && <ByUseTable ev={ev} />}
+      {ev.capacity && <CapacityCard ev={ev} />}
       {ev.warnings.length > 0 && (
         <div className="warnings">
           {ev.warnings.map((w) => (
@@ -135,6 +141,43 @@ export default function Scoreboard() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function CapacityCard({ ev }: { ev: Evaluation }) {
+  const b = ev.capacity!.baseline;
+  const s = ev.capacity!.scenario;
+  const d = (x: number) => (Math.abs(x) < 0.5 ? "·" : `${x > 0 ? "+" : "−"}${compact(Math.abs(x))}`);
+  return (
+    <div className="byuse">
+      <div className="ind-group-head">Development capacity (zoning)</div>
+      <table>
+        <tbody>
+          <tr>
+            <td>Built floor area</td>
+            <td>{compact(s.built_sqft)} sq ft</td>
+            <td className={s.built_sqft >= b.built_sqft ? "good" : "bad"}>{d(s.built_sqft - b.built_sqft)}</td>
+          </tr>
+          <tr>
+            <td>Unused zoning capacity</td>
+            <td>{compact(s.unused_capacity_sqft)} sq ft</td>
+            <td>{d(s.unused_capacity_sqft - b.unused_capacity_sqft)}</td>
+          </tr>
+          <tr>
+            <td title={s.soft_site_rule}>Soft sites</td>
+            <td>{s.soft_sites.toLocaleString()}</td>
+            <td>{d(s.soft_sites - b.soft_sites)}</td>
+          </tr>
+          {s.plan_added_capacity_sqft > 0 && (
+            <tr>
+              <td>Capacity added by upzoning</td>
+              <td>{compact(s.plan_added_capacity_sqft)} sq ft</td>
+              <td className="good">≈{Math.round(s.plan_added_capacity_homes).toLocaleString()} homes</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

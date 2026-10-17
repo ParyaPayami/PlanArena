@@ -2,7 +2,8 @@ import { useState } from "react";
 import { api } from "../api";
 import { useStore } from "../store";
 import { PillarCards } from "./Scoreboard";
-import type { Evaluation } from "../types";
+import ParetoExplorer from "./ParetoExplorer";
+import type { ChangeValue, Evaluation } from "../types";
 
 interface Props {
   suitOverlay: boolean;
@@ -21,7 +22,7 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
   const [budget, setBudget] = useState(5);
   const [zoning, setZoning] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ changes: Record<string, string>; evaluation: Evaluation; ms: number } | null>(null);
+  const [result, setResult] = useState<{ changes: Record<string, ChangeValue>; evaluation: Evaluation; ms: number } | null>(null);
 
   const run = async () => {
     setBusy(true);
@@ -48,7 +49,7 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
     const m = new Map<string, number>();
     for (const [k, v] of Object.entries(result.changes)) {
       const b = base[Number(k)];
-      const key = `${b >= 0 ? meta.land_uses[b].key : "unk"}→${v}`;
+      const key = `${b >= 0 ? meta.land_uses[b].key : "unk"}→${typeof v === "string" ? v : v.use}`;
       m.set(key, (m.get(key) ?? 0) + 1);
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
@@ -138,6 +139,8 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
           </div>
         </div>
       )}
+
+      <ParetoExplorer />
 
       <div className="card mt">
         <label className="check">

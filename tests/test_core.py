@@ -131,3 +131,37 @@ def test_indicator_metadata_complete():
     keys = [i.key for i in INDICATORS]
     assert len(keys) == len(set(keys)) == 11
     assert {i.pillar for i in INDICATORS} == {"social", "economic", "environmental"}
+
+
+def test_calibrated_coefficients_are_loaded(engine):
+    assert engine.coef.get("calibrated_on"), "run python -m planarena.calibrate"
+    assert engine.coef["emissions_tco2e_per_kbtu"]["status"] == "derived"
+    assert engine.coef["jobs_sqft_per_worker"]["status"] == "calibrated"
+
+
+def test_baseline_jobs_match_qcew_target(engine):
+    target = engine.coef["jobs_sqft_per_worker"]["calibration_target_jobs"]
+    assert abs(engine.baseline_state["jobs"].sum() / target - 1) < 0.005
+
+
+def test_paving_open_space_increases_runoff(engine):
+    use = engine.base_use.copy()
+    idx = np.nonzero((engine.base_use == U["opn"]) & (engine.bldg == 0))[0][:20]
+    use[idx] = U["prk"]
+    row = {r["key"]: r for r in engine.evaluate(use, scope="affected")["indicators"]}["runoff"]
+    assert row["delta"] > 0
+
+
+def test_no_indicator_is_provisional_after_calibration(engine):
+    assert not any(engine.provisional.values()), engine.provisional
+
+
+def test_web_layers_are_polygonal():
+    """Every display parcel must be a polygon; a collapsed line once pulled a level's camera off the map."""
+    import json
+
+    from planarena.config import WEB_DATA
+
+    for f in [WEB_DATA / "parcels.geojson", *sorted((WEB_DATA / "levels").glob("*.geojson"))]:
+        types = {ft["geometry"]["type"] for ft in json.loads(f.read_text())["features"]}
+        assert types <= {"Polygon", "MultiPolygon"}, (f.name, types)

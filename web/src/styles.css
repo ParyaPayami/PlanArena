@@ -235,3 +235,50 @@ h3 { margin: 2px 0 6px; font-size: 16px; }
   .tools .seg, .brand-sub { display: none; }
   .inspector { width: auto; right: 14px; }
 }
+
+/* ---------------------------------------------------------------- v0.2 additions */
+.text { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; color: var(--text); margin-bottom: 6px; resize: vertical; }
+.density { margin-top: 10px; padding: 10px; }
+.far-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+.far-row input[type="number"] { width: 70px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 5px; }
+.nowrap { white-space: nowrap; }
+.ind-range { font-size: 10.5px; color: var(--muted); font-weight: 500; }
+.tool-label { font-size: 12px; }
+.search { position: relative; display: flex; align-items: center; gap: 6px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; width: min(320px, 26vw); }
+.search input { background: transparent; border: 0; outline: none; padding: 8px 0; width: 100%; }
+.search-results { position: absolute; top: 40px; left: 0; right: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; z-index: 30; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.search-results button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; background: transparent; border-bottom: 1px solid var(--line); white-space: normal; }
+.search-results button:hover { background: var(--panel-2); }
+.lasso-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.lasso-svg polyline { fill: rgba(91,140,255,.12); stroke: #fff; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.map-legend { position: absolute; right: 14px; top: 14px; background: rgba(17,26,44,.92); border: 1px solid var(--line); border-radius: 20px; padding: 6px 12px; font-size: 12.5px; }
+.studies { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.study { background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px; }
+.study.open { border-color: var(--accent); }
+.study-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.study-title { flex: 1; cursor: pointer; min-width: 0; }
+.study-body { padding: 0 10px 10px; }
+.field.inline { margin: 4px 0; flex: 1; }
+.field.inline input { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.history { list-style: none; padding: 0; margin: 4px 0 0; font-size: 12px; max-height: 140px; overflow: auto; }
+.history li { padding: 2px 0; border-bottom: 1px solid rgba(36,50,79,.5); }
+button.danger { border-color: #6a2531; color: #ff9aa5; }
+.compare table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.compare th, .compare td { padding: 4px; text-align: right; border-bottom: 1px solid rgba(36,50,79,.6); }
+.compare th:first-child, .compare td:first-child { text-align: left; }
+.pareto-plot { width: 100%; height: auto; margin-top: 8px; background: var(--panel); border-radius: 10px; }
+.pareto-plot .axis0 { stroke: var(--line); stroke-width: 1; }
+.pareto-plot .axis-label { font-size: 10px; }
+.presets { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.seed { width: 64px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 5px; }
+.review details { margin: 6px 0; }
+.modal.methods { width: min(760px, 100%); max-height: 86vh; overflow: auto; text-align: left; }
+.modal.methods h4 { margin: 14px 0 4px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
+.coef { width: 100%; border-collapse: collapse; font-size: 12px; }
+.coef td, .coef th { padding: 3px 5px; border-bottom: 1px solid rgba(36,50,79,.6); text-align: left; }
+.coef td.warn { color: var(--warn); }
+.derived { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 11px; max-height: 180px; overflow: auto; }
+.tabs { grid-template-columns: repeat(6, 1fr) !important; }
+.tabs button { font-size: 11.5px !important; padding: 10px 2px !important; flex-direction: column; gap: 2px; }
+@media (max-width: 1250px) { .tool-label { display: none; } .search { width: 200px; } }

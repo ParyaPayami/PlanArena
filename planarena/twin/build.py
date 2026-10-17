@@ -13,6 +13,7 @@ Run with:  python -m planarena.twin.build
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 
@@ -20,7 +21,9 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
+import shapely
 from shapely import STRtree
+from shapely.ops import unary_union
 
 from planarena.config import (
     CITY_NAME, FT_PER_M, PLUTO_PATH, PLUTO_TO_USE, PROCESSED, PROJECTED_CRS,
@@ -129,15 +132,34 @@ def build_graph(g: gpd.GeoDataFrame, df: pd.DataFrame, k: int = 8) -> dict[str, 
     return {"adjacent": adj, "near": knn, "same_zoning": zon}
 
 
+def _polygonal(geom):
+    """Display geometry that survives 6-decimal GeoJSON rounding.
+
+    Keeps polygon parts; slivers (mean width under 0.5 ft) and non-polygonal results of make_valid get
+    a 1 ft buffer so they are written as polygons rather than collapsing to lines.
+    """
+    if geom.geom_type not in ("Polygon", "MultiPolygon"):
+        parts = [p for p in getattr(geom, "geoms", []) if p.geom_type in ("Polygon", "MultiPolygon")]
+        geom = unary_union(parts) if parts else geom
+    if geom.geom_type not in ("Polygon", "MultiPolygon") or geom.area < 0.5 * geom.length:
+        return geom.buffer(1.0)
+    return geom
+
+
 def write_web(g: gpd.GeoDataFrame, df: pd.DataFrame, web_dir=WEB_DATA) -> None:
     web_dir.mkdir(parents=True, exist_ok=True)
     (web_dir / "levels").mkdir(exist_ok=True)
     w = gpd.GeoDataFrame(
         {"i": np.arange(len(df), dtype="int32"), "u": df.use.to_numpy(),
          "h": df.height_m.round(1).to_numpy(), "cd": df.cd.to_numpy()},
-        geometry=g.geometry.simplify(1.5, preserve_topology=True).values,
+        geometry=g.geometry.simplify(1.5, preserve_topology=True).map(_polygonal).values,
         crs=PROJECTED_CRS,
     ).to_crs(WEB_CRS)
+    # Snap to the 6-decimal output grid ourselves so no part collapses into a line during writing.
+    snapped = shapely.set_precision(w.geometry.values, 1e-6)
+    ok = np.array([x.geom_type in ("Polygon", "MultiPolygon") and not x.is_empty for x in snapped])
+    fallback = gpd.GeoSeries(g.geometry.values, crs=PROJECTED_CRS).buffer(2.0).to_crs(WEB_CRS).values
+    w["geometry"] = np.where(ok, snapped, shapely.set_precision(fallback, 1e-6))
     opts = {"COORDINATE_PRECISION": 6, "RFC7946": "YES"}
     w.to_file(web_dir / "parcels.geojson", driver="GeoJSON", engine="pyogrio", layer_options=opts)
     for cd, part in w.groupby("cd"):
@@ -159,10 +181,23 @@ def build(out_dir=PROCESSED, web_dir=WEB_DATA) -> dict:
     np.savez_compressed(out_dir / "graph.npz", **graph)
     write_web(g, df, web_dir)
     bounds = gpd.GeoSeries(g.geometry, crs=PROJECTED_CRS).to_crs(WEB_CRS).total_bounds
+    h = hashlib.sha256()
+    with open(PLUTO_PATH, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    quality = {
+        "missing_land_use": int((df.use < 0).sum()),
+        "zero_lot_area_filled_from_geometry": int((pd.to_numeric(g["LotArea"], errors="coerce").fillna(0) <= 0).sum()),
+        "zero_building_area": int((df.bldg_area <= 0).sum()),
+        "duplicate_bbl": int(df.bbl.duplicated().sum()),
+    }
     meta = {
         "city": CITY_NAME,
         "source": f"NYC DCP MapPLUTO {g['Version'].iloc[0]}",
         "source_path": str(PLUTO_PATH),
+        "source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change",
+        "source_sha256": h.hexdigest(),
+        "data_quality": quality,
         "n_parcels": int(len(df)),
         "use_counts": {USE_KEYS[u] if u >= 0 else "unknown": int(n)
                        for u, n in df.use.value_counts().sort_index().items()},

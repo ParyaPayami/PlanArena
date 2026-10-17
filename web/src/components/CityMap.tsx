@@ -1,19 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DeckGL, { type DeckGLRef } from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
-import { LinearInterpolator, type PickingInfo, type MapViewState } from "@deck.gl/core";
+import { FlyToInterpolator, LinearInterpolator, type MapViewState, type PickingInfo } from "@deck.gl/core";
 import Map from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { CityData } from "../store";
+import type { CityData, Highlight } from "../store";
 import type { LandUse } from "../types";
 
 const DARK_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
+const FLOOR_M = 3.5;
+const ASSUMED_COVERAGE = 0.6; // lot coverage used only to draw buildings for proposed FAR
 
-export type MapMode = "select" | "box" | "paint";
+export type MapMode = "select" | "box" | "lasso" | "block" | "paint";
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function pointInPolygon(x: number, y: number, poly: number[][]) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-12) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 interface Props {
@@ -21,29 +33,33 @@ interface Props {
   features?: GeoJSON.Feature[];
   landUses: LandUse[];
   use: Int16Array;
+  far?: Float32Array;
   version: number;
   selected: Set<number>;
   selVersion: number;
   preview?: Map<number, number>;
+  highlight?: Highlight;
+  focus?: { lon: number; lat: number; zoom: number; id: number };
   view3d: boolean;
   mode: MapMode;
   initialViewState: MapViewState;
   onPick?: (i: number, additive: boolean) => void;
   onPaint?: (i: number) => void;
   onBox?: (idx: number[], additive: boolean) => void;
+  onBlock?: (i: number, additive: boolean) => void;
   suggestionOverlay?: { top: number[]; p: number[] } | null;
 }
 
 export default function CityMap(props: Props) {
-  const { data, landUses, use, version, selected, selVersion, preview, view3d, mode } = props;
+  const { data, landUses, use, far, version, selected, selVersion, preview, view3d, mode, highlight } = props;
   const colors = useMemo(() => landUses.map((u) => hexToRgb(u.color)), [landUses]);
   const [box, setBox] = useState<null | { x0: number; y0: number; x1: number; y1: number; c0: number[] }>(null);
-  const dragging = useRef(false);
+  const [lasso, setLasso] = useState<null | { screen: number[][]; geo: number[][] }>(null);
   const deckRef = useRef<DeckGLRef>(null);
-  useEffect(() => {
-    (window as unknown as { __deck?: unknown }).__deck = deckRef.current?.deck;
-  });
   const [viewState, setViewState] = useState<MapViewState>(props.initialViewState);
+  const features = props.features ?? data.features;
+  const base = data.baseUse;
+
   useEffect(() => {
     setViewState((v) => ({
       ...v,
@@ -52,8 +68,20 @@ export default function CityMap(props: Props) {
       transitionInterpolator: new LinearInterpolator(["pitch"]),
     }) as MapViewState);
   }, [view3d]);
-  const features = props.features ?? data.features;
-  const base = data.baseUse;
+
+  useEffect(() => {
+    if (!props.focus) return;
+    setViewState((v) => ({
+      ...v,
+      longitude: props.focus!.lon,
+      latitude: props.focus!.lat,
+      zoom: props.focus!.zoom,
+      transitionDuration: 900,
+      transitionInterpolator: new FlyToInterpolator(),
+    }) as MapViewState);
+  }, [props.focus?.id]);
+
+  const changedAt = (i: number) => use[i] !== base[i] || (far !== undefined && !Number.isNaN(far[i]));
 
   const layer = new GeoJsonLayer({
     id: "parcels",
@@ -73,43 +101,46 @@ export default function CityMap(props: Props) {
         const c = colors[pv];
         return [c[0], c[1], c[2], 245];
       }
-      const u = use[i];
-      if (u < 0) return [90, 96, 110, 120];
-      const c = colors[u];
-      const changed = u !== base[i];
       if (props.suggestionOverlay) {
         const a = Math.round(60 + 195 * props.suggestionOverlay.p[i]);
         const t = colors[props.suggestionOverlay.top[i]];
         return [t[0], t[1], t[2], a];
       }
-      return [c[0], c[1], c[2], changed ? 250 : preview ? 70 : 190];
+      const u = use[i];
+      if (u < 0) return [90, 96, 110, 120];
+      const c = colors[u];
+      return [c[0], c[1], c[2], changedAt(i) ? 250 : preview || highlight ? 80 : 190];
     },
     getLineColor: (f: GeoJSON.Feature) => {
       const i = (f.properties as { i: number }).i;
       if (selected.has(i)) return [255, 255, 255, 255];
+      if (highlight?.parcels.has(i)) return [highlight.color[0], highlight.color[1], highlight.color[2], 255];
       if (preview?.has(i)) return [255, 255, 255, 220];
-      if (use[i] !== base[i]) return [255, 240, 200, 230];
+      if (changedAt(i)) return [255, 240, 200, 230];
       return [10, 14, 24, 160];
     },
     getLineWidth: (f: GeoJSON.Feature) => {
       const i = (f.properties as { i: number }).i;
       if (selected.has(i)) return 2.5;
-      if (preview?.has(i) || use[i] !== base[i]) return 1.4;
+      if (highlight?.parcels.has(i)) return 2.2;
+      if (preview?.has(i) || changedAt(i)) return 1.4;
       return 0.35;
     },
     getElevation: (f: GeoJSON.Feature) => {
-      const i = (f.properties as { i: number; h: number }).i;
-      const h = (f.properties as { h: number }).h || 0;
+      const p = f.properties as { i: number; h: number };
+      const i = p.i;
       const u = preview?.get(i) ?? use[i];
       if (u >= 0 && !landUses[u].built) return 0.5;
-      if (u !== base[i] && h < 3) return 20; // new building on a formerly unbuilt lot
-      return Math.max(h, 1);
+      if (far && !Number.isNaN(far[i]) && preview?.get(i) === undefined)
+        return Math.max(1, (far[i] / ASSUMED_COVERAGE) * FLOOR_M);
+      if (u !== base[i] && (p.h || 0) < 3) return 20; // new building on a formerly unbuilt lot
+      return Math.max(p.h || 0, 1);
     },
-    material: { ambient: 0.45, diffuse: 0.6, shininess: 24, specularColor: [60, 64, 70] },
+    material: { ambient: 0.35, diffuse: 0.55, shininess: 18, specularColor: [40, 44, 50] },
     updateTriggers: {
-      getFillColor: [version, preview, props.suggestionOverlay],
-      getLineColor: [version, selVersion, preview],
-      getLineWidth: [version, selVersion, preview],
+      getFillColor: [version, preview, props.suggestionOverlay, highlight?.key],
+      getLineColor: [version, selVersion, preview, highlight?.key],
+      getLineWidth: [version, selVersion, preview, highlight?.key],
       getElevation: [version, preview],
     },
     transitions: { getFillColor: 220, getElevation: 400 },
@@ -117,6 +148,8 @@ export default function CityMap(props: Props) {
 
   const pickIndex = (info: PickingInfo) =>
     info.object ? ((info.object as GeoJSON.Feature).properties as { i: number }).i : null;
+  const additiveOf = (ev: { srcEvent?: MouseEvent }) =>
+    !!(ev.srcEvent && (ev.srcEvent.shiftKey || ev.srcEvent.metaKey || ev.srcEvent.ctrlKey));
 
   const onClick = (info: PickingInfo, ev: { srcEvent?: MouseEvent }) => {
     const i = pickIndex(info);
@@ -125,24 +158,21 @@ export default function CityMap(props: Props) {
       return;
     }
     if (mode === "paint") props.onPaint?.(i);
-    else props.onPick?.(i, !!(ev.srcEvent && (ev.srcEvent.shiftKey || ev.srcEvent.metaKey || ev.srcEvent.ctrlKey)));
+    else if (mode === "block") props.onBlock?.(i, additiveOf(ev));
+    else props.onPick?.(i, additiveOf(ev));
   };
 
-  const boxSelect = (b: NonNullable<typeof box>, endCoord: number[], additive: boolean) => {
-    const [lo0, la0] = b.c0;
-    const [lo1, la1] = endCoord;
-    const minLo = Math.min(lo0, lo1), maxLo = Math.max(lo0, lo1);
-    const minLa = Math.min(la0, la1), maxLa = Math.max(la0, la1);
+  const selectInBounds = (test: (x: number, y: number) => boolean, additive: boolean) => {
     const out: number[] = [];
     for (const f of features) {
       const i = (f.properties as { i: number }).i;
-      const x = data.lon[i], y = data.lat[i];
-      if (x >= minLo && x <= maxLo && y >= minLa && y <= maxLa) out.push(i);
+      if (test(data.lon[i], data.lat[i])) out.push(i);
     }
     props.onBox?.(out, additive);
   };
 
-  const controller = mode === "select" ? true : { dragPan: false, touchRotate: false, dragRotate: false };
+  const dragModes = mode === "box" || mode === "lasso" || mode === "paint";
+  const controller = dragModes ? { dragPan: false, touchRotate: false, dragRotate: false } : true;
 
   return (
     <div className="map-wrap">
@@ -154,9 +184,9 @@ export default function CityMap(props: Props) {
         layers={[layer]}
         onClick={onClick as never}
         onDragStart={(info: PickingInfo) => {
-          dragging.current = true;
           if (mode === "box" && info.coordinate)
             setBox({ x0: info.x, y0: info.y, x1: info.x, y1: info.y, c0: info.coordinate });
+          if (mode === "lasso" && info.coordinate) setLasso({ screen: [[info.x, info.y]], geo: [info.coordinate] });
           if (mode === "paint") {
             const i = pickIndex(info);
             if (i !== null) props.onPaint?.(i);
@@ -164,26 +194,40 @@ export default function CityMap(props: Props) {
         }}
         onDrag={(info: PickingInfo) => {
           if (mode === "box" && box) setBox({ ...box, x1: info.x, y1: info.y });
+          if (mode === "lasso" && lasso && info.coordinate)
+            setLasso({ screen: [...lasso.screen, [info.x, info.y]], geo: [...lasso.geo, info.coordinate] });
           if (mode === "paint") {
             const i = pickIndex(info);
             if (i !== null) props.onPaint?.(i);
           }
         }}
         onDragEnd={(info: PickingInfo, ev: { srcEvent?: MouseEvent }) => {
-          dragging.current = false;
           if (mode === "box" && box && info.coordinate) {
-            boxSelect(box, info.coordinate, !!ev.srcEvent?.shiftKey);
+            const [lo0, la0] = box.c0;
+            const [lo1, la1] = info.coordinate;
+            selectInBounds(
+              (x, y) =>
+                x >= Math.min(lo0, lo1) && x <= Math.max(lo0, lo1) && y >= Math.min(la0, la1) && y <= Math.max(la0, la1),
+              additiveOf(ev),
+            );
             setBox(null);
           }
+          if (mode === "lasso" && lasso) {
+            if (lasso.geo.length > 2) selectInBounds((x, y) => pointInPolygon(x, y, lasso.geo), additiveOf(ev));
+            setLasso(null);
+          }
         }}
-        getCursor={({ isHovering }) => (mode === "paint" ? "crosshair" : mode === "box" ? "crosshair" : isHovering ? "pointer" : "grab")}
+        getCursor={({ isHovering }) =>
+          mode === "paint" || mode === "box" || mode === "lasso" ? "crosshair" : isHovering ? "pointer" : "grab"
+        }
         getTooltip={({ object }) => {
           if (!object || mode === "paint") return null;
           const i = ((object as GeoJSON.Feature).properties as { i: number }).i;
           const u = use[i];
           const label = u >= 0 ? landUses[u].label : "Unclassified";
           const was = base[i] !== u && base[i] >= 0 ? ` (was ${landUses[base[i]].label})` : "";
-          return { text: `${label}${was}`, className: "deck-tooltip" };
+          const f = far && !Number.isNaN(far[i]) ? ` · FAR ${far[i].toFixed(1)}` : "";
+          return { text: `${label}${was}${f}`, className: "deck-tooltip" };
         }}
       >
         <Map mapStyle={DARK_STYLE} attributionControl={true} reuseMaps interactive={false} />
@@ -198,6 +242,17 @@ export default function CityMap(props: Props) {
             height: Math.abs(box.y1 - box.y0),
           }}
         />
+      )}
+      {lasso && (
+        <svg className="lasso-svg">
+          <polyline points={lasso.screen.map((p) => p.join(",")).join(" ")} />
+        </svg>
+      )}
+      {highlight && (
+        <div className="map-legend">
+          <span className="swatch" style={{ background: `rgb(${highlight.color.join(",")})` }} /> {highlight.label} (
+          {highlight.parcels.size.toLocaleString()})
+        </div>
       )}
     </div>
   );
