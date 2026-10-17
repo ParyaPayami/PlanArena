@@ -223,3 +223,10 @@ Zoning codes are kept but not interpreted (all uses allowed; context FAR). Distr
   - It uses the longest available horizon, extended to 2025 with a constant hazard.
   - Its range is the 2.5th–97.5th percentile of 20,000 draws, with each site redeveloping independently.
 - **Observed:** homes recorded in 2025 on each site's land, minus those before; and the redevelopment label.
+
+**Realism-layer ablation** (`planarena/models/ablate_recs.py`). On the 2020 snapshot (precedent table as of 2020), the optimizer plans every district (balanced weights, 2% budget) three ways:
+- without the precedent filter;
+- with it;
+- with it and candidates restricted to the likeliest fifth for redevelopment (model trained on 2015→2020).
+
+Recommended parcels are compared with 2025: redeveloped or not, and whether the recommended use appeared.

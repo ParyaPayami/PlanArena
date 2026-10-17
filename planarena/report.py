@@ -143,6 +143,22 @@ def _integration() -> list[str]:
                       f"{r['mean_probability_adopted_vs_prior_zoning'][1]:.3f} before"
                       for n, r in ir["rezonings"].items()) + ".", ""]
     L += [f"- {c}" for c in ir["caveats"]]
+    ra = load("realism_ablation")
+    if ra:
+        L += ["", f"**Realism layers in the optimizer** (`planarena/models/ablate_recs.py`): plans for every district on the "
+              f"{ra['snapshot']} snapshot, compared with what happened by {ra['outcome_year']}. This tests plausibility, not "
+              "desirability.", "",
+              "| Setting | Recommended parcels | Without precedent | Redeveloped by 2025 | Redeveloped into the recommended use | Median district plan score |",
+              "|---|---:|---:|---:|---:|---:|"]
+        for n, s in ra["settings"].items():
+            L.append(f"| {n} | {num(s['recommended_parcels'])} | {pct(s['share_without_precedent'], 1)} | "
+                     f"{pct(s['share_redeveloped_by_2025'], 1)} | {pct(s['share_redeveloped_into_recommended_use'], 1)} | "
+                     f"{s['median_district_plan_score']} |")
+        ref = ra["reference"]
+        L += ["", f"For reference, {pct(ref['share_of_all_lots_redeveloped'], 1)} of all lots and "
+              f"{pct(ref['share_of_likely_fifth_redeveloped'], 1)} of the likeliest fifth were redeveloped. The plan score "
+              "is the optimizer's own objective; search is heuristic, so a constraint can change the plan found in "
+              "either direction."]
     return L
 
 

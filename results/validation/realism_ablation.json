@@ -1,0 +1,35 @@
+{
+  "test": "The optimizer is run on the 2020 Manhattan snapshot in every community district (balanced weights, 2% change\nbudget, exact re-scoring of the top 30 moves), under three settings:\n* no realism layer: conversions without precedent are allowed;\n* precedent filter (the default): conversions of existing buildings never observed before 2020 at that size are\n  skipped (precedent table as of 2020);\n* precedent filter + likelihood layer: candidates restricted to the fifth of parcels most likely to be redeveloped\n  within five years (redevelopment model trained on 2015->2020 only).\nRecommended parcels are then compared with what happened by 2025 (redevelopment label; 2025 land use). This tests\nplausibility, not desirability: a plan can be good without resembling the market.",
+  "snapshot": 2020,
+  "outcome_year": 2025,
+  "settings": {
+    "no realism layer": {
+      "recommended_parcels": 529,
+      "share_without_precedent": 0.166,
+      "share_redeveloped_by_2025": 0.1191,
+      "share_with_recommended_use_in_2025": 0.0227,
+      "share_redeveloped_into_recommended_use": 0.0057,
+      "median_district_plan_score": 7.524
+    },
+    "precedent filter (default)": {
+      "recommended_parcels": 544,
+      "share_without_precedent": 0.0,
+      "share_redeveloped_by_2025": 0.1213,
+      "share_with_recommended_use_in_2025": 0.0257,
+      "share_redeveloped_into_recommended_use": 0.0055,
+      "median_district_plan_score": 8.267
+    },
+    "precedent filter + likelihood layer": {
+      "recommended_parcels": 118,
+      "share_without_precedent": 0.0,
+      "share_redeveloped_by_2025": 0.2119,
+      "share_with_recommended_use_in_2025": 0.0169,
+      "share_redeveloped_into_recommended_use": 0.0,
+      "median_district_plan_score": 2.734
+    }
+  },
+  "reference": {
+    "share_of_all_lots_redeveloped": 0.0135,
+    "share_of_likely_fifth_redeveloped": 0.0521
+  }
+}

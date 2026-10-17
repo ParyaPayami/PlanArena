@@ -65,6 +65,7 @@ cities:
 	$(RUN) planarena.cities.mke_history
 	$(RUN) planarena.models.crosscity
 	$(RUN) planarena.models.replay
+	$(RUN) planarena.models.ablate_recs
 
 # Any US place, with the best data available for it:  make city PLACE="Austin, TX"
 city:

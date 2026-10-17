@@ -304,3 +304,13 @@ Model used for each rezoning (training pairs known by the adoption year; extende
 - Three rezonings; few sites were redeveloped by 2025, so site-level rankings are not informative where fewer than five were.
 - Capacity projections describe full build-out by the review's build year; the comparison is with what was built by 2025, which is the near-term question.
 - Homes are counted from MapPLUTO units on each site's land; Mandatory Inclusionary Housing bonus floor area is not modelled.
+
+**Realism layers in the optimizer** (`planarena/models/ablate_recs.py`): plans for every district on the 2020 snapshot, compared with what happened by 2025. This tests plausibility, not desirability.
+
+| Setting | Recommended parcels | Without precedent | Redeveloped by 2025 | Redeveloped into the recommended use | Median district plan score |
+|---|---:|---:|---:|---:|---:|
+| no realism layer | 529 | 16.6% | 11.9% | 0.6% | 7.524 |
+| precedent filter (default) | 544 | 0.0% | 12.1% | 0.5% | 8.267 |
+| precedent filter + likelihood layer | 118 | 0.0% | 21.2% | 0.0% | 2.734 |
+
+For reference, 1.4% of all lots and 5.2% of the likeliest fifth were redeveloped. The plan score is the optimizer's own objective; search is heuristic, so a constraint can change the plan found in either direction.
