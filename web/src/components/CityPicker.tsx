@@ -52,7 +52,8 @@ export default function CityPicker() {
           <div className="modal methods" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Choose a city">
             <h2>Choose a city</h2>
             <p className="muted small">
-              <b>Tier B</b> cities use official parcel records. <b>Tier A</b> works for any US city or town: lots are
+              <b>Tier B</b> cities use official parcel records (Manhattan, Milwaukee and every Massachusetts city and
+              town). <b>Tier A</b> works for any US city or town: lots are
               estimated from Overture buildings within 2020 census blocks; homes come from the Census and jobs from
               LEHD LODES by block; land use and floor area are estimated; there is no zoning or assessed value.
             </p>
@@ -85,7 +86,7 @@ export default function CityPicker() {
               {hits.map((h) => (
                 <div key={h.geoid} className="city-hit">
                   <span>
-                    <b>{h.label}</b> <span className="muted small">{h.land_km2.toLocaleString()} km² · {h.kind === "cousub" ? "town" : "place"}</span>
+                    <b>{h.label}</b> <span className="muted small">{h.land_km2.toLocaleString()} km² · {h.kind === "cousub" ? "town" : "place"} · Tier {h.tier}</span>
                   </span>
                   {h.built ? (
                     <a className="button chip" href={cityHref(h.geoid)}>Open</a>

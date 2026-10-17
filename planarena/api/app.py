@@ -765,8 +765,10 @@ def place_search(q: str, limit: int = 12):
     from planarena.national import places
 
     hits = places.search(q, min(max(limit, 1), 30))
+    from planarena.cities.build import tier_for
+
     built = registry.cities()
-    return [h | {"built": h["geoid"] in built} for h in hits]
+    return [h | {"built": h["geoid"] in built, "tier": tier_for(h["geoid"])} for h in hits]
 
 
 def _run_build(geoid: str) -> None:
@@ -774,7 +776,7 @@ def _run_build(geoid: str) -> None:
     log = registry.city_dir(geoid) / "build.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     with open(log, "w") as fh:
-        p = subprocess.run([sys.executable, "-I", "-m", "planarena.cities.tier_a", geoid], cwd=ROOT,
+        p = subprocess.run([sys.executable, "-I", "-m", "planarena.cities.build", geoid], cwd=ROOT,
                            stdout=fh, stderr=subprocess.STDOUT)
     job["status"] = "done" if p.returncode == 0 else "failed"
     job["log"] = log.read_text()[-4000:]
@@ -784,7 +786,7 @@ def _run_build(geoid: str) -> None:
 
 @app.post("/api/cities/{geoid}/build", status_code=202)
 def build_city(geoid: str):
-    """Build a Tier A twin of any US place from national open data (a few minutes; downloads per city)."""
+    """Build a twin of any US place: Tier B where parcel records are supported, otherwise Tier A (a few minutes)."""
     from planarena.national import places
 
     if not re.fullmatch(r"\d{7}|\d{10}", geoid):

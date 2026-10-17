@@ -48,7 +48,7 @@ async function download(url: string, body: unknown, filename: string) {
 }
 
 export interface CityEntry { id: string; label: string; tier: string; source?: string; parcels?: number }
-export interface PlaceHit { geoid: string; label: string; state: string; kind: string; land_km2: number; built: boolean }
+export interface PlaceHit { geoid: string; label: string; state: string; kind: string; land_km2: number; built: boolean; tier: "A" | "B" }
 export interface BuildJob { geoid: string; label?: string; status: "running" | "done" | "failed"; step?: string; elapsed?: number; log?: string }
 
 export const api = {

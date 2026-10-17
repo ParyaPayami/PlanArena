@@ -21,7 +21,11 @@ from planarena.config import DATA, ROOT, USE_KEYS
 from planarena.models.common import SEED
 from planarena.national.common import NATIONAL
 
-CITIES = {"manhattan": DATA / "processed", "milwaukee": DATA / "cities" / "5553000"}
+
+
+def cities() -> list[str]:
+    """Tier B cities with a Tier A test twin (built by planarena.cities.compare)."""
+    return sorted(d.name[len("tierA_"):] for d in (DATA / "cities").glob("tierA_*") if (d / "lot_features.parquet").exists())
 MODEL = NATIONAL / "landuse_model.txt"
 META = NATIONAL / "landuse_model.json"
 OUT = ROOT / "results" / "validation" / "landuse_model.json"
@@ -32,8 +36,11 @@ def dataset(city: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
     work = DATA / "cities" / f"tierA_{city}"
     f = pd.read_parquet(work / "lot_features.parquet")
     pa = pd.read_parquet(work / "parcels.parquet")
-    gb = gpd.read_parquet(CITIES[city] / "parcels.geoparquet")
-    pb = pd.read_parquet(CITIES[city] / "parcels.parquet")
+    from planarena.cities.compare import config
+
+    tb = config(city)["dir"]
+    gb = gpd.read_parquet(tb / "parcels.geoparquet")
+    pb = pd.read_parquet(tb / "parcels.parquet")
     ga = gpd.read_parquet(work / "parcels.geoparquet").to_crs(gb.crs)
     a, k = shapely.STRtree(gb.geometry.values).query(ga.geometry.representative_point().values, predicate="within")
     truth = np.full(len(pa), -1)
@@ -63,10 +70,13 @@ def _scores(y: np.ndarray, p: np.ndarray) -> dict:
 
 
 def evaluate() -> dict:
-    data = {c: dataset(c) for c in CITIES if (DATA / "cities" / f"tierA_{c}" / "lot_features.parquet").exists()}
+    data = {c: dataset(c) for c in cities()}
     res = {"test": __doc__.strip().split("\n\n")[1], "held_out": {},
            "variants_tried": ["LightGBM with balanced class weights (2026-10-17): worse than the rules in both held-out "
-                              "cities (Manhattan accuracy 0.455, Milwaukee 0.372)", "LightGBM unweighted (reported here)"]}
+                              "cities (Manhattan accuracy 0.455, Milwaukee 0.372)",
+                              "LightGBM unweighted with two Tier B cities (2026-10-17): worse than the rules in Milwaukee "
+                              "(0.595 vs 0.908), not deployed",
+                              "LightGBM unweighted with all Tier B cities with a Tier A test twin (reported here)"]}
     for test in data:
         train = [c for c in data if c != test]
         if not train:

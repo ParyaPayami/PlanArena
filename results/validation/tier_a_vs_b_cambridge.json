@@ -1,0 +1,150 @@
+{
+  "test": "Tier A pseudo-lots from Census blocks and Overture buildings are scored against the city's parcel records (land use,\nfloor area, homes) and LODES 2023 (jobs), and in Manhattan against LL84 2023 (building emissions), next to the\nTier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1), Milwaukee (MPROP) and Massachusetts towns (MassGIS L3).\nWrites results/validation/tier_a_vs_b_<city>.json.",
+  "city": "Cambridge",
+  "tier_a": {
+    "n_parcels": 13045,
+    "data_quality": {
+      "missing_land_use": 0,
+      "pseudo_lots": true,
+      "height_observed_share": 0.967,
+      "land_use_method": "rules",
+      "use_confidence": {
+        "0": 273,
+        "1": 5952,
+        "2": 6820,
+        "3": 0
+      },
+      "housing_units_unallocated": 510.0,
+      "jobs_lodes": 157065
+    },
+    "source": "Tier A: Census 2020 blocks, LODES 2023, Overture Maps 2026-09-23.1"
+  },
+  "tier_b_parcels": 12933,
+  "land_use": {
+    "n": 12179,
+    "accuracy": 0.867,
+    "macro_f1": 0.306,
+    "majority_class_accuracy": 0.82,
+    "confusion": {
+      "com": {
+        "com": 379,
+        "ind": 9,
+        "mix": 63,
+        "pub": 30,
+        "res": 42,
+        "tra": 25
+      },
+      "ind": {
+        "com": 125,
+        "ind": 34,
+        "mix": 15,
+        "pub": 13,
+        "res": 38,
+        "tra": 4
+      },
+      "mix": {
+        "com": 74,
+        "ind": 1,
+        "mix": 127,
+        "pub": 8,
+        "res": 94,
+        "tra": 3
+      },
+      "opn": {
+        "com": 8,
+        "ind": 0,
+        "mix": 0,
+        "pub": 7,
+        "res": 7,
+        "tra": 1
+      },
+      "prk": {
+        "com": 5,
+        "ind": 1,
+        "mix": 2,
+        "pub": 3,
+        "res": 23,
+        "tra": 6
+      },
+      "pub": {
+        "com": 78,
+        "ind": 1,
+        "mix": 44,
+        "pub": 496,
+        "res": 235,
+        "tra": 6
+      },
+      "res": {
+        "com": 84,
+        "ind": 0,
+        "mix": 262,
+        "pub": 117,
+        "res": 9523,
+        "tra": 5
+      },
+      "tra": {
+        "com": 15,
+        "ind": 1,
+        "mix": 1,
+        "pub": 1,
+        "res": 13,
+        "tra": 2
+      },
+      "vac": {
+        "com": 21,
+        "ind": 0,
+        "mix": 14,
+        "pub": 12,
+        "res": 94,
+        "tra": 7
+      }
+    },
+    "accuracy_by_confidence": {
+      "0": {
+        "n": 23,
+        "accuracy": 0.261
+      },
+      "1": {
+        "n": 5658,
+        "accuracy": 0.94
+      },
+      "2": {
+        "n": 6498,
+        "accuracy": 0.805
+      }
+    }
+  },
+  "floor_area_by_block": {
+    "n": 919,
+    "total_ratio": 1.318,
+    "pearson_r": 0.555,
+    "log_r": 0.874,
+    "median_abs_pct_error": 0.364
+  },
+  "homes_by_block": {
+    "n": 919,
+    "total_ratio": 1.096,
+    "pearson_r": 0.772,
+    "log_r": 0.852,
+    "median_abs_pct_error": 0.098,
+    "note": "Tier A homes are Census 2020 housing units; Tier B homes are the city's parcel records."
+  },
+  "height_observed_share": 0.967,
+  "jobs_by_block": {
+    "tier_a": {
+      "n": 919,
+      "total_ratio": 1.218,
+      "pearson_r": 0.769,
+      "log_r": 0.643,
+      "median_abs_pct_error": 0.959
+    },
+    "tier_b": {
+      "n": 919,
+      "total_ratio": 1.0,
+      "pearson_r": 0.475,
+      "log_r": 0.597,
+      "median_abs_pct_error": 1.0
+    },
+    "note": "In-sample for both tiers: each fits its rates to these LODES blocks."
+  }
+}

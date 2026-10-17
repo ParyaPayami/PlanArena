@@ -61,3 +61,20 @@ def test_energy_factors_read_from_the_epa_hub():
     f = energy.fuel_factors()
     assert f["_detail"]["kg_co2_g_ch4_g_n2o_per_mmbtu"]["natural_gas"] == [53.06, 1.0, 0.1]
     assert 5.3e-5 < f["natural_gas"] < 5.33e-5  # t CO2e per kBtu
+
+
+def test_massachusetts_use_codes():
+    from planarena.cities.adapters.massgis import use_of
+
+    cases = {("101", "Single Family Residential"): "res", ("102", "Residential Condominium"): "res",
+             ("013", "Mixed Use (Primarily Residential, some Commercial)"): "mix",
+             ("031", "Mixed Use (Primarily Commercial, some Residential)"): "mix",
+             ("340", "General Office Buildings"): "com", ("337", "Parking Lots"): "prk",
+             ("316", "Other Storage, Warehouse, and Distribution facilities"): "ind",
+             ("130", "Developable Residential Land"): "vac", ("942", "College or University"): "pub",
+             ("9705", "Housing Authority"): "res", ("960", "Church, Mosque, Synagogue, Temple, etc..."): "pub",
+             ("9100", "Dept. of Conservation and Recreation (DCR), Division of State Parks and Recreation"): "opn",
+             ("930", "Vacant, Selectmen or City Council (Municipal)"): "vac", ("423", "Electric utility"): "tra",
+             ("", ""): "unknown"}
+    for (code, desc), want in cases.items():
+        assert use_of(code, desc) == want, (code, desc)

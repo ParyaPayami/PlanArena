@@ -57,13 +57,15 @@ cities:
 	$(RUN) planarena.cities.adapters.milwaukee
 	$(RUN) planarena.cities.tier_a "Wauwatosa, WI"
 	$(RUN) planarena.cities.tier_a "Shorewood, WI"
+	$(RUN) planarena.cities.adapters.massgis Cambridge
 	$(RUN) planarena.cities.compare milwaukee
 	$(RUN) planarena.cities.compare manhattan
+	$(RUN) planarena.cities.compare cambridge
 	$(RUN) planarena.cities.landuse_model
 
-# Any US place:  make city PLACE="Austin, TX"
+# Any US place, with the best data available for it:  make city PLACE="Austin, TX"
 city:
-	$(RUN) planarena.cities.tier_a "$(PLACE)"
+	$(RUN) planarena.cities.build "$(PLACE)"
 
 validate:
 	$(RUN) planarena.validate all

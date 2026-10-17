@@ -2,10 +2,10 @@
 
 Tier A pseudo-lots from Census blocks and Overture buildings are scored against the city's parcel records (land use,
 floor area, homes) and LODES 2023 (jobs), and in Manhattan against LL84 2023 (building emissions), next to the
-Tier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1) and Milwaukee (MPROP).
+Tier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1), Milwaukee (MPROP) and Massachusetts towns (MassGIS L3).
 Writes results/validation/tier_a_vs_b_<city>.json.
 
-Run:  python -I -m planarena.cities.compare [manhattan|milwaukee]
+Run:  python -I -m planarena.cities.compare [manhattan|milwaukee|cambridge|<Tier B GEOID>]
 """
 from __future__ import annotations
 
@@ -20,9 +20,23 @@ import shapely
 from planarena.config import DATA, PROCESSED, PROJECTED_CRS, ROOT, USE_KEYS
 
 RAW = DATA / "raw"
-CITIES = {"manhattan": {"dir": PROCESSED, "state": "NY", "fips": "36", "label": "Manhattan", "emissions": True},
-          "milwaukee": {"dir": DATA / "cities" / "5553000", "state": "WI", "fips": "55", "label": "Milwaukee",
-                        "emissions": False}}
+MANHATTAN = {"dir": PROCESSED, "state": "NY", "fips": "36", "label": "Manhattan", "emissions": True}
+
+
+def config(city: str) -> dict:
+    """A Tier B city by short name ("manhattan", "milwaukee", "cambridge") or GEOID."""
+    if city == "manhattan":
+        return MANHATTAN
+    from planarena.cities import registry
+    from planarena.national import places
+
+    reg = {k: v for k, v in registry.cities().items() if v["tier"] == "B" and k != registry.DEFAULT}
+    gid = city if city in reg else next((k for k, v in reg.items() if v["label"].lower().startswith(city.lower())), None)
+    if gid is None:
+        raise SystemExit(f"no Tier B city {city!r} is built")
+    pl = places.place(gid)
+    return {"dir": registry.city_dir(gid), "state": pl["state"], "fips": gid[:2], "label": pl["label"].split(",")[0],
+            "emissions": False}
 
 
 def _r(x, d=3):
@@ -56,7 +70,7 @@ def _classes(y: np.ndarray, p: np.ndarray) -> dict:
 def build_tier_a(city: str) -> Path:
     from planarena.cities.tier_a import build_city
 
-    c = CITIES[city]
+    c = config(city)
     work = DATA / "cities" / f"tierA_{city}"
     if not (work / "parcels.parquet").exists():
         g = gpd.read_parquet(c["dir"] / "parcels.geoparquet")
@@ -72,7 +86,7 @@ def compare(city: str = "manhattan") -> dict:
     from planarena.indicators.engine import load_engine
     from planarena.national.census import lodes_jobs
 
-    c = CITIES[city]
+    c = config(city)
     WORK = build_tier_a(city)
     pb = pd.read_parquet(c["dir"] / "parcels.parquet")
     gb = gpd.read_parquet(c["dir"] / "parcels.geoparquet")

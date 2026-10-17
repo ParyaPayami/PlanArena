@@ -1,0 +1,46 @@
+"""Build any US place with the best data available for it.
+
+Tier B where an adapter covers the place (Milwaukee: MPROP; every Massachusetts city and town: MassGIS L3), Tier A
+(national open data) everywhere else.
+
+Run:  python -I -m planarena.cities.build <GEOID or "City, ST">
+"""
+from __future__ import annotations
+
+import json
+import sys
+
+from planarena.national import places
+
+MILWAUKEE = "5553000"
+
+
+def tier_for(geoid: str) -> str:
+    pl = places.place(geoid)
+    return "B" if geoid == MILWAUKEE or pl["state"] == "MA" else "A"
+
+
+def build(target: str) -> dict:
+    hit = [places.place(target)] if target.isdigit() else places.search(target, 1)
+    if not hit:
+        raise SystemExit(f"no US place matches {target!r}")
+    geoid = hit[0]["geoid"]
+    if geoid == MILWAUKEE:
+        from planarena.cities.adapters import milwaukee
+
+        return milwaukee.build()
+    if hit[0]["state"] == "MA":
+        from planarena.cities.adapters import massgis
+
+        try:
+            return massgis.build(geoid)
+        except SystemExit as e:  # no L3 file for this place (e.g. a CDP inside a town): fall back to Tier A
+            print(f"MassGIS: {e}; building Tier A instead", flush=True)
+    from planarena.cities.tier_a import build_city
+
+    return build_city(geoid)
+
+
+if __name__ == "__main__":
+    m = build(" ".join(sys.argv[1:]))
+    print(json.dumps({k: m.get(k) for k in ("city", "tier", "n_parcels", "use_counts", "build_seconds")}, indent=1))

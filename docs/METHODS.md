@@ -165,6 +165,17 @@ The GNN is kept only where the ablation shows that it adds accuracy; the redevel
 
 Milwaukee regulates bulk with height, setback and density rules rather than one FAR. Its zoning screen is therefore simplified: the district family sets the allowed uses, and the context FAR (below) stands in for capacity.
 
+Massachusetts (every city and town) uses the MassGIS Level 3 assessors' parcels:
+- tax-parcel polygons, with right-of-way polygons dropped and multi-part parcels joined;
+- assessing records summed to their parcel (LOC_ID) for condominiums;
+- land use from the Department of Revenue property-type code (first three characters), with overrides from the town's code descriptions (vacant, parking, housing authority, conservation, utilities);
+- dwellings counted only on residential and mixed records;
+- residential area from RES_AREA where recorded.
+
+Zoning codes are kept but not interpreted (all uses allowed; context FAR). Districts are tract groups, as for Tier A.
+
+**Which builder runs** (`planarena/cities/build.py`): Milwaukee and Massachusetts places get Tier B; every other place gets Tier A.
+
 **Tier A (national open data, any place).**
 - **Area:** the place's TIGER boundary; 2020 census blocks whose representative point lies inside it.
 - **Lots:** Overture buildings are assigned to blocks by representative point. A building of under 60 m² within 25 m of a larger one is accessory: it adds no lot and no floor area for homes or jobs. Within each block, each building's lot is its Voronoi cell (seeded at its representative point), clipped to the block and to 30 m around the building. Block land outside every cell becomes lots without buildings when larger than 5,000 sq ft.

@@ -101,7 +101,8 @@ def _cv_tables() -> list[str]:
 def _tiers() -> list[str]:
     """Tier A (national open data) scored against Tier B parcel records in the same city."""
     rows = []
-    for city in ("manhattan", "milwaukee"):
+    names = sorted(f.stem[len("tier_a_vs_b_"):] for f in (RES / "validation").glob("tier_a_vs_b_*.json"))
+    for city in sorted(names, key=lambda c: (c != "manhattan", c)):
         t = load(f"tier_a_vs_b_{city}")
         if not t:
             continue
@@ -132,7 +133,7 @@ def _tiers() -> list[str]:
             "(Tier B) and scored against them (`planarena/cities/compare.py`).", "",
             "| City | Test | Tier A | Tier B |", "|---|---|---|---|"] + rows + [
             "", "Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities."] + (
-            [f"A land-use model trained on one Tier B city and tested on the other {'beat' if lm['model_beats_rules_everywhere'] else 'did not beat'} "
+            [f"A land-use model trained on the other Tier B cities and tested on each held-out one {'beat' if lm['model_beats_rules_everywhere'] else 'did not beat'} "
              f"the rules in every held-out city, so Tier A uses {'the model' if lm['model_beats_rules_everywhere'] else 'the rules'} "
              f"({len(lm['variants_tried'])} model variants tried; `results/validation/landuse_model.json`)."] if lm else [])
 
