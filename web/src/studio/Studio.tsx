@@ -140,7 +140,11 @@ export default function Studio() {
           </div>
         )}
         <div className="sources muted small">
-          Data: {meta.source}. Zoning rules are simplified. Every coefficient has a source and a range.{" "}
+          Data: {meta.source}.{" "}
+          {meta.zoning_rules.startsWith("none")
+            ? "No zoning data here: every use is allowed and capacity uses the built density of nearby lots."
+            : "Zoning rules are simplified."}{" "}
+          Every coefficient has a source and a range.{" "}
           <button className="link" onClick={() => s.setMethodsOpen(true)}>
             Methods
           </button>
