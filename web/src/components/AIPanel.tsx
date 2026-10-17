@@ -37,7 +37,7 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
         max_change_share: budget / 100, respect_zoning: zoning,
       });
       setResult(r);
-      setPreview({ label: "AI optimal plan", changes: r.changes, evaluation: r.evaluation });
+      setPreview({ label: "Recommended plan", changes: r.changes, evaluation: r.evaluation });
       notify(`AI suggests ${Object.keys(r.changes).filter((k) => JSON.stringify(start[k]) !== JSON.stringify(r.changes[k])).length} changes`, "good");
     } catch (e) {
       notify(String(e), "bad");
@@ -81,11 +81,11 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
 
   return (
     <div className="panel-pad">
-      <h3>Optimal land use</h3>
+      <h3>Recommended plan</h3>
       <p className="muted small">
-        The optimizer proposes the best use for every parcel. It combines the impact engine with a graph neural
-        network that learned which uses fit each block. Zoning, landmarks, parks, public facilities and existing
-        homes are protected.
+        A search over land-use changes that scores each candidate with the impact engine and returns the best plan it
+        finds. It is a recommendation for discussion, not a proven optimum. Zoning, landmarks, parks, public facilities
+        and existing homes are protected, and conversions with no precedent are skipped.
       </p>
       <label className="field">
         <span>Area</span>
@@ -121,7 +121,7 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
         <input type="checkbox" checked={zoning} onChange={(e) => setZoning(e.target.checked)} /> Respect current zoning
       </label>
       <button className="primary wide" onClick={run} disabled={busy}>
-        {busy ? "Optimizing…" : "✨ Find the optimal plan"}
+        {busy ? "Searching…" : "✨ Find a recommended plan"}
       </button>
 
       {result && (
@@ -157,7 +157,7 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
             </button>
             <button
               onClick={() =>
-                preview ? setPreview(undefined) : setPreview({ label: "AI optimal plan", changes: result.changes })
+                preview ? setPreview(undefined) : setPreview({ label: "Recommended plan", changes: result.changes })
               }
             >
               {preview ? "Hide preview" : "Preview on map"}
@@ -171,9 +171,9 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
       <div className="card mt">
         <label className="check">
           <input type="checkbox" checked={suitOverlay} onChange={(e) => setSuitOverlay(e.target.checked)} />
-          Show the AI's best-fit land use for every parcel
+          Show the pattern-consistent use for every parcel (GNN)
         </label>
-        <div className="muted small">Brighter colour means a more confident prediction.</div>
+        <div className="muted small">The use most consistent with each parcel’s surroundings today. It describes existing patterns, not what is desirable.</div>
         <label className="check mt">
           <input type="checkbox" checked={!!overlay && overlay.label.startsWith("Redevelopment")} onChange={(e) => toggleRedev(e.target.checked)} />
           Show where redevelopment is likely (next 5 years)

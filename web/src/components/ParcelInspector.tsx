@@ -95,7 +95,7 @@ export default function ParcelInspector() {
           </div>
           {suit.length > 0 && (
             <>
-              <div className="eyebrow mt">AI neighbourhood fit (GNN)</div>
+              <div className="eyebrow mt">Pattern consistency (GNN)</div>
               {suit.map(([k, p]) => (
                 <div className="fit-row" key={k}>
                   <span className="swatch" style={{ background: lu[k].color }} />

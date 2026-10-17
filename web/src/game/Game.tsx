@@ -155,7 +155,7 @@ function Level({ meta, cd, onExit, onNext }: { meta: Meta; cd: string; onExit: (
     try {
       const v = await api.vote({
         scope: `cd:${cd}`, residents: false, parcel_ballot: false, samples: 0,
-        plans: { ai: { title: "AI planner", changes: rivalChanges ?? {} }, you: { title: "Your plan", changes: s.changes() } },
+        plans: { ai: { title: "Recommended plan", changes: rivalChanges ?? {} }, you: { title: "Your plan", changes: s.changes() } },
       });
       setCouncil(v);
     } catch (e) {

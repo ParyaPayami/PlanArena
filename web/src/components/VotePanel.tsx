@@ -85,11 +85,12 @@ export default function VotePanel() {
 
   return (
     <div className="panel-pad">
-      <h3>Stakeholder vote</h3>
+      <h3>Simulated stakeholder scenario</h3>
       <p className="muted small">
-        Five stakeholders hold seats on a planning council. Each casts a full ranked ballot over candidate plans, derived
-        from its own priorities, and the plans are decided by nine voting rules. Today's residents also vote block by
-        block, and the council votes parcel by parcel. No language model is used.
+        Five simulated stakeholders hold seats on a council. Each ranks every candidate plan from assumed priorities,
+        and nine voting rules decide; simulated residents vote block by block. These are not real preferences: use the
+        result to explore trade-offs, not as evidence of public support. Not represented: renters as a group,
+        commuters, future residents, small landlords, people with disabilities.
       </p>
       <div className="agents">
         {meta.stakeholders.map((s) => {
@@ -224,7 +225,7 @@ function Results({ vote, short, title }: { vote: Vote; short: (v: Vote, id: stri
   return (
     <>
       <div className="card mt agreed">
-        <div className="eyebrow">Council decision · Schulze rule</div>
+        <div className="eyebrow">Simulated council decision · Schulze rule</div>
         <div className="agreed-title">{vote.decision.title}</div>
         <div className="badges">
           {badges.map((b) => (
