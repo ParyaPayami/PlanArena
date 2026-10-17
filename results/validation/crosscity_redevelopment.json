@@ -1,0 +1,278 @@
+{
+  "protocol": "* Horizon: 3 years. Test pairs: Manhattan 2022->2025, Milwaukee 2023->2026 (the latest in each city).\n* Training pairs end no later than the test pair's start year in either city (outcomes known at decision time).\n* Training sets: the same city, the other city only, and both pooled.\n* Features: a portable set computed the same way in both cities (own use; lot, floor area, floors, age, built FAR,\n  homes and assessed value per sq ft as within-city percentile ranks; land-value share; FAR relative to the 90th\n  percentile of nearby lots; land-use mix and recent construction of neighbours). Zoning and permitted FAR are left\n  out because the two cities regulate density differently. Same-city results with the full NYC feature set are\n  given for comparison.\n* Label: a new building on the lot within the horizon (year built at or after the start year), in both cities.\n  Floor-area growth is not used because Milwaukee's floor area is not recorded consistently across years. Milwaukee\n  pairs are matched by tax key on today's parcel polygons, so parcels split or merged since the start year are not\n  scored; Manhattan pairs are matched by geometry.\n* Uncertainty: 600 m tile block bootstrap of AUC and average precision.",
+  "horizon_years": 3,
+  "tests": {
+    "manhattan": {
+      "test_pair": "2022->2025",
+      "parcels": 42099,
+      "redeveloped": 226,
+      "base_rate": 0.0054,
+      "models": {
+        "same city": {
+          "auc": 0.903,
+          "average_precision": 0.122,
+          "precision_top1pct": 0.178,
+          "auc_95ci": [
+            0.879,
+            0.925
+          ],
+          "ap_95ci": [
+            0.089,
+            0.163
+          ],
+          "training_pairs": {
+            "manhattan": [
+              "2015->2018",
+              "2016->2019",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022"
+            ]
+          }
+        },
+        "other city only": {
+          "auc": 0.774,
+          "average_precision": 0.05,
+          "precision_top1pct": 0.05,
+          "auc_95ci": [
+            0.725,
+            0.822
+          ],
+          "ap_95ci": [
+            0.018,
+            0.124
+          ],
+          "training_pairs": {
+            "milwaukee": [
+              "2015->2018",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022"
+            ]
+          }
+        },
+        "both cities": {
+          "auc": 0.905,
+          "average_precision": 0.113,
+          "precision_top1pct": 0.15,
+          "auc_95ci": [
+            0.884,
+            0.925
+          ],
+          "ap_95ci": [
+            0.082,
+            0.156
+          ],
+          "training_pairs": {
+            "manhattan": [
+              "2015->2018",
+              "2016->2019",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022"
+            ],
+            "milwaukee": [
+              "2015->2018",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022"
+            ]
+          }
+        },
+        "same city, full feature set": {
+          "auc": 0.922,
+          "average_precision": 0.123,
+          "precision_top1pct": 0.154,
+          "auc_95ci": [
+            0.901,
+            0.94
+          ],
+          "ap_95ci": [
+            0.089,
+            0.17
+          ]
+        }
+      },
+      "baselines": {
+        "Land-value share of assessed value": {
+          "auc": 0.837,
+          "average_precision": 0.044,
+          "precision_top1pct": 0.064,
+          "auc_95ci": [
+            0.801,
+            0.872
+          ],
+          "ap_95ci": [
+            0.034,
+            0.069
+          ]
+        },
+        "Built FAR below nearby lots": {
+          "auc": 0.857,
+          "average_precision": 0.051,
+          "precision_top1pct": 0.093,
+          "auc_95ci": [
+            0.826,
+            0.888
+          ],
+          "ap_95ci": [
+            0.036,
+            0.067
+          ]
+        },
+        "Building age": {
+          "auc": 0.392,
+          "average_precision": 0.004,
+          "precision_top1pct": 0.0,
+          "auc_95ci": [
+            0.356,
+            0.431
+          ],
+          "ap_95ci": [
+            0.003,
+            0.005
+          ]
+        }
+      },
+      "best_baseline": "Built FAR below nearby lots"
+    },
+    "milwaukee": {
+      "test_pair": "2023->2026",
+      "parcels": 146945,
+      "redeveloped": 121,
+      "base_rate": 0.0008,
+      "models": {
+        "same city": {
+          "auc": 0.946,
+          "average_precision": 0.02,
+          "precision_top1pct": 0.023,
+          "auc_95ci": [
+            0.915,
+            0.971
+          ],
+          "ap_95ci": [
+            0.014,
+            0.031
+          ],
+          "training_pairs": {
+            "milwaukee": [
+              "2015->2018",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022",
+              "2020->2023"
+            ]
+          }
+        },
+        "other city only": {
+          "auc": 0.951,
+          "average_precision": 0.022,
+          "precision_top1pct": 0.017,
+          "auc_95ci": [
+            0.926,
+            0.972
+          ],
+          "ap_95ci": [
+            0.011,
+            0.043
+          ],
+          "training_pairs": {
+            "manhattan": [
+              "2015->2018",
+              "2016->2019",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022",
+              "2020->2023"
+            ]
+          }
+        },
+        "both cities": {
+          "auc": 0.968,
+          "average_precision": 0.032,
+          "precision_top1pct": 0.026,
+          "auc_95ci": [
+            0.953,
+            0.981
+          ],
+          "ap_95ci": [
+            0.017,
+            0.055
+          ],
+          "training_pairs": {
+            "milwaukee": [
+              "2015->2018",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022",
+              "2020->2023"
+            ],
+            "manhattan": [
+              "2015->2018",
+              "2016->2019",
+              "2017->2020",
+              "2018->2021",
+              "2019->2022",
+              "2020->2023"
+            ]
+          }
+        },
+        "same city, full feature set": {
+          "auc": 0.943,
+          "average_precision": 0.028,
+          "precision_top1pct": 0.029,
+          "auc_95ci": [
+            0.902,
+            0.967
+          ],
+          "ap_95ci": [
+            0.018,
+            0.041
+          ]
+        }
+      },
+      "baselines": {
+        "Land-value share of assessed value": {
+          "auc": 0.782,
+          "average_precision": 0.008,
+          "precision_top1pct": 0.009,
+          "auc_95ci": [
+            0.686,
+            0.847
+          ],
+          "ap_95ci": [
+            0.005,
+            0.017
+          ]
+        },
+        "Built FAR below nearby lots": {
+          "auc": 0.855,
+          "average_precision": 0.008,
+          "precision_top1pct": 0.008,
+          "auc_95ci": [
+            0.76,
+            0.914
+          ],
+          "ap_95ci": [
+            0.006,
+            0.016
+          ]
+        },
+        "Building age": {
+          "auc": 0.482,
+          "average_precision": 0.001,
+          "precision_top1pct": 0.001,
+          "auc_95ci": [
+            0.438,
+            0.529
+          ],
+          "ap_95ci": [
+            0.001,
+            0.001
+          ]
+        }
+      },
+      "best_baseline": "Built FAR below nearby lots"
+    }
+  }
+}

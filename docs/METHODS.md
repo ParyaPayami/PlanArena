@@ -87,6 +87,8 @@ The form with the smaller bias and error on observed change is the default. Its 
 
 **Precedent.** The conversion-precedent table is date-aware: `precedent(as_of=t)` uses only snapshot pairs that ended by t.
 
+**Across cities** (`planarena/models/crosscity.py`). Milwaukee snapshots 2015–2026 come from the annual Master Property files on today's parcel polygons (`planarena/cities/mke_history.py`; 2016 is left out because 27,186 parcels lack floor area in that file). The label is a new building within three years, in both cities, because Milwaukee's floor area is not recorded consistently over time. Features are portable: within-city percentile ranks of size, age, value and density, the land-value share, FAR relative to the 90th percentile of nearby lots, and neighbour mix and recent construction. Zoning and permitted FAR are left out, because the cities regulate density differently. Each test city's latest pair is scored by models trained on the same city, on the other city only, and on both, with training pairs ending by the test pair's start year.
+
 ## 4. Simulated stakeholder scenario
 
 **Voters.**

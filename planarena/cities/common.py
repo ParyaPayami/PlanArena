@@ -25,7 +25,7 @@ def reconcile_lot_area(recorded: np.ndarray, polygon: np.ndarray) -> tuple[np.nd
 
 
 def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: float, jobs_block: np.ndarray,
-                blk: np.ndarray, log, meta: dict, t0: float | None = None) -> dict:
+                blk: np.ndarray, log, meta: dict, t0: float | None = None, minimal: bool = False) -> dict:
     """Write a built city: parcels, geometry, graph, web layers, calibrated.yaml and twin_meta.json.
 
     df follows the parcels.parquet schema (planarena/twin/build.py tabulate) plus census_block; geoms are lot
@@ -38,6 +38,11 @@ def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: f
     df.to_parquet(out / "parcels.parquet", index=False)
     gl.to_parquet(out / "parcels.geoparquet")
     np.savez_compressed(out / "graph.npz", **graph)
+    if minimal:  # historical snapshot: no web layers, coefficients or jobs fit
+        meta = meta | {"crs": crs, "n_parcels": int(len(df)), "grid": grid,
+                       "graph_edges": {k: int(v.shape[1]) for k, v in graph.items()}}
+        (out / "twin_meta.json").write_text(json.dumps(meta, indent=2))
+        return meta
     write_web(gl, df, out / "web")
     log("twin written")
     coef = energy.coefficients(state)

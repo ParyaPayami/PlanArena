@@ -132,6 +132,23 @@ The GNN cross-validation is transductive: held-out parcels stay in the graph wit
 
 Adding the GNN embedding raises LightGBM accuracy in 5 of 5 folds.
 
+### Redevelopment across cities (Manhattan and Milwaukee)
+
+New building on the lot within 3 years. Portable features (computed the same way in both cities); training pairs end by the test pair's start year in either city; 600 m tile bootstrap intervals (`planarena/models/crosscity.py`).
+
+| Test city (pair) | Trained on | AUC (95% CI) | Average precision (95% CI) | Precision, top 1% |
+|---|---|---|---|---|
+| Manhattan (2022->2025; 226 new buildings, base rate 0.54%) | same city | 0.903 (0.879–0.925) | 0.122 (0.089–0.163) | 17.8% |
+|  | other city only | 0.774 (0.725–0.822) | 0.050 (0.018–0.124) | 5.0% |
+|  | both cities | 0.905 (0.884–0.925) | 0.113 (0.082–0.156) | 15.0% |
+|  | same city, full feature set | 0.922 (0.901–0.940) | 0.123 (0.089–0.170) | 15.4% |
+| | best simple baseline: Built FAR below nearby lots | 0.857 | 0.051 | 9.3% |
+| Milwaukee (2023->2026; 121 new buildings, base rate 0.08%) | same city | 0.946 (0.915–0.971) | 0.020 (0.014–0.031) | 2.3% |
+|  | other city only | 0.951 (0.926–0.972) | 0.022 (0.011–0.043) | 1.7% |
+|  | both cities | 0.968 (0.953–0.981) | 0.032 (0.017–0.055) | 2.6% |
+|  | same city, full feature set | 0.943 (0.902–0.967) | 0.028 (0.018–0.041) | 2.9% |
+| | best simple baseline: Built FAR below nearby lots | 0.855 | 0.008 | 0.8% |
+
 ### Pattern models as redevelopment predictors (2015 → 2025)
 
 41,020 lots matched; 773 rebuilt with a new use (1.9%). Models trained on 2015 data only.

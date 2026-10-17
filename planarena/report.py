@@ -98,6 +98,26 @@ def _cv_tables() -> list[str]:
     return out
 
 
+def _crosscity() -> list[str]:
+    cc = load("crosscity_redevelopment")
+    if not cc:
+        return []
+    L = [f"New building on the lot within {cc['horizon_years']} years. Portable features (computed the same way in both "
+         "cities); training pairs end by the test pair's start year in either city; 600 m tile bootstrap intervals "
+         "(`planarena/models/crosscity.py`).", "",
+         "| Test city (pair) | Trained on | AUC (95% CI) | Average precision (95% CI) | Precision, top 1% |",
+         "|---|---|---|---|---|"]
+    for city, t in cc["tests"].items():
+        lab = f"{city.title()} ({t['test_pair']}; {num(t['redeveloped'])} new buildings, base rate {pct(t['base_rate'], 2)})"
+        for name, m in t["models"].items():
+            L.append(f"| {lab} | {name} | {r3(m['auc'])} ({r3(m['auc_95ci'][0])}–{r3(m['auc_95ci'][1])}) | "
+                     f"{r3(m['average_precision'])} ({r3(m['ap_95ci'][0])}–{r3(m['ap_95ci'][1])}) | {pct(m['precision_top1pct'], 1)} |")
+            lab = ""
+        b = t["baselines"][t["best_baseline"]]
+        L.append(f"| | best simple baseline: {t['best_baseline']} | {r3(b['auc'])} | {r3(b['average_precision'])} | {pct(b['precision_top1pct'], 1)} |")
+    return L
+
+
 def _tiers() -> list[str]:
     """Tier A (national open data) scored against Tier B parcel records in the same city."""
     rows = []
@@ -264,6 +284,8 @@ def render_validation() -> str:
 
     # D. Models
     L += ["## D. Models", "", "### Pattern-consistency model (GNN) and LightGBM", ""] + _cv_tables() + [""]
+    if _crosscity():
+        L += ["### Redevelopment across cities (Manhattan and Milwaukee)", ""] + _crosscity() + [""]
     bt = load("backtest_2015_2025")
     if bt:
         ph = bt["physical_change"]
@@ -441,6 +463,13 @@ def readme_blocks() -> dict[str, str]:
         la = ro.get("label_audit", {}).get("2020->2025")
         if la:
             rows.append(f"| D | Labels vs DOB certificates of occupancy (2020→2025) | {pct(la['precision_vs_new_building_or_alteration_certificate'])} of labelled lots have a certificate (a lower bound); labels are noisy |")
+    cc = load("crosscity_redevelopment")
+    if cc:
+        mk, mh = cc["tests"]["milwaukee"]["models"], cc["tests"]["manhattan"]["models"]
+        rows.append(f"| D | Redevelopment model moved between cities (new buildings, {cc['horizon_years']} years) | "
+                    f"Milwaukee: trained on Manhattan AUC {r3(mk['other city only']['auc'])} vs own city {r3(mk['same city']['auc'])}; "
+                    f"Manhattan: trained on Milwaukee {r3(mh['other city only']['auc'])} vs own city {r3(mh['same city']['auc'])} "
+                    f"(best baseline {r3(cc['tests']['manhattan']['baselines'][cc['tests']['manhattan']['best_baseline']]['auc'])}) |")
     if op:
         rows.append(f"| E | Optimizer vs exhaustive search ({op['areas_with_positive_optimum']} single-block areas, up to 2 changes) | optimum found in {pct(op['polished']['share_exact_optimum_found'])} with exact re-scoring; small cases only |")
     blocks["key_results"] = "\n".join(["| Class | What is tested | Result |", "|---|---|---|"] + rows)

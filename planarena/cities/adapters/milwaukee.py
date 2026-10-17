@@ -63,8 +63,68 @@ def _family(z: str) -> str:
     return z[:2] if z[:2] in ZONING_FAMILY else ("PD" if z.startswith("PD") else "OTHER")
 
 
-def load() -> gpd.GeoDataFrame:
-    mf = download(MPROP_URL, RAW / "milwaukee_mprop" / "mprop.csv")
+# MPROP land-use code ranges -> land-use group (MPROP documentation, Appendix H); used for the 2022+ files,
+# which carry the code but not the group
+GROUP_RANGES = [(100, 299, 10), (700, 1099, 10), (1500, 1799, 8), (2000, 3999, 8), (4000, 4199, 9), (4212, 4214, 9),
+                (4221, 4222, 8), (4224, 4226, 8), (4231, 4231, 9), (4610, 4899, 9), (4953, 4953, 13), (5000, 5999, 5),
+                (6000, 6552, 6), (6553, 6553, 12), (6554, 6799, 6), (7000, 7099, 6), (7200, 7699, 6), (7800, 8499, 6),
+                (8600, 8699, 6), (8700, 8799, 9), (8810, 8811, 1), (8820, 8820, 2), (8830, 8830, 3), (8860, 8860, 12),
+                (8870, 8871, 12), (8880, 8880, 13), (8899, 8899, 4), (8900, 8999, 6), (9100, 9799, 11), (9900, 9999, 7)]
+
+
+def group_of(code: int) -> int:
+    for lo, hi, gp in GROUP_RANGES:
+        if lo <= code <= hi:
+            return gp
+    return 0
+
+
+NEW_COLS = ["Taxkey", "InactiveFl", "FK_LandUse", "Residentia", "YearBuilt", "NR_STORIES", "BLDG_AREA", "AssessValu",
+            "TotalLandV", "AssessExem", "TotalLandE", "ZoningCFN", "FK_Histori", "BuildingTy", "StreetNumb", "StreetDire",
+            "StreetName", "StreetType", "DistrictNa"]
+
+
+ALIASES = {"AssessValu": ["TotalAssessedValue"], "AssessExem": ["TotalAssessedExemptValue"]}  # 2024 onwards
+
+
+def _resolve(head, names) -> dict:
+    """Column names vary by year: shapefile exports truncate them to ten characters (2017), and later exports spell
+    them out (FK_Historical, 2024) or rename them (ALIASES). Match each wanted name by its first ten characters."""
+    out = {}
+    for n in names:
+        hit = ([c for c in head if c == n] or [c for c in head if c[:10].upper() == n[:10].upper()]
+               or [c for c in head if c in ALIASES.get(n, [])])
+        if hit:
+            out[n] = hit[0]
+    return out
+
+
+def read_mprop(path) -> pd.DataFrame:
+    """One MPROP file in the pre-2022 column layout (COLS), whichever layout it was published in."""
+    head = list(pd.read_csv(path, nrows=0).columns)
+    old = _resolve(head, COLS)
+    if "TAXKEY" in old and "LAND_USE_GP" in old:
+        m = pd.read_csv(path, dtype=str, usecols=list(old.values())).rename(columns={v: k for k, v in old.items()})
+        missing = [c for c in COLS if c not in old]
+        return m.reindex(columns=COLS, fill_value="0").assign(_missing=",".join(missing))
+    new = _resolve(head, NEW_COLS)
+    lack = [c for c in NEW_COLS if c not in new]
+    if lack:
+        raise ValueError(f"{path}: unrecognised MPROP layout, missing {lack}")
+    m = pd.read_csv(path, dtype=str, usecols=list(new.values())).rename(columns={v: k for k, v in new.items()})
+    m = m[m.InactiveFl.fillna("0") == "0"]
+    code = pd.to_numeric(m.FK_LandUse, errors="coerce").fillna(0).astype(int)
+    return pd.DataFrame({
+        "TAXKEY": m.Taxkey, "HOUSE_NR_LO": m.StreetNumb, "SDIR": m.StreetDire, "STREET": m.StreetName, "STTYPE": m.StreetType,
+        "C_A_LAND": m.TotalLandV, "C_A_TOTAL": m.AssessValu, "C_A_EXM_LAND": m.TotalLandE, "C_A_EXM_TOTAL": m.AssessExem,
+        "BLDG_TYPE": m.BuildingTy, "NR_STORIES": m.NR_STORIES, "NR_UNITS": m.Residentia, "BLDG_AREA": m.BLDG_AREA,
+        "YR_BUILT": m.YearBuilt, "LOT_AREA": "0", "ZONING": m.ZoningCFN, "LAND_USE": code.astype(str),
+        "LAND_USE_GP": code.map(group_of).astype(str), "GEO_ALDER": m.DistrictNa.str.extract(r"(\d+)")[0],
+        "HIST_CODE": m.FK_Histori, "YR_ASSMT": None, "_missing": "LOT_AREA"})
+
+
+def load(mprop_path=None) -> gpd.GeoDataFrame:
+    mf = mprop_path or download(MPROP_URL, RAW / "milwaukee_mprop" / "mprop.csv")
     zf = download(PARCEL_URL, RAW / "milwaukee_parcels" / "parcelpolygontax.zip")
     ext = zf.parent / "extracted"
     if not ext.exists():
@@ -75,20 +135,24 @@ def load() -> gpd.GeoDataFrame:
     shp = next(ext.rglob("ParcelPolygonTax.shp"))
     g = gpd.read_file(shp, columns=["FK_Tax", "FK_Parcel", "InactiveFl"], engine="pyogrio")
     g = g[(g.InactiveFl == 0) & g.geometry.notna()]
-    m = pd.read_csv(mf, dtype=str, usecols=COLS)
+    m = read_mprop(mf)
     m["key"] = pd.to_numeric(m.TAXKEY, errors="coerce")
     g["key"] = pd.to_numeric(g.FK_Tax, errors="coerce")
     return g.merge(m, on="key", how="left")
 
 
-def build() -> dict:
+def build(mprop_path=None, out=None, year: int | None = None) -> dict:
+    """The current twin, or (mprop_path, out, year) a historical snapshot: parcels, geometry, graph and metadata only."""
     t0 = time.time()
     log = lambda s: print(f"[{time.time() - t0:6.0f}s] {s}", flush=True)
     pl = places.place(GEOID)
-    out = city_dir(GEOID)
+    history = mprop_path is not None
+    out = out or city_dir(GEOID)
     out.mkdir(parents=True, exist_ok=True)
     crs = local_crs(pl["lat"], pl["lon"])
-    g = load().to_crs(crs)
+    g = load(mprop_path).to_crs(crs)
+    if history:
+        g = g[g.TAXKEY.notna()]  # today's polygons whose tax key existed that year
     g["geometry"] = g.geometry.make_valid()
     num = lambda c: pd.to_numeric(g[c], errors="coerce").fillna(0).astype(float)
     for c in ("C_A_LAND", "C_A_TOTAL", "C_A_EXM_LAND", "C_A_EXM_TOTAL", "NR_STORIES", "NR_UNITS", "BLDG_AREA", "YR_BUILT",
@@ -170,14 +234,18 @@ def build() -> dict:
     df["resid_far"] = df["comm_far"] = df["facil_far"] = df["max_far"]
     df["allowed"] = fam.map(lambda f: ZONING_FAMILY.get(f, ALL)).to_numpy().astype("int64")
     alders = sorted(d for d in df.cd.unique() if d > 0)
+    if history:
+        df["lot_area"] = p.geometry.area.to_numpy()  # older files lack lot area in some years; use the polygon
+        df["built_far"] = np.divide(fa, df.lot_area.to_numpy(), out=np.zeros(len(p)), where=df.lot_area.to_numpy() > 0)
     meta = finish_twin(df, p.geometry.values, crs, out, "WI", float(blocks.POP100.sum() / max(blocks.HU100.sum(), 1)),
                        jobs_block, blk, log, {
         "city": pl["label"], "geoid": GEOID, "tier": "B",
-        "source": f"City of Milwaukee MPROP (assessment year {int(pd.to_numeric(g.YR_ASSMT, errors='coerce').max())}) and parcel polygons",
+        "source": f"City of Milwaukee MPROP (assessment year {year or int(pd.to_numeric(g.YR_ASSMT, errors='coerce').max())}) and parcel polygons",
         "source_url": "https://data.milwaukee.gov/dataset/mprop",
         "data_quality": {"missing_land_use": int((df.use < 0).sum()), "tax_keys": int(len(g)),
                          "condo_parcels": int((p.n_keys > 1).sum()), "zero_building_area": int((df.bldg_area <= 0).sum()),
-                         "lots_outside_census_blocks": int(miss.sum()), "lot_area_from_polygon": n_lot_fixed, "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
+                         "lots_outside_census_blocks": int(miss.sum()), "lot_area_from_polygon": n_lot_fixed,
+                         "columns_missing_in_source": str(g["_missing"].dropna().iloc[0]) if "_missing" in g and g["_missing"].notna().any() else "", "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
         "columns": {"lot boundaries": "observed (city parcels)", "floor area": "observed (MPROP BLDG_AREA)",
                     "land use": "observed (MPROP land-use group)",
                     "homes": "observed (MPROP NR_UNITS on residential and mixed parcels only)",
@@ -187,8 +255,9 @@ def build() -> dict:
                     "mixed-use split": "assumed 70% residential"},
         "missing_indicators": [], "zoning_rules": "Milwaukee Zoning Code district families (simplified)",
         "levels": {str(d): f"Aldermanic district {d}" for d in alders},
-    }, t0=t0)
-    register(GEOID, pl["label"], "B", meta)
+    }, t0=t0, minimal=history)
+    if not history:
+        register(GEOID, pl["label"], "B", meta)
     log(f"done: {len(df):,} parcels")
     return meta
 
