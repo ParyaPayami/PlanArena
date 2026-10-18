@@ -45,15 +45,35 @@ def test_energy_factors_read_from_the_epa_hub():
     assert 5.3e-5 < f["natural_gas"] < 5.33e-5  # t CO2e per kBtu
 
 
-def test_philadelphia_uses_and_zoning():
-    from planarena.cities.adapters.philadelphia import allowed, use_of
+def test_philadelphia_zoning_families():
+    from planarena.cities.adapters.philadelphia import allowed
     from planarena.config import USE_INDEX as U
 
-    assert use_of("1", "ROW PORCH FRONT") == "res" and use_of("3", "ROW MIXED-COM/RES-BLT AS RES") == "mix"
-    assert use_of("4", "SCHOOL") == "pub" and use_of("4", "PARKING GARAGE/DECK") == "prk" and use_of("6", None) == "vac"
-    assert use_of(None, float("nan")) == "unknown"
     assert not (allowed("RSA5") >> U["ind"]) & 1 and (allowed("ICMX") >> U["ind"]) & 1
     assert (allowed("SPPOA") >> U["opn"]) & 1 and not (allowed("SPPOA") >> U["res"]) & 1
+
+
+def test_crosswalks():
+    from planarena.sources.crosswalk import milwaukee, nyc, philadelphia
+    from planarena.taxonomy import KEYS
+
+    # New York: MapPLUTO land use refined by building class and units
+    assert nyc("01", "A1", 1) == "sf" and nyc("01", "B2", 2) == "mf_small" and nyc("02", "C1", 12) == "mf"
+    assert nyc("05", "O4", 0) == "off" and nyc("05", "H2", 0) == "hot" and nyc("06", "E1", 0) == "whs"
+    assert nyc("08", "W1", 0) == "edu" and nyc("08", "I1", 0) == "hlt" and nyc("08", "M1", 0) == "civ"
+    assert nyc(None, None, None) == "unknown" and nyc("11", float("nan"), 0) == "vac"
+    # Milwaukee: MPROP group refined by the SIC-style code
+    assert milwaukee("8810", "1", "1") == "sf" and milwaukee("8830", "3", "12") == "mf" and milwaukee("5812", "5", "0") == "ret"
+    assert milwaukee("5093", "5", "0") == "whs" and milwaukee("8062", "6", "0") == "hlt" and milwaukee("7523", "9", "0") == "prk"
+    assert milwaukee("8211", "11", "0") == "edu" and milwaukee("6553", "12", "0") == "opn" and milwaukee("0", "0", "0") == "unknown"
+    # Philadelphia: three-digit code where present, two-digit otherwise, OPA category splits homes
+    assert philadelphia(12, None, 1) == "sf" and philadelphia(12, None, 2) == "mf_small" and philadelphia(12, None, 14) == "mf"
+    assert philadelphia(31, 317) == "whs" and philadelphia(41, 413) == "edu" and philadelphia(51, 514) == "prk"
+    assert philadelphia(41, None, 4, "SCHOOL") == "edu" and philadelphia(41, None, 4, "HOSPITAL") == "hlt"
+    assert philadelphia(41, None, 4, "RELIGIOUS") == "civ" and philadelphia(31, None, 5, "WAREHOUSE") == "whs"
+    assert philadelphia(None, None) == "unknown" and philadelphia(92, None) == "unknown" and philadelphia(91, None) == "vac"
+    for key in ("sf", "mf", "whs", "edu", "prk", "vac"):
+        assert key in KEYS
 
 
 def test_milwaukee_land_use_groups():

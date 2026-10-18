@@ -5,10 +5,12 @@ year built, zoning, market value; a point per account) and the Water Department 
 placed in the parcel that contains it, so condominium units and several accounts on one parcel are summed. Owner and
 mailing fields are never read.
 
+Land use: the City Planning Commission's parcel land-use layer (official), translated to the 16 classes; OPA
+categories split single- from multi-family homes where only the two-digit code is given.
 Homes: OPA has no dwelling-unit count. Single-family records count as one home each; the rest of each census block's
 2020 housing units are allocated to its multi-family and mixed-use parcels by livable area (estimated, flagged).
 Zoning: district families (Philadelphia Zoning Code; codes are written without hyphens, e.g. RSA5, CMX3, SPPOA) set
-the allowed uses; capacity uses the context FAR. Land zoned parks and open space (SPPOA, SPPOP) is open space.
+the allowed uses; capacity uses the context FAR.
 
 Run:  python -I -m planarena.cities.adapters.philadelphia
 """
@@ -26,23 +28,22 @@ import shapely
 from planarena.cities.common import (districts, finish_twin, local_crs, plausible_floor_area, reconcile_lot_area,
                                      round_by_block)
 from planarena.cities.registry import city_dir, register
+from planarena.sources import crosswalk
+from planarena.sources.arcgis import fetch_layer
+from planarena.taxonomy import INDEX as TAX_INDEX, group_of
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
 from planarena.national import census, places
 from planarena.national.common import download
 from planarena.twin.build import FLOOR_HEIGHT_M, _polygonal
 
 GEOID = "4260000"
+LAND_USE_URL = "https://services.arcgis.com/fLeGjb7u4uXqeF9q/arcgis/rest/services/Land_Use/FeatureServer/0"
 RAW = DATA / "raw" / "philadelphia"
 OPA_URL = "https://opendata-downloads.s3.amazonaws.com/opa_properties_public.csv"
 PWD_URL = ("https://hub.arcgis.com/api/v3/datasets/84baed491de44f539889f2af178ad85c_0/downloads/data"
            "?format=shp&spatialRefId=4326&where=1%3D1")
 COLS = ["parcel_number", "category_code", "building_code_description_new", "total_livable_area", "total_area",
         "number_stories", "year_built", "market_value", "taxable_land", "exempt_land", "zoning", "location", "shape"]
-CATEGORY = {1: "res", 2: "res", 14: "res", 3: "mix", 4: "com", 9: "com", 10: "com", 15: "com", 5: "ind", 6: "vac",
-            12: "vac", 13: "vac", 7: "prk", 8: "prk", 11: "pub"}
-PUBLIC = ("RELIGIOUS", "CHURCH", "SCHOOL", "HOSPITAL", "GOVERNMENT", "LIBRARY", "MUSEUM", "FIRE STATION", "POLICE",
-          "UNIVERSITY", "COLLEGE", "DORMITOR", "NURSING", "MEDICAL", "COMMUNITY CENTER", "RECREATION")
-TRANSPORT = ("TERMINAL", "UTILITY", "RAIL", "TRANSIT", "PUMPING", "SUB STATION", "SUBSTATION")
 ALL = (1 << len(USE_KEYS)) - 1
 bit = lambda *keys: sum(1 << U[k] for k in keys)
 ZONING = [("SPPO", bit("opn", "pub", "vac")), ("RSD", bit("res", "pub", "opn", "vac")),
@@ -62,20 +63,6 @@ def allowed(zone: str) -> int:
         if z.startswith(prefix):
             return mask
     return ALL  # special-purpose and unknown districts: not screened
-
-
-def use_of(category, description: str) -> str:
-    d = description.upper() if isinstance(description, str) else ""
-    if any(k in d for k in PUBLIC):
-        return "pub"
-    if any(k in d for k in TRANSPORT):
-        return "tra"
-    if "PARKING" in d:
-        return "prk"
-    try:
-        return CATEGORY.get(int(category), "unknown")
-    except (TypeError, ValueError):
-        return "unknown"
 
 
 def build() -> dict:
@@ -106,24 +93,37 @@ def build() -> dict:
     log(f"{len(opa):,} OPA accounts; {int((lot_of >= 0).sum()):,} placed in {len(g):,} parcels")
     for c in ("total_livable_area", "total_area", "number_stories", "year_built", "market_value", "taxable_land", "exempt_land"):
         opa[c] = pd.to_numeric(opa[c], errors="coerce").fillna(0)
-    opa["use"] = [use_of(c, d) for c, d in zip(opa.category_code, opa.building_code_description_new)]
-    opa["sf"] = (pd.to_numeric(opa.category_code, errors="coerce") == 1).astype(float)
+    opa["cat"] = pd.to_numeric(opa.category_code, errors="coerce")
+    opa["sf"] = (opa.cat == 1).astype(float)
     opa["lot"] = lot_of
     placed = opa[opa.lot >= 0]
-    # most common known use per parcel (vectorised mode)
-    m = placed[placed.use != "unknown"].groupby(["lot", "use"]).size().reset_index(name="n")
-    mode = m.sort_values(["lot", "n"], ascending=[True, False]).drop_duplicates("lot").set_index("lot").use
+    # most common OPA category per parcel (splits single- from multi-family where the land-use code does not)
+    m = placed.dropna(subset=["cat"]).groupby(["lot", "cat"]).size().reset_index(name="n")
+    cat_mode = m.sort_values(["lot", "n"], ascending=[True, False]).drop_duplicates("lot").set_index("lot").cat
     a = placed.groupby("lot").agg(
         fa=("total_livable_area", "sum"), lot_sqft=("total_area", "max"), floors=("number_stories", "max"),
         year=("year_built", "max"), value=("market_value", "sum"), land=("taxable_land", "sum"), exland=("exempt_land", "sum"),
-        zone=("zoning", "first"), opa_address=("location", "first"), single_family=("sf", "sum"), accounts=("use", "size"))
-    a["use"] = mode.reindex(a.index).fillna("unknown")
-    # land zoned parks and open space (SPPOA active, SPPOP passive) is open space unless a public building stands on it
-    park = a.zone.fillna("").astype(str).str.upper().str.startswith("SPPO") & (a.use != "pub")
-    a.loc[park, "use"] = "opn"
+        zone=("zoning", "first"), opa_address=("location", "first"), single_family=("sf", "sum"), accounts=("cat", "size"))
+    a["opa_cat"] = cat_mode.reindex(a.index)
+    md = placed.dropna(subset=["building_code_description_new"]).groupby(["lot", "building_code_description_new"]).size()
+    md = md.reset_index(name="n").sort_values(["lot", "n"], ascending=[True, False]).drop_duplicates("lot")
+    a["opa_desc"] = md.set_index("lot").building_code_description_new.reindex(a.index)
     p = g.join(a, how="left")
     p["address"] = p.address.where(p.address.notna() & (p.address.astype(str).str.len() > 0), p.opa_address)
-    p["use"] = p.use.fillna("unknown")
+    # official land use (City Planning Commission): the land-use polygon under each parcel's representative point
+    log("downloading the city land-use layer")
+    lu = fetch_layer(LAND_USE_URL, RAW / "land_use" / "land_use.parquet",
+                     ["objectid", "c_dig1", "c_dig2", "c_dig3", "year"]).to_crs(crs)
+    i, k = shapely.STRtree(lu.geometry.values).query(p.geometry.representative_point().values, predicate="within")
+    # where polygons overlap (street right-of-way drawn over blocks), the smallest one containing the point is the parcel
+    hits = pd.DataFrame({"i": i, "k": k, "area": lu.geometry.area.to_numpy()[k]}).sort_values(["i", "area"])
+    under = hits.drop_duplicates("i").set_index("i").k
+    p["lu_d2"] = pd.Series(lu.c_dig2.to_numpy()[under.to_numpy()], index=under.index).reindex(p.index)
+    p["lu_d3"] = pd.Series(lu.c_dig3.to_numpy()[under.to_numpy()], index=under.index).reindex(p.index)
+    p["lu16"] = [TAX_INDEX.get(crosswalk.philadelphia(d2, d3, c, d), -1)
+                 for d2, d3, c, d in zip(p.lu_d2, p.lu_d3, p.opa_cat, p.opa_desc)]
+    p["use"] = [USE_KEYS[group_of(c)] if c >= 0 else "unknown" for c in p.lu16]
+    log(f"{int(p.lu_d2.notna().sum()):,} of {len(p):,} parcels have an official land-use code")
     log(f"{int(p.accounts.notna().sum()):,} parcels with OPA records")
 
     bnd = places.boundary(GEOID)
@@ -159,7 +159,9 @@ def build() -> dict:
     df = pd.DataFrame({
         "bbl": np.arange(len(p), dtype="int64"), "address": p.address.fillna("").astype(str).to_numpy(), "cd": 0,
         "block": blk.astype("int32"), "zone": zone.to_numpy(), "overlay": "", "special": "", "bldg_class": "",
-        "use": use_a.astype("int16"), "lot_area": lot, "bldg_area": fa, "res_area": res_area,
+        "use": use_a.astype("int16"), "lu16": p.lu16.to_numpy().astype("int16"),
+        "lu_code": (p.lu_d3.fillna(p.lu_d2).fillna(-1).astype(int).astype(str)).to_numpy(),
+        "lot_area": lot, "bldg_area": fa, "res_area": res_area,
         "com_area": np.where(com_like, nonres, 0.0), "office_area": np.where(com_like, 0.5 * nonres, 0.0),
         "retail_area": np.where(com_like, 0.3 * nonres, 0.0), "other_area": np.where(com_like, 0.2 * nonres, 0.0),
         "factory_area": np.where(use_a == U["ind"], nonres, 0.0), "storage_area": 0.0, "garage_area": 0.0,
@@ -188,7 +190,7 @@ def build() -> dict:
                          "lot_area_from_polygon": n_lot_fixed, "floor_area_implausible_dropped": n_fa_dropped,
                          "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
         "columns": {"lot boundaries": "observed (PWD parcels)", "floor area": "observed (OPA livable area)",
-                    "land use": "observed (OPA category and building description)",
+                    "land use": "observed (City Planning Commission land-use layer; OPA splits homes)",
                     "homes": "single-family observed; other homes estimated from Census 2020 block housing units",
                     "jobs": "observed by block (LODES), modelled by floor area", "assessed value": "observed (OPA market value)",
                     "zoning": "simplified (district families set allowed uses; context FAR for capacity)",

@@ -12,6 +12,7 @@ import shapely
 import yaml
 
 from planarena.config import USE_KEYS, WEB_CRS
+from planarena.taxonomy import KEYS as TAX_KEYS
 from planarena.national import census, energy
 from planarena.twin.build import FLOOR_HEIGHT_M, _polygonal, add_grid, build_graph
 
@@ -97,6 +98,8 @@ def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: f
     meta = meta | {
         "crs": crs, "n_parcels": int(len(df)),
         "use_counts": {USE_KEYS[u] if u >= 0 else "unknown": int(n) for u, n in df.use.value_counts().sort_index().items()},
+        "class_counts": ({TAX_KEYS[u] if u >= 0 else "unknown": int(n) for u, n in df.lu16.value_counts().sort_index().items()}
+                         if "lu16" in df else {}),
         "bbox_wgs84": [float(x) for x in bounds], "grid": grid,
         "graph_edges": {k: int(v.shape[1]) for k, v in graph.items()}, "floor_height_m": FLOOR_HEIGHT_M,
     }

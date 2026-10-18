@@ -23,6 +23,8 @@ import shapely
 
 from planarena.cities.common import finish_twin, local_crs, plausible_floor_area, reconcile_lot_area
 from planarena.cities.registry import city_dir, register
+from planarena.sources import crosswalk
+from planarena.taxonomy import INDEX as TAX_INDEX, group_of
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
 from planarena.national import census, places
 from planarena.national.common import download
@@ -37,10 +39,6 @@ PARCEL_URL = ("https://data.milwaukee.gov/dataset/3e238aee-5a21-4e2f-8ae7-803440
 COLS = ["TAXKEY", "HOUSE_NR_LO", "SDIR", "STREET", "STTYPE", "C_A_LAND", "C_A_TOTAL", "C_A_EXM_LAND", "C_A_EXM_TOTAL",
         "BLDG_TYPE", "NR_STORIES", "NR_UNITS", "BLDG_AREA", "YR_BUILT", "LOT_AREA", "ZONING", "LAND_USE", "LAND_USE_GP",
         "GEO_ALDER", "HIST_CODE", "YR_ASSMT"]
-# MPROP land-use group (Appendix H) -> PlanArena use
-GROUP_USE = {1: "res", 2: "res", 3: "res", 4: "mix", 5: "com", 6: "com", 7: "com", 8: "ind", 9: "tra", 10: "opn",
-             11: "pub", 12: "opn", 13: "vac"}
-PARKING_CODES = {7521, 7523, 7525}
 STORAGE_CODES = set(range(4221, 4227)) | {4231}  # warehousing and storage
 HISTORIC_LOCAL = {"1", "3", "5", "7"}  # locally designated (protected); 2 and 4 are National Register only
 ALL = (1 << len(USE_KEYS)) - 1
@@ -160,16 +158,16 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
     # NR_UNITS also counts hotel rooms, nursing-home beds and other non-dwelling units (MPROP documentation);
     # dwellings are counted only on residential and mixed land-use groups (1-4).
     g["NR_UNITS"] = g.NR_UNITS.where(g.LAND_USE_GP.astype(int).isin([1, 2, 3, 4]), 0.0)
-    code = g.LAND_USE.astype(int)
-    use = g.LAND_USE_GP.astype(int).map(GROUP_USE)
-    use = use.where(~code.isin(PARKING_CODES), "prk")
-    g["use_i"] = use.map(U).fillna(-1).astype(int)
+    # official land use -> 16 classes (planarena/sources/crosswalk.py); the analysis group follows from the class
+    g["lu16"] = [TAX_INDEX.get(crosswalk.milwaukee(c, gp, u), -1)
+                 for c, gp, u in zip(g.LAND_USE, g.LAND_USE_GP, g.NR_UNITS)]
+    g["use_i"] = [group_of(c) for c in g.lu16]
     g["addr"] = (g.HOUSE_NR_LO.fillna("").str.lstrip("0") + " " + g.SDIR.fillna("") + " " + g.STREET.fillna("") + " "
                  + g.STTYPE.fillna("")).str.split().str.join(" ")
     # condominium units -> one parcel (sum quantities, keep the most common use, the first geometry)
     agg = g.groupby("FK_Parcel").agg(
         geometry=("geometry", "first"), taxkey=("key", "min"), address=("addr", "first"), zone=("ZONING", "first"),
-        use=("use_i", lambda s: s.value_counts().index[0]), code=("LAND_USE", "first"), bldg_type=("BLDG_TYPE", "first"),
+        lu16=("lu16", lambda s: s.value_counts().index[0]), code=("LAND_USE", "first"), bldg_type=("BLDG_TYPE", "first"),
         lot_area=("LOT_AREA", "max"), bldg_area=("BLDG_AREA", "sum"), units=("NR_UNITS", "sum"), floors=("NR_STORIES", "max"),
         year=("YR_BUILT", "max"), land=("C_A_LAND", "sum"), tot=("C_A_TOTAL", "sum"), exl=("C_A_EXM_LAND", "sum"),
         ext=("C_A_EXM_TOTAL", "sum"), alder=("GEO_ALDER", "first"), histcode=("HIST_CODE", "first"), n_keys=("key", "size"))
@@ -191,7 +189,8 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
     jobs = census.lodes_jobs("55", "WI")
     jobs_block = jobs.reindex(blocks.GEOID).fillna(0).to_numpy()
 
-    use_a = p.use.to_numpy()
+    lu16 = p.lu16.to_numpy().astype(int)
+    use_a = np.array([group_of(c) for c in lu16])
     lot, n_lot_fixed = reconcile_lot_area(p.lot_area.to_numpy().astype(float), p.geometry.area.to_numpy())
     fa, n_fa_dropped = plausible_floor_area(p.bldg_area.fillna(0).to_numpy().astype(float), lot)
     res = np.isin(use_a, [U["res"]])
@@ -214,6 +213,7 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
         "cd": pd.to_numeric(p.alder, errors="coerce").fillna(0).astype("int32").to_numpy(),
         "block": blk.astype("int32"), "zone": zone.to_numpy(), "overlay": "", "special": "",
         "bldg_class": p.bldg_type.fillna("").astype(str).to_numpy(), "use": use_a.astype("int16"),
+        "lu16": lu16.astype("int16"), "lu_code": p.code.fillna(0).astype(int).astype(str).to_numpy(),
         "lot_area": lot, "bldg_area": fa, "res_area": res_area, "com_area": np.where(com_like, nonres, 0.0),
         "office_area": np.where(office, nonres, 0.0), "retail_area": np.where(retail, nonres, 0.0),
         "factory_area": np.where(ind & ~storage, nonres, 0.0), "storage_area": np.where(storage, nonres, 0.0),

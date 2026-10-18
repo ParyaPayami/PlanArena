@@ -30,6 +30,8 @@ from planarena.config import (
     CITY_NAME, FT_PER_M, PLUTO_PATH, PLUTO_TO_USE, PROCESSED, PROJECTED_CRS,
     UNKNOWN_USE, USE_KEYS, WEB_CRS, WEB_DATA,
 )
+from planarena.sources import crosswalk
+from planarena.taxonomy import INDEX as TAX_INDEX, KEYS as TAX_KEYS
 from planarena.twin.zoning import RULE_SOURCE, allowed_mask
 
 PLUTO_COLS = [
@@ -74,6 +76,9 @@ def tabulate(g: gpd.GeoDataFrame) -> pd.DataFrame:
         "special": g["SPDist1"].fillna(""),
         "bldg_class": g["BldgClass"].fillna(""),
         "use": g["LandUse"].map(PLUTO_TO_USE).fillna(UNKNOWN_USE).astype("int16"),
+        "lu16": np.array([TAX_INDEX.get(crosswalk.nyc(a, b, u), -1)
+                          for a, b, u in zip(g["LandUse"], g["BldgClass"], g["UnitsRes"])], dtype="int16"),
+        "lu_code": g["LandUse"].fillna("").astype(str) + "/" + g["BldgClass"].fillna("").astype(str),
         "lot_area": num("LotArea"), "bldg_area": num("BldgArea"),
         "res_area": num("ResArea"), "com_area": num("ComArea"),
         "office_area": num("OfficeArea"), "retail_area": num("RetailArea"),
@@ -206,6 +211,7 @@ def build(out_dir=PROCESSED, web_dir=WEB_DATA, pluto_path=PLUTO_PATH, web: bool 
         "n_parcels": int(len(df)),
         "use_counts": {USE_KEYS[u] if u >= 0 else "unknown": int(n)
                        for u, n in df.use.value_counts().sort_index().items()},
+        "class_counts": {TAX_KEYS[u] if u >= 0 else "unknown": int(n) for u, n in df.lu16.value_counts().sort_index().items()},
         "bbox_wgs84": [float(b) for b in bounds],
         "grid": grid,
         "graph_edges": {k: int(v.shape[1]) for k, v in graph.items()},
