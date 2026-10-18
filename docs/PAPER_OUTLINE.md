@@ -58,14 +58,16 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 ## Figures and tables (all generated from result files)
 
+`python -I -m planarena.figures` writes PNG and SVG files to [figures/](figures/); they read only `results/validation/*.json`.
+
 | Figure / table | Source |
 |---|---|
 | System diagram | to draw by hand from METHODS.md |
 | Table: validation classes and key results | README "key results" block |
-| Figure: projected vs built homes for three rezonings (capacity, pro-rated, likelihood-weighted with ranges) | `integration_replay.json` |
-| Figure: rolling-origin AUC and average precision by horizon and decision year | `rolling_origin.json` |
-| Table: cross-city transfer | `crosscity_redevelopment.json` |
-| Table: Tier A against Tier B | `tier_a_vs_b_*.json` |
+| Figure: projected vs built homes for three rezonings (capacity, pro-rated, likelihood-weighted with ranges) | `integration_replay.json` → [figures/integration_replay.png](figures/integration_replay.png) |
+| Figure: rolling-origin AUC and average precision by horizon and decision year | `rolling_origin.json` → [figures/rolling_origin.png](figures/rolling_origin.png) |
+| Table or figure: cross-city transfer | `crosscity_redevelopment.json` → [figures/crosscity.png](figures/crosscity.png) |
+| Table or figure: Tier A against Tier B | `tier_a_vs_b_*.json` → [figures/tier_a_vs_b.png](figures/tier_a_vs_b.png) |
 | Map: one Tier A and one Tier B city in the Studio | screenshot |
 
 ## Before submission

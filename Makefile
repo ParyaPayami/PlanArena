@@ -80,6 +80,7 @@ validate:
 
 report:
 	$(RUN) planarena.report
+	$(RUN) planarena.figures
 
 web:
 	cd web && npm ci && npx vite build
