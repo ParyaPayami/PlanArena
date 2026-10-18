@@ -171,7 +171,7 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
       <div className="card mt">
         <label className="check">
           <input type="checkbox" checked={suitOverlay} onChange={(e) => setSuitOverlay(e.target.checked)} />
-          Show the pattern-consistent use for every parcel (GNN)
+          Show the pattern-consistent use for every parcel (LightGBM with a GNN embedding)
         </label>
         <div className="muted small">The use most consistent with each parcel’s surroundings today. It describes existing patterns, not what is desirable.</div>
         <label className="check mt">

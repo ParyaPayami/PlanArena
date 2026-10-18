@@ -38,12 +38,12 @@
 | F6 | 10 Help and documentation | The vote uses Schulze, Condorcet, Smith set and Kemeny–Young without explanation | 2 | **Fixed**: a "How to read this" guide with plain-language definitions |
 | F7 | 1 Visibility of system status | The redevelopment overlay and the "Previewing AI plan" mode could be active together, so it was unclear what the colours showed | 2 | **Fixed**: turning on an overlay closes the preview, and the reverse |
 | F8 | 1 Visibility of system status | When zoomed out, the white selection outline hid the new colours of painted parcels | 2 | **Fixed**: the outline is thinner when zoomed out |
-| F9 | 6 Recognition rather than recall | The FAR control does not show what zoning allows on the selection | 2 | Open |
+| F9 | 6 Recognition rather than recall | The FAR control does not show what zoning allows on the selection | 2 | **Fixed**: the FAR control shows the zoning maximum and built FAR on the selection (or that the city has no zoning data) and warns when the proposed FAR exceeds it |
 | F10 | 10 Help and documentation | The plan score's units (points) were not explained | 1 | **Fixed**: a "?" tooltip explains % change, percentage points and averaging |
 | F11 | 2 Match with the real world | In "If this parcel became…", open space kept most of its "tax base", because the indicator is assessed value including exempt property | 2 | **Fixed (label)**: now reads "Assessed value", with a tooltip that it is not tax revenue. Modelling exempt property is open |
-| F12 | 8 Aesthetic and minimal design | Long land-use names are truncated in the palette at 1440 px | 1 | Open |
+| F12 | 8 Aesthetic and minimal design | Long land-use names are truncated in the palette at 1440 px | 1 | **Fixed**: names wrap |
 | F13 | 5 Error prevention | Painting a conversion with no precedent (e.g. an office tower to a public facility) was silent | 2 | **Fixed**: a "no precedent in Manhattan 2015–2025" warning. The optimizer skips such conversions by default |
-| F14 | 4 Consistency and standards | No onboarding: a first-time user sees "Paint parcels to start a plan" but no guided first task | 2 | Open |
+| F14 | 4 Consistency and standards | No onboarding: a first-time user sees "Paint parcels to start a plan" but no guided first task | 2 | **Fixed**: a three-step "Your first plan" card that ticks itself off and can be skipped |
 
 ## What would change with real users
 

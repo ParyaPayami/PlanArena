@@ -264,6 +264,5 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 2. **Building coverage.** LL84 covers only buildings of 25,000 sq ft or more; smaller buildings take use-type EUIs.
 3. **Roof share** is estimated as floor area / floors.
 4. **Inwood** is replayed for the whole area only; Mandatory Inclusionary Housing bonus floor area is not modelled.
-5. **Usability items** F9, F12 and F14 are open.
-6. **Tier A is an estimate.** Pseudo-lots are not legal parcels, and land use and floor area are inferred; see the Tier A against Tier B results above.
-7. **Large cities** (over 100,000 parcels) are drawn as points when zoomed out and as vector tiles cut on demand when zoomed in (`planarena/cities/tiles.py`); the first view of each area takes a moment while its tiles are made.
+5. **Tier A is an estimate.** Pseudo-lots are not legal parcels, and land use and floor area are inferred; see the Tier A against Tier B results above.
+6. **Large cities** (over 100,000 parcels) are drawn as points when zoomed out and as vector tiles cut on demand when zoomed in (`planarena/cities/tiles.py`); the first view of each area takes a moment while its tiles are made.

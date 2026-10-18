@@ -47,6 +47,6 @@ In a Tier A city, lots are estimated from buildings within census blocks, land u
 - Stakeholder priorities are assumptions you can change (seats in the Vote tab).
 - Assessed value includes tax-exempt property; it is not tax revenue.
 - Over Wi-Fi on a phone, the game cannot be installed as an app (that needs https); it still runs in the browser.
-- Usability evidence so far is an expert review ([docs/USABILITY_REVIEW.md](docs/USABILITY_REVIEW.md)). Open items: zoning limits next to the FAR control, a guided first task, and truncated land-use names.
+- Usability evidence so far is a developer heuristic review ([docs/USABILITY_REVIEW.md](docs/USABILITY_REVIEW.md)); its findings are fixed, but it is not a study with planners.
 
 The evidence behind the numbers is in [docs/VALIDATION.md](docs/VALIDATION.md).

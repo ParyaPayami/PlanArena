@@ -90,7 +90,7 @@ h3 { margin: 2px 0 6px; font-size: 16px; }
 .palette-hint { margin-bottom: 8px; }
 .palette-grid { display: flex; flex-direction: column; gap: 5px; }
 .use-btn { justify-content: flex-start; width: 100%; padding: 8px 9px; }
-.use-btn .use-label { flex: 1; text-align: left; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.use-btn .use-label { flex: 1; text-align: left; font-size: 13px; white-space: normal; line-height: 1.2; }
 .use-btn .use-count { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .use-btn:disabled { opacity: .85; }
 .use-btn.current { border-color: #fff; }
@@ -324,3 +324,9 @@ button.danger { border-color: #6a2531; color: #ff9aa5; }
 .city-button .badge { margin: 0; }
 .city-hits { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; max-height: 40vh; overflow: auto; }
 .city-hit { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.first-plan { margin-bottom: 10px; }
+.first-plan ol { margin: 4px 0 6px 18px; padding: 0; font-size: 12.5px; }
+.first-plan li { margin: 3px 0; }
+.first-plan li.done { color: var(--muted); }
+.zoning-note { margin: 6px 0; }
+.zoning-note .warn { color: #e0a43a; }

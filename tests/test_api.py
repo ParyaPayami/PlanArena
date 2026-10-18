@@ -150,3 +150,10 @@ def test_search_understands_common_address_forms(client):
     hits = client.get("/api/search", params={"q": "14 W 4th St"}).json()
     assert hits and hits[0]["address"] == "14 WEST 4 STREET"
     assert client.get("/api/search", params={"q": "350 Fifth Ave"}).json()[0]["address"].endswith("5 AVENUE")
+
+
+def test_zoning_summary_of_a_selection(client):
+    z = client.post("/api/zoning-summary", json={"parcels": [10, 11, 12]}).json()
+    assert z["n"] == 3 and z["has_zoning"] and z["max_far"]["min"] <= z["max_far"]["max"]
+    assert all(u in [x["key"] for x in client.get("/api/meta").json()["land_uses"]] for u in z["allowed_on_all"])
+    assert client.post("/api/zoning-summary", json={"parcels": [-5]}).status_code == 400

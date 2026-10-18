@@ -47,12 +47,18 @@ async function download(url: string, body: unknown, filename: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+export interface ZoningSummary {
+  n: number; has_zoning: boolean; zoning_rules: string;
+  max_far: { min: number; median: number; max: number }; built_far: { min: number; median: number; max: number };
+  districts: Record<string, number>; allowed_on_all: string[];
+}
 export interface CityEntry { id: string; label: string; tier: string; source?: string; parcels?: number }
 export interface PlaceHit { geoid: string; label: string; state: string; kind: string; land_km2: number; built: boolean; tier: "A" | "B" }
 export interface BuildJob { geoid: string; label?: string; status: "running" | "done" | "failed"; step?: string; elapsed?: number; log?: string }
 
 export const api = {
   cities: () => get<CityEntry[]>("/api/cities"),
+  zoningSummary: (parcels: number[]) => post<ZoningSummary>("/api/zoning-summary", { parcels }),
   points: async () => {
     const r = await fetch("/api/points", { headers: CITY_HEADER });
     if (!r.ok) throw new Error(`/api/points: ${r.status}`);

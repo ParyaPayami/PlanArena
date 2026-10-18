@@ -234,6 +234,10 @@ class ParetoRequest(Strict):
     changes: dict[str, Change] = Field(default_factory=dict)
 
 
+class SelectionRequest(Strict):
+    parcels: list[int] = Field(min_length=1, max_length=1_000_000)
+
+
 class RadiusRequest(Strict):
     parcels: list[int] = Field(min_length=1, max_length=5000)
     feet: float = Field(500, gt=0, le=5280)
@@ -573,6 +577,23 @@ async def poa(req: NegotiateRequest):
 
 
 # ----------------------------------------------------------------------------- planner's desk
+@app.post("/api/zoning-summary")
+def zoning_summary(req: SelectionRequest):
+    """What zoning allows on a selection: maximum FAR, built FAR now, districts and the uses allowed on every parcel."""
+    e: ImpactEngine = runtime()["engine"]
+    idx = np.array([i for i in req.parcels if 0 <= i < e.n], dtype=int)
+    if not len(idx):
+        raise HTTPException(400, "no valid parcels")
+    p = e.p.iloc[idx]
+    q = lambda v: {"min": round(float(np.min(v)), 2), "median": round(float(np.median(v)), 2), "max": round(float(np.max(v)), 2)}
+    allowed = np.bitwise_and.reduce(p["allowed"].to_numpy().astype("int64"))
+    has_zoning = not str(e.meta.get("zoning_rules", "")).startswith("none")
+    return {"n": int(len(idx)), "has_zoning": has_zoning, "zoning_rules": e.meta.get("zoning_rules"),
+            "max_far": q(p["max_far"].to_numpy()), "built_far": q(p["built_far"].to_numpy()),
+            "districts": {str(k): int(v) for k, v in p["zone"].value_counts().head(4).items()} if has_zoning else {},
+            "allowed_on_all": [USE_KEYS[k] for k in range(len(USE_KEYS)) if (int(allowed) >> k) & 1]}
+
+
 @app.post("/api/radius")
 def radius(req: RadiusRequest):
     """Parcels within a notice radius of the selected parcels (polygon-to-polygon distance)."""

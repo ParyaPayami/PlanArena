@@ -11,6 +11,7 @@ import DataPanel from "../components/DataPanel";
 import MethodsDialog from "../components/MethodsDialog";
 import SearchBox from "../components/SearchBox";
 import CityPicker from "../components/CityPicker";
+import FirstPlan from "../components/FirstPlan";
 import Toast from "../components/Toast";
 import { api, cityHref } from "../api";
 import { useStore, type Tab } from "../store";
@@ -53,7 +54,7 @@ export default function Studio() {
   const data = s.data!;
 
   useEffect(() => {
-    if (suitOverlay && !suit) api.suitability().then(setSuit).catch(() => s.notify("GNN not trained yet", "bad"));
+    if (suitOverlay && !suit) api.suitability().then(setSuit).catch(() => s.notify("No pattern model for this city", "bad"));
   }, [suitOverlay, suit]);
 
   useEffect(() => {
@@ -135,6 +136,7 @@ export default function Studio() {
         </div>
       </header>
       <aside className="left">
+        <FirstPlan />
         <Palette />
         {s.overlay && (
           <div className="preview-banner">
