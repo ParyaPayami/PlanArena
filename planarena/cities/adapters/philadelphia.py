@@ -178,6 +178,7 @@ def build() -> dict:
     df["max_far"] = np.maximum(bg.map(ctx).fillna(df.built_far[built].quantile(0.9)).to_numpy(), df.built_far.to_numpy())
     df["resid_far"] = df["comm_far"] = df["facil_far"] = df["max_far"]
     df["allowed"] = zone.map(allowed).to_numpy().astype("int64")
+    df["zone16"] = np.array([TAX_INDEX.get(crosswalk.philadelphia_zone(z), -1) for z in zone], dtype="int16")
     df["cd"] = districts(blocks, blk)
     meta = finish_twin(df, p.geometry.values, crs, out, "PA", float(blocks.POP100.sum() / max(blocks.HU100.sum(), 1)),
                        jobs_block, blk, log, {
@@ -188,6 +189,7 @@ def build() -> dict:
                          "accounts_not_in_a_parcel": int((lot_of < 0).sum()),
                          "parcels_without_opa_record": int(p.accounts.isna().sum()),
                          "lot_area_from_polygon": n_lot_fixed, "floor_area_implausible_dropped": n_fa_dropped,
+                         "homes_census_2020": int(blocks.HU100.sum()),
                          "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
         "columns": {"lot boundaries": "observed (PWD parcels)", "floor area": "observed (OPA livable area)",
                     "land use": "observed (City Planning Commission land-use layer; OPA splits homes)",

@@ -213,3 +213,378 @@ def los_angeles_zone(zone, scag_code, specific_plan=None) -> str:
         if re.match(prefix + r"(?![A-Z])", z):
             return cls
     return scag(scag_code, specific_plan=specific_plan)
+
+
+# ----------------------------------------------------------------------------- Chicago region (CMAP)
+# CMAP Land Use Inventory codes (2020 and 2023 inventories share the code list; layer domain_LANDUSE)
+CMAP = (_codes("sf", 1111, 1112)  # detached; attached (townhouses, rowhouses)
+        | _codes("mf", 1130, 1140)  # multi-family; mobile home parks
+        | _codes("ret", 1211, 1212, 1214, 1215, 1240)  # malls, regional, big box, urban mix, cultural/entertainment
+        | _codes("mix", 1216)  # urban mix with residential
+        | _codes("off", 1220)
+        | _codes("hot", 1250)
+        | _codes("hlt", 1310)
+        | _codes("edu", 1321, 1322)
+        | _codes("civ", 1330, 1340, 1350, 1370, 1380)  # government, prisons, religious, other, national labs
+        | _codes("ind", 1410, 1420, 1431, 1433)  # mineral, general, manufacturing and flex over 100k sq ft
+        | _codes("whs", 1432, 1450)  # warehousing over 100k sq ft; storage
+        | _codes("tra", 1511, 1512, 1520, 1530, 1550, 1561, 1562, 1563, 1564, 1565, 1570)
+        | _codes("prk", 1540)
+        | _codes("opn", 1151, 1360, 2000, 3100, 3200, 3300, 3400, 3500, 5000)  # residential common areas, cemeteries,
+                                                                              # agriculture, open space, water
+        | _codes("vac", 4110, 4120, 4130, 4140, 4210, 4220, 4230, 4240))  # vacant; under construction
+CMAP_UNKNOWN = ("6000", "9999")  # non-parcel; uncodeable
+CMAP_RESIDENTIAL = ("1111", "1112", "1130")
+CMAP_BUSINESS = ("1211", "1212", "1214", "1215", "1220", "1240", "1250", "1410", "1420", "1431", "1432", "1433", "1450")
+# Cook County Assessor commercial valuation property types (first match wins)
+COOK_PROPERTY_TYPE = [("MIXED USE", "mix"), ("HOTEL", "hot"), ("MOTEL", "hot"), ("MEDICAL", "hlt"),
+                      ("NURSING", "hlt"), ("OFFICE", "off"), ("WAREHOUSE", "whs"), ("SELF STORAGE", "whs"),
+                      ("DISTRIBUTION", "whs"), ("PARKING", "prk"), ("DAY CARE", "edu")]
+
+
+def cmap(code, units=None, property_type=None) -> str:
+    """CMAP land-use code -> class, refined by the Cook County Assessor where the inventory is coarse.
+
+    Residential codes are split by the homes the assessor records on the parcel (2-4 small multi-family, 5+
+    multi-family; a mixed-use apartment record makes it mixed use). Commercial and industrial codes are split by the
+    commercial valuation's property type (office, medical, hotel, warehouse, parking, mixed use)."""
+    c = str(code).strip() if code is not None else ""
+    n = _num(units)
+    pt = property_type.upper() if isinstance(property_type, str) else ""
+    if c in CMAP_RESIDENTIAL:
+        if "MIXED USE" in pt:
+            return "mix"
+        if n:
+            return "sf" if n <= 1 else "mf_small" if n <= 4 else "mf"
+    if c in CMAP_BUSINESS and pt:
+        for word, cls in COOK_PROPERTY_TYPE:
+            if word in pt:
+                return cls
+    return CMAP.get(c, "unknown")
+
+
+# ----------------------------------------------------------------------------- Houston (City of Houston land use)
+# Harris Central Appraisal District land-use codes, as published in the City of Houston "Land Use (Grouped)" layer
+HOUSTON = (_codes("sf", 1001, 1003, 2001, 2003, 3100, 4108, 4301, 4444)  # houses; mobile homes; houses on other land
+           | _codes("mf", 1006, 4209, 4211, 4212, 4213, 4214, 4221, 4222, 4318)  # condominiums, apartments (4+ units),
+                                                                              # mobile home parks, boarding houses
+           | _codes("mix", 4319)  # commercial building with residences
+           | _codes("ret", 4321, 4323, 4324, 4325, 4326, 4327, 4328, 4329, 4330, 4331, 4332, 4333, 4334, 4336, 4337,
+                    4340, 4341, 4342, 4343, 4344, 4345, 4346, 4347, 4348, 4350, 4351, 4356, 4361, 4362, 4363, 4364,
+                    4365, 4370, 4373, 4374, 4375, 4376, 4381, 4382, 4383, 4384, 4385, 4386, 4388, 4390)
+           | _codes("off", 4353, 4354, 4355, 4359, 4366)
+           | _codes("hot", 4314, 4315, 4320)
+           | _codes("hlt", 4316, 4317, 4349, 4352, 4357, 4640)  # nursing and retirement homes, medical, hospitals
+           | _codes("edu", 4313, 4369, 4612, 4613)  # dormitories, day care, schools, colleges
+           | _codes("civ", 4367, 4610, 4611, 4614, 4620, 4630, 4660, 4670, 4680, 4685)
+           | _codes("prk", 4338, 4339, 4372)
+           | _codes("whs", 4335, 4358, 4377, 4380, 4391, 4392, 4394, 4395, 4396, 4397, 4398, 4399, 4427, 4428, 4491)
+           | _codes("ind", 3300, 4401, 4402, 4403, 4405, 4410, 4411, 4413, 4415, 4416, 4417, 4418, 4419, 4420, 4421,
+                    4422, 4423, 4424, 4425, 4426, 4460, 4470, 4510, 4544, 4961)
+           | _codes("tra", 1105, 2005, 4368, 4371, 4530, 4542, 4545, 4690, 4700, 4706, 4710, 4712, 4715, 4720, 4730,
+                    4733, 4735, 4737, 4740, 4742, 4745, 4747, 4749, 4750, 4752, 4755, 4756, 4757, 4760, 4762, 4765,
+                    4770, 4772, 4773, 4777)
+           | _codes("opn", 1107, 2004, 4389, 4500, 4520, 4543, 9011, 9015, 9019, 9023, 9039, 9043, 9047, 9063, 9075,
+                    9083, 9200, 9910, 9920, 9930)  # retention, wetlands, golf, subdivision common lots, agriculture
+           | _codes("vac", 1000, 1002, 2000, 2002, 4200, 4299, 4300, 4310, 4400, 4499, 4540, 7000, 9999))
+HOUSTON_GROUP = {"Single-Family Residential": "sf", "Multi-Family Residential": "mf", "Commercial": "ret",
+                 "Office": "off", "Industrial": "ind", "Public & Institutional": "civ", "Park & Open Spaces": "opn",
+                 "Transportation & Utility": "tra", "Undeveloped": "vac", "Agriculture Production": "opn"}
+HOUSTON_RESIDENTIAL = {"B2": "mf_small", "B3": "mf_small", "B4": "mf_small", "B1": "mf"}  # duplex/tri/fourplex; apartments
+
+
+def houston(code, group=None, state_class=None) -> str:
+    """HCAD land-use code -> class. Houses are split by the Texas property class (B1 apartments, B2-B4 duplexes to
+    fourplexes). Vacant exempt land (4600) and codes without a description take the City of Houston staff group
+    (park, public, transportation or vacant)."""
+    c = str(code).strip() if code is not None else ""
+    sc = str(state_class).strip().upper() if isinstance(state_class, str) else ""
+    cls = HOUSTON.get(c)
+    if cls == "sf" and sc in HOUSTON_RESIDENTIAL:
+        return HOUSTON_RESIDENTIAL[sc]
+    if cls:
+        return cls
+    if c == "4600" and group not in ("Park & Open Spaces", "Public & Institutional", "Transportation & Utility"):
+        return "vac"
+    return HOUSTON_GROUP.get(group, "unknown") if isinstance(group, str) else "unknown"
+
+
+# ----------------------------------------------------------------------------- Dallas (City of Dallas existing land use)
+DALLAS = {"Single Family Detached": "sf", "Single Family Attached": "sf", "Multi-Family": "mf", "Mixed Use": "mix",
+          "Commercial": "ret", "Office": "off", "Lodging": "hot", "Light Industrial": "ind",
+          "Heavy Industrial": "ind", "Public or Institutional": "civ", "Open Space": "opn", "Agriculture": "opn",
+          "Utility": "tra", "Transportation": "tra"}
+# Dallas Central Appraisal District building classes that split the business and public categories (first match wins)
+DALLAS_BUILDING = [("VETERINARY", "ret"), ("SENIOR CITIZEN HOUSING", "mf"), ("RETIREMENT COMMUNITY", "mf"),
+                   ("ASSISTED LIVING", "hlt"), ("NURSING", "hlt"), ("CONVALESCENT", "hlt"), ("HOSPITAL", "hlt"),
+                   ("MEDICAL", "hlt"), ("URGENT CARE", "hlt"), ("HOTEL", "hot"), ("MOTEL", "hot"),
+                   ("WAREHOUSE", "whs"), ("COLD STORAGE", "whs"), ("TRUCK TERMINAL", "whs"),
+                   ("PARKING", "prk"), ("SCHOOL", "edu"), ("DAY NURSERY", "edu"), ("CHURCH", "civ"),
+                   ("GOVERNMENTAL", "civ"), ("FRATERNAL", "civ"), ("PUBLIC CHARITY", "civ"), ("AUDITORIUM", "civ"),
+                   ("OFFICE/SHOWROOM", "ret"), ("OFFICE", "off")]
+DALLAS_REFINED = ("Commercial", "Office", "Lodging", "Light Industrial", "Heavy Industrial", "Public or Institutional",
+                  "Transportation")
+
+
+def dallas(land_use, vacant=None, building_class=None, units=None) -> str:
+    """City of Dallas existing land use -> class. The appraisal district's building class splits the business and
+    public categories; residential parcels are split by the appraisal district's unit count (2-4 small multi-family,
+    5+ multi-family); a vacant parcel in a built category is vacant land (open space, agriculture, utility and
+    transportation land keeps its class)."""
+    lu = land_use.strip() if isinstance(land_use, str) else ""
+    cls = DALLAS.get(lu)
+    if cls is None:
+        return "unknown"
+    if isinstance(vacant, str) and vacant.strip().lower() == "vacant" and cls not in ("opn", "tra"):
+        return "vac"
+    bc = building_class.upper() if isinstance(building_class, str) else ""
+    if lu in DALLAS_REFINED and bc:
+        for word, c in DALLAS_BUILDING:
+            if word in bc:
+                return c
+    n = _num(units)
+    if cls in ("sf", "mf") and n:
+        return "sf" if n <= 1 else "mf_small" if n <= 4 else "mf"
+    return cls
+
+# forwardDallas! 2.0 (adopted 2024) placetypes: the plan's land-use designation of each parcel
+DALLAS_PLACETYPE = {"Community Residential": "sf", "Small Town Residential": "sf", "City Residential": "mf",
+                    "Neighborhood Mixed-Use": "mix", "Community Mixed-Use": "mix", "Regional Mixed-Use": "mix",
+                    "City Center": "mix", "Flex Commercial": "ret", "Logistics/Industrial Park": "whs",
+                    "Industrial Hub": "ind", "Institutional Campus": "civ", "Regional Open Space": "opn",
+                    "Airport": "tra", "Utility": "tra"}
+
+
+def dallas_plan(placetype) -> str:
+    return DALLAS_PLACETYPE.get(placetype.strip(), "unknown") if isinstance(placetype, str) else "unknown"
+
+
+# ----------------------------------------------------------------------------- San Antonio (BCAD; City of San Antonio)
+# Texas property classes as used by the Bexar Appraisal District (State_cd)
+SAN_ANTONIO_STATE = {"A1": "sf", "A2": "sf", "A3": "sf", "E1": "sf", "E2": "sf", "B1": "mf", "B2": "mf_small",
+                     "B6": "mf_small", "C1": "vac", "C": "vac", "O1": "vac", "O2": "vac", "D1": "opn", "D2": "opn",
+                     "F1": "ret", "F2": "ind", "F3": "ret", "G3": "ind", "J1": "tra", "J2": "tra", "J3": "tra",
+                     "J4": "tra", "J5": "tra", "J6": "tra", "J7": "tra", "X": "civ"}
+# City of San Antonio comprehensive plan land-use categories (Future_Land_Use, all adopted area plans)
+SAN_ANTONIO_PLAN = [("ESTATE", "sf"), ("RURAL", "sf"), ("URBAN LOW DENSITY RESIDENTIAL", "mf_small"),
+                    ("LOW DENSITY RESIDENTIAL", "sf"), ("MEDIUM DENSITY RESIDENTIAL", "mf"),
+                    ("HIGH DENSITY RESIDENTIAL", "mf"), ("COMPACT MULTI FAMILY", "mf"), ("RESIDENTIAL", "sf"),
+                    ("EMPLOYMENT/FLEX", "ind"), ("BUSINESS/INNOVATION", "off"), ("MIXED", "mix"), ("URBAN LIVING", "mix"),
+                    ("TRANSIT ORIENTED", "mix"), ("COMMERCIAL", "ret"), ("OFFICE", "off"), ("BUSINESS PARK", "off"),
+                    ("INDUSTRIAL", "ind"), ("PARK", "opn"), ("OPEN SPACE", "opn"), ("GREENSPACE", "opn"),
+                    ("AGRICULTURAL", "opn"), ("GOVERNMENT", "civ"), ("PUBLIC INSTITUTIONAL", "civ"),
+                    ("MILITARY", "civ"), ("VACANT", "vac")]
+# San Antonio Unified Development Code base zoning districts -> the district's use class
+SAN_ANTONIO_ZONE = [("RM-", "mf_small"), ("MF-", "mf"), ("MH", "mf"), ("R-", "sf"), ("RE", "sf"), ("RP", "sf"),
+                    ("RD", "sf"), ("NC", "ret"), ("C-", "ret"), ("O-", "off"), ("MI-", "ind"), ("I-", "ind"),
+                    ("L", "ind"), ("D", "mix"), ("UD", "mix"), ("FR", "opn"), ("UZROW", "tra")]
+
+
+def _first_match(text, table) -> str:
+    t = text.upper().strip() if isinstance(text, str) else ""
+    for word, cls in table:
+        if word in t:
+            return cls
+    return "unknown"
+
+
+def san_antonio(state_class, units=None) -> str:
+    """BCAD property class -> class; apartments (B1) of 2-4 units are small multi-family."""
+    sc = state_class.strip().upper() if isinstance(state_class, str) else ""
+    cls = SAN_ANTONIO_STATE.get(sc, "unknown")
+    n = _num(units)
+    if cls == "mf" and n and n <= 4:
+        return "mf_small"
+    return cls
+
+
+def san_antonio_plan(category) -> str:
+    return _first_match(category, SAN_ANTONIO_PLAN)
+
+
+def san_antonio_zone(base) -> str:
+    z = base.upper().strip() if isinstance(base, str) else ""
+    for prefix, cls in SAN_ANTONIO_ZONE:
+        if z == prefix or (z.startswith(prefix) and (prefix.endswith("-") or not z[len(prefix)].isalpha())):
+            return cls
+    return "unknown"
+
+
+# ----------------------------------------------------------------------------- Phoenix (Maricopa County Assessor; MAG)
+# Maricopa County Assessor property use code groups (first two digits of the property use code)
+MARICOPA_GROUP = {"00": "vac", "01": "sf", "02": "opn", "03": "mf", "04": "hot", "05": "hot", "06": "hot",
+                  "07": "mf", "08": "mf", "09": "ind", "10": "ret", "11": "ret", "12": "ret", "13": "ret",
+                  "14": "ret", "15": "off", "16": "ret", "17": "ret", "18": "ret", "19": "hlt", "20": "ret",
+                  "21": "hlt", "22": "ret", "23": "opn", "24": "opn", "25": "ret", "26": "prk", "27": "civ",
+                  "28": "vac", "29": "edu", "30": "ind", "37": "whs", "40": "opn", "41": "opn", "43": "opn",
+                  "45": "opn", "47": "opn", "48": "opn", "50": "tra", "51": "tra", "53": "tra", "54": "tra",
+                  "55": "tra", "56": "tra", "57": "tra", "62": "tra", "85": "sf", "86": "mf_small"}
+# groups 87-99 (miscellaneous, limited use, exempt and public ownership) describe ownership or tax status, not use:
+# those parcels take MAG's existing land use instead
+MAG_LAND_USE = {"Agriculture": "opn", "Airport": "tra", "Business Park": "off", "Cemetery": "opn",
+                "Developing Employment": "vac", "Developing Residential": "vac", "Educational": "edu",
+                "Golf Course": "opn", "Tourist Accomodations": "hot", "Industrial": "ind",
+                "Medical/Nursing Home": "hlt", "Multi Family": "mf", "Mixed Use": "mix", "Office": "off",
+                "Active Open Space": "opn", "Passive/Restricted Open Space": "opn", "Other Employment": "ind",
+                "Public/Special Event/Military": "civ", "Religious/Institutional": "civ", "Commercial High": "ret",
+                "Commercial Low": "ret", "Single Family High Density": "sf", "Single Family Low Density": "sf",
+                "Single Family Medium Density": "sf", "Transportation": "tra", "Vacant": "vac", "Water": "opn",
+                "Desert Parks and Preserves": "opn", "Wash": "opn", "Orchard": "opn", "Dairy or Feedlot": "opn",
+                "Abandoned Agriculture": "vac", "Public Land": "civ", "Vacant State Trust": "vac",
+                "Railroads": "tra", "Solar Generating Stations": "tra"}
+
+
+def phoenix(use_group, description=None, mag=None) -> str:
+    """Maricopa County Assessor property use group -> class (private roads in group 02 are transportation);
+    ownership and exempt groups take MAG's existing land use (2026)."""
+    g = str(use_group).strip().zfill(2) if use_group not in (None, "") else ""
+    d = description.upper() if isinstance(description, str) else ""
+    if g == "02" and "RDWY" in d:
+        return "tra"
+    cls = MARICOPA_GROUP.get(g)
+    if cls:
+        return cls
+    return MAG_LAND_USE.get(mag.strip(), "unknown") if isinstance(mag, str) else "unknown"
+
+
+def phoenix_plan(description) -> str:
+    """City of Phoenix General Plan land-use designation (code table 'General Plan Codes') -> class. Residential
+    designations by their highest density: up to 5 homes an acre single-family, up to 10 small multi-family, more
+    multi-family. Preserves (hillside and desert preserves) are open space whatever the underlying designation."""
+    import re
+
+    d = description.upper().strip() if isinstance(description, str) else ""
+    if not d or "UNDESIGNATED" in d and "PRESERVE" not in d:
+        return "unknown"
+    if "PRESERVE" in d:
+        return "opn"
+    if "PLANNED SCHOOL" in d:
+        return "edu"
+    homes = "RESIDENTIAL" in d or re.search(r"\bDU\b", d) is not None or d in ("MU", "MIXED USE")
+    if (d.startswith(("MIXED USE", "MU")) or "TRANSITION" in d) and homes:
+        return "mix"  # homes with commercial, business park or open space
+    if "RESIDENTIAL" in d:
+        if "15+" in d:
+            return "mf"
+        top = max((float(x) for x in re.findall(r"\d+(?:\.\d+)?", d)), default=0)
+        return "sf" if top <= 5 else "mf_small" if top <= 10 else "mf"
+    # mixed use without homes takes its leading non-residential use
+    for word, cls in (("INDUSTRIAL", "ind"), ("COMMERCE", "off"), ("BUSINESS PARK", "off"), ("COMMERCIAL", "ret"),
+                      ("PARK", "opn"), ("OPEN SPACE", "opn"), ("FLOODPLAIN", "opn"), ("AGRICULTUR", "opn"),
+                      ("NURSERIES", "opn"), ("PUBLIC", "civ"), ("TRANSPORT", "tra"), ("FREEWAY", "tra"),
+                      ("AIRPORT", "tra")):
+        if word in d:
+            return cls
+    return "mix" if d.startswith(("MIXED USE", "MU")) else "unknown"
+
+
+PHOENIX_ZONE = {"SF Residential": "sf", "MF Residential": "mf", "Commercial": "ret", "Industrial": "ind",
+                "Downtown Code": "mix", "Non-Developable": "opn"}  # PUD and County: not screened
+
+
+# ----------------------------------------------------------------------------- San Diego (SANDAG; City of San Diego)
+# SANDAG Land Use 2025 (annual land use and housing inventory) codes
+SANDAG = (_codes("sf", 1000, 1090, 1110, 1190)  # rural, single family (with or without units)
+          | _codes("mf_small", 1120)  # single family multiple-units (duplexes and attached houses on one lot)
+          | _codes("mf", 1200, 1280, 1290, 1300)  # multi-family, single-room occupancy, mobile home parks
+          | _codes("civ", 1401, 1403, 1404, 1409, 6003, 6102, 6103, 6104, 6105, 6108, 6109, 6701, 6702, 6703, 6807)
+          | _codes("edu", 1402, 6801, 6802, 6803, 6804, 6805, 6806, 6809)  # dormitories, colleges, schools
+          | _codes("hot", 1501, 1502, 1503)
+          | _codes("ind", 2001, 2101, 2103, 2201)
+          | _codes("whs", 2104, 2105, 5001)  # warehousing, public storage, wholesale trade
+          | _codes("tra", 2301, 4101, 4102, 4103, 4104, 4111, 4112, 4113, 4117, 4118, 4119, 4120)
+          | _codes("prk", 4114, 4115, 4116)
+          | _codes("ret", 5002, 5003, 5004, 5005, 5006, 5007, 5008, 5009, 7201, 7202, 7203, 7206, 7208, 7209, 7210)
+          | _codes("off", 6001, 6002)
+          | _codes("hlt", 6501, 6502, 6509)
+          | _codes("opn", 6101, 7204, 7205, 7207, 7211, 7601, 7603, 7604, 7605, 7606, 7607, 7609, 8001, 8002, 8003,
+                   9200, 9201, 9202)
+          | _codes("vac", 9101, 9501, 9502, 9503, 9504, 9505, 9506, 9507)  # vacant; under construction
+          | _codes("mix", 9700))
+
+
+def sandag(code, units=None) -> str:
+    """SANDAG land-use code -> class; multi-family of 2-4 units (assessor unit count) is small multi-family."""
+    c = str(_num(code)) if _num(code) is not None else ""
+    cls = SANDAG.get(c, "unknown")
+    n = _num(units)
+    if cls == "mf" and n and n <= 4 and c == "1200":
+        return "mf_small"
+    if cls == "sf" and n and n >= 2:
+        return "mf_small" if n <= 4 else "mf"
+    return cls
+
+
+SAN_DIEGO_PLAN = {"Multiple Use": "mix", "Park, Open Space, & Recreation": "opn", "Industrial Employment": "ind",
+                  "Roads / Freeways / Transportation": "tra", "Right-of-Way": "tra",
+                  "Commercial Employment, Retail, & Services": "ret",
+                  "Institutional & Public and Semi-Public Facilities": "civ", "Water Bodies": "opn",
+                  "Military Use": "civ", "Agriculture": "opn"}
+
+
+def san_diego_plan(category, density_hi=None) -> str:
+    """City of San Diego General Plan land-use category -> class. Residential by the designation's highest
+    density: up to 9 homes an acre single-family, up to 15 small multi-family, more multi-family."""
+    c = category.strip() if isinstance(category, str) else ""
+    if c == "Residential":
+        d = _num(density_hi)
+        if d is None:
+            return "sf"
+        return "sf" if d <= 9 else "mf_small" if d <= 15 else "mf"
+    return SAN_DIEGO_PLAN.get(c, "unknown")
+
+
+# City of San Diego Land Development Code base zone families -> the zone's use class (prefix match)
+SAN_DIEGO_ZONE = [("RE-", "sf"), ("RS-", "sf"), ("RX-", "sf"), ("RT-", "mf_small"), ("RM-", "mf"), ("AR-", "sf"),
+                  ("AG-", "opn"), ("OP-", "opn"), ("OC-", "opn"), ("OR-", "opn"), ("OF-", "opn"),
+                  ("CN-", "ret"), ("CC-", "ret"), ("CR-", "ret"), ("CV-", "hot"), ("CO-", "off"), ("CP-", "prk"),
+                  ("EMX-", "mix"), ("RMX-", "mix"), ("IP-", "ind"), ("IL-", "ind"), ("IH-", "ind"), ("IS-", "ind"),
+                  ("IBT-", "ind")]
+
+
+def san_diego_zone(zone) -> str:
+    z = zone.upper().strip() if isinstance(zone, str) else ""
+    for prefix, cls in SAN_DIEGO_ZONE:
+        if z.startswith(prefix):
+            return cls
+    return "unknown"  # planned districts (CCPD, PD) and specific plans
+
+
+# ----------------------------------------------------------------------------- zoning district -> use class (NYC,
+# Philadelphia, Milwaukee): the use each district family is mapped for, as the "permitted" layer
+def nyc_zone(zone) -> str:
+    """NYC Zoning Resolution districts: R1-R2 single-family, R3-R5 low-rise (2-4 homes), R6-R10 apartments;
+    C4 and C7-C8 commercial, C5-C6 central (offices); M manufacturing; paired M/R districts mixed use."""
+    import re
+
+    z = zone.upper().strip() if isinstance(zone, str) else ""
+    if "/" in z or z.startswith("BPC"):
+        return "mix"
+    if z.startswith("PARK"):
+        return "opn"
+    m = re.match(r"([RCM])(\d+)", z)
+    if not m:
+        return "unknown"
+    kind, n = m.group(1), int(m.group(2))
+    if kind == "R":
+        return "sf" if n <= 2 else "mf_small" if n <= 5 else "mf"
+    if kind == "C":
+        return "off" if n in (5, 6) else "ret"
+    return "ind"
+
+
+PHILADELPHIA_ZONE = [("SPPO", "opn"), ("IRMX", "mix"), ("ICMX", "ind"), ("RSD", "sf"), ("RSA", "sf"),
+                     ("RTA", "mf_small"), ("RMX", "mix"), ("RM", "mf"), ("CMX", "mix"), ("CA", "ret"),
+                     ("I1", "ind"), ("I2", "ind"), ("I3", "ind"), ("IP", "ind")]
+MILWAUKEE_ZONE = {"RS": "sf", "RT": "mf_small", "RM": "mf", "RO": "mix", "NS": "ret", "LB": "ret", "RB": "ret",
+                  "CS": "ret", "C9": "mix", "IO": "off", "IL": "ind", "IM": "ind", "IH": "ind", "PK": "opn"}
+
+
+def philadelphia_zone(zone) -> str:
+    z = zone.upper().replace("-", "").strip() if isinstance(zone, str) else ""
+    return next((cls for prefix, cls in PHILADELPHIA_ZONE if z.startswith(prefix)), "unknown")
+
+
+def milwaukee_zone(zone) -> str:
+    z = zone.upper().strip() if isinstance(zone, str) else ""
+    return MILWAUKEE_ZONE.get(z[:2], "unknown")

@@ -119,3 +119,91 @@ def test_los_angeles_plan_and_zone_classes():
     assert los_angeles_zone("RD1.5", "1123") == "mf_small" and los_angeles_zone("R3", "1123") == "mf"
     assert los_angeles_zone("RE11", "1111") == "sf" and los_angeles_zone("RAS4", "1600") == "mf"
     assert los_angeles_zone("C2", "1220") == "ret" and los_angeles_zone("PVSP", "7777", "1600") == "mix"
+
+
+def test_cmap_crosswalk_covers_the_code_list():
+    from planarena.sources.crosswalk import CMAP, CMAP_UNKNOWN, cmap
+    from planarena.taxonomy import KEYS
+
+    # the 57 codes of the CMAP Land Use Inventory code list (2020 and 2023)
+    assert len(set(CMAP) | set(CMAP_UNKNOWN)) == 57 and all(v in KEYS for v in CMAP.values())
+    assert cmap("1111") == "sf" and cmap("1111", 2) == "mf_small" and cmap("1130", 24) == "mf" and cmap("1130") == "mf"
+    assert cmap("1111", 3, "Multifamily-Mixed Use, Low rise (3 floors or less)") == "mix"
+    assert cmap("1215", None, "Office-Multitenant") == "off" and cmap("1215", None, "Retail-Restaurants") == "ret"
+    assert cmap("1215", None, "Office-Medical Office Buildings/Spaces") == "hlt"
+    assert cmap("1420", None, "Industrial-Storage Warehouses") == "whs" and cmap("1420") == "ind"
+    assert cmap("1540") == "prk" and cmap("4210") == "vac" and cmap("1360") == "opn" and cmap("6000") == "unknown"
+
+
+def test_chicago_zoning_families():
+    from planarena.cities.adapters.chicago import ALL, zone_rule
+    from planarena.config import USE_INDEX as U
+
+    on = lambda z, k: bool((zone_rule(z)[0] >> U[k]) & 1)
+    assert zone_rule("RS-3")[1] == "sf" and zone_rule("RT-4")[1] == "mf_small" and zone_rule("RM-5")[1] == "mf"
+    assert on("B2-3", "res") and not on("B3-2", "res") and on("B3-2", "mix") and not on("M2-3", "res")
+    assert on("PMD 4", "ind") and zone_rule("DX-12")[1] == "mix" and on("POS-1", "opn") and not on("POS-1", "com")
+    assert zone_rule("PD 1234") == (ALL, "unknown")  # planned developments follow their own ordinance
+
+
+def test_houston_crosswalk():
+    from planarena.sources.crosswalk import HOUSTON, houston
+    from planarena.taxonomy import KEYS
+
+    assert all(v in KEYS for v in HOUSTON.values())
+    assert houston("1001", "Single-Family Residential", "A1") == "sf" and houston("1001", None, "B2") == "mf_small"
+    assert houston("4211", "Multi-Family Residential", "B1") == "mf" and houston("4349") == "hlt"
+    assert houston("4380") == "whs" and houston("4612") == "edu" and houston("4339") == "prk"
+    assert houston("4600", "Park & Open Spaces") == "opn" and houston("4600", "Undeveloped") == "vac"
+    assert houston("4393", "Industrial") == "ind" and houston(None, None) == "unknown"
+
+
+def test_dallas_crosswalk():
+    from planarena.sources.crosswalk import DALLAS, dallas
+    from planarena.taxonomy import KEYS
+
+    assert all(v in KEYS for v in DALLAS.values())
+    assert dallas("Single Family Detached", " ") == "sf" and dallas("Single Family Detached", "Vacant") == "vac"
+    assert dallas("Multi-Family", " ", "APARTMENT (BRICK EXTERIOR)", 120) == "mf" and dallas("Multi-Family", None, None, 3) == "mf_small"
+    assert dallas("Commercial", " ", "OFFICE/SHOWROOM") == "ret" and dallas("Office", " ", "MEDICAL OFFICE BUILDING") == "hlt"
+    assert dallas("Light Industrial", " ", "STORAGE WAREHOUSE") == "whs" and dallas("Public or Institutional", " ", "SCHOOL") == "edu"
+    assert dallas("Open Space", "Vacant") == "opn" and dallas("Transportation", " ", "PARKING GARAGE") == "prk"
+    assert dallas("Commercial", " ", "VETERINARY HOSPITAL") == "ret" and dallas(None) == "unknown"
+
+
+def test_dallas_zoning_and_plan():
+    from planarena.cities.adapters.dallas import ALL, zone_rule
+    from planarena.config import USE_INDEX as U
+    from planarena.sources.crosswalk import dallas_plan
+
+    on = lambda z, k: bool((zone_rule(z)[0] >> U[k]) & 1)
+    assert zone_rule("R-7.5(A)")[1] == "sf" and zone_rule("D(A)")[1] == "mf_small" and zone_rule("MF-2(A)")[1] == "mf"
+    assert zone_rule("RR")[1] == "ret" and zone_rule("GO(A)")[1] == "off" and on("MU-3(SAH)", "res") and not on("IM", "res")
+    assert zone_rule("PD") == (ALL, "unknown") and zone_rule("CD") == (ALL, "unknown")
+    assert dallas_plan("Community Residential") == "sf" and dallas_plan("Logistics/Industrial Park") == "whs"
+    assert dallas_plan("Regional Mixed-Use") == "mix" and dallas_plan(None) == "unknown"
+
+
+def test_san_antonio_phoenix_san_diego_crosswalks():
+    from planarena.sources.crosswalk import (SANDAG, phoenix, phoenix_plan, san_antonio, san_antonio_plan,
+                                             san_antonio_zone, san_diego_plan, san_diego_zone, sandag)
+    from planarena.taxonomy import KEYS
+
+    # San Antonio: BCAD property class; city plan categories and zoning bases
+    assert san_antonio("A1") == "sf" and san_antonio("B2") == "mf_small" and san_antonio("B1", 3) == "mf_small"
+    assert san_antonio("F1") == "ret" and san_antonio("C1") == "vac" and san_antonio(None) == "unknown"
+    assert san_antonio_plan("Urban Low Density Residential") == "mf_small" and san_antonio_plan("Regional Mixed-Use") == "mix"
+    assert san_antonio_plan("Parks/Open Space") == "opn" and san_antonio_plan("City/State/Federal Government") == "civ"
+    assert san_antonio_zone("R-6") == "sf" and san_antonio_zone("RM-4") == "mf_small" and san_antonio_zone("MF-33") == "mf"
+    assert san_antonio_zone("L") == "ind" and san_antonio_zone("DR") == "unknown" and san_antonio_zone("OCL") == "unknown"
+    # Phoenix: assessor property use group, MAG for ownership groups; General Plan code descriptions
+    assert phoenix("01") == "sf" and phoenix("37") == "whs" and phoenix("02", "PRIVATE RDWY - QUALIFIED") == "tra"
+    assert phoenix("97", None, "Active Open Space") == "opn" and phoenix("92", None, "Religious/Institutional") == "civ"
+    assert phoenix_plan("Residential 3.5 to 5 du / acre") == "sf" and phoenix_plan("Residential 15+ du / acre") == "mf"
+    assert phoenix_plan("Parks / Open Space-Public") == "opn" and phoenix_plan("MU (Commercial/Industrial)") == "ind"
+    assert phoenix_plan("Mixed Use (Commercial / 10-15 du/ac)") == "mix" and phoenix_plan("Undesignated") == "unknown"
+    # San Diego: SANDAG land use (104 codes), General Plan categories by density, base zones
+    assert len(SANDAG) == 104 and all(v in KEYS for v in SANDAG.values())
+    assert sandag(1110) == "sf" and sandag(1200, 3) == "mf_small" and sandag(6502) == "hlt" and sandag(9501) == "vac"
+    assert san_diego_plan("Residential", 9) == "sf" and san_diego_plan("Residential", 36) == "mf"
+    assert san_diego_zone("RS-1-7") == "sf" and san_diego_zone("CC-3-5") == "ret" and san_diego_zone("CCPD-CORE") == "unknown"

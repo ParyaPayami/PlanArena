@@ -19,6 +19,8 @@ import pandas as pd
 import shapely
 
 from planarena.cities.common import finish_twin
+from planarena.sources import crosswalk
+from planarena.taxonomy import INDEX as TAX_INDEX
 from planarena.cities.registry import city_dir, register
 from planarena.config import PROJECTED_CRS
 from planarena.national import census, places
@@ -45,6 +47,7 @@ def build() -> dict:
     g["geometry"] = g.geometry.make_valid()
     log(f"{len(g):,} lots in five boroughs")
     df = tabulate(g)
+    df["zone16"] = np.array([TAX_INDEX.get(crosswalk.nyc_zone(z), -1) for z in df.zone], dtype="int16")
     bct = g["BCTCB2020"].fillna("").astype(str).str.replace(r"\.0$", "", regex=True)
     df["census_block"] = ["36" + BOROUGHS[b[0]][1] + b[1:] if len(b) == 11 and b[0] in BOROUGHS else "" for b in bct]
 
@@ -69,6 +72,7 @@ def build() -> dict:
         "source_archive": json.loads((DIR / "SOURCE.json").read_text()),
         "data_quality": {"missing_land_use": int((df.use < 0).sum()), "lots_without_2020_block": int(miss.sum()),
                          "zero_building_area": int((df.bldg_area <= 0).sum()),
+                         "homes_census_2020": int(blocks.HU100.sum()),
                          "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
         "columns": {"lot boundaries": "observed (tax lots)", "floor area": "observed (MapPLUTO)",
                     "land use": "observed (MapPLUTO)", "homes": "observed (MapPLUTO)",

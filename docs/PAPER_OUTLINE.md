@@ -9,7 +9,7 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 **Question:** For each parcel and scenario, PlanArena distinguishes what exists (official land use), what is permitted (zoning), what is planned (the adopted future land use), what is likely (redevelopment model) and what is recommended (optimizer). Does this integration give plan assessments closer to what actually gets built than capacity-based scenario buildout (the approach of density-based scenario tools)?
 
-**Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports to, and analyses scenarios from, ArcGIS Urban; it does not compete with it as a design tool.
+**Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports to, and analyses scenarios from, ArcGIS Urban; it does not compete with it as a design tool. UrbanFootprint and CommunityViz are reviewed with UrbanSim in [RELATED_TOOLS.md](RELATED_TOOLS.md): none publishes a land-use optimizer; the methods PlanArena adopts from them (growth-target allocation, pro forma feasibility, build-out, constraint screens) are listed there.
 
 **Target venue:** a planning-analytics journal (for example *Environment and Planning B*). Not the journal that rejected the earlier PIMALUOS submission.
 

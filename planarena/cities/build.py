@@ -16,13 +16,13 @@ import sys
 CITIES = {
     "3651000": ("New York, NY", "nyc"),
     "0644000": ("Los Angeles, CA", "losangeles"),
-    "1714000": ("Chicago, IL", None),
-    "4835000": ("Houston, TX", None),
-    "0455000": ("Phoenix, AZ", None),
+    "1714000": ("Chicago, IL", "chicago"),
+    "4835000": ("Houston, TX", "houston"),
+    "0455000": ("Phoenix, AZ", "phoenix"),
     "4260000": ("Philadelphia, PA", "philadelphia"),
-    "4865000": ("San Antonio, TX", None),
-    "0666000": ("San Diego, CA", None),
-    "4819000": ("Dallas, TX", None),
+    "4865000": ("San Antonio, TX", "sanantonio"),
+    "0666000": ("San Diego, CA", "sandiego"),
+    "4819000": ("Dallas, TX", "dallas"),
     "5553000": ("Milwaukee, WI", "milwaukee"),
 }
 

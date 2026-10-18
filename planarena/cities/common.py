@@ -57,6 +57,24 @@ def districts(blocks: gpd.GeoDataFrame, blk: np.ndarray) -> np.ndarray:
     return tract.map(code).to_numpy()[blk].astype("int32")
 
 
+def overture_buildings(geoid: str, geoms, crs: str) -> tuple[np.ndarray, np.ndarray]:
+    """Per lot: floor area (footprint x floors) and the most floors of the Overture buildings whose representative
+    point lies in it. Floors are Overture's num_floors, else height / floor height, else 1 (estimated). NaN floors
+    where a lot has no building. Used only where the city's records have no building data."""
+    from planarena.national import overture
+
+    lots = gpd.GeoSeries(geoms, crs=crs)
+    bld = overture.fetch(geoid, tuple(lots.to_crs(4326).total_bounds), "buildings")
+    bld = bld[~bld.is_underground.fillna(False).astype(bool)].to_crs(crs)
+    fl = pd.to_numeric(bld.num_floors, errors="coerce").astype(float).fillna(
+        pd.to_numeric(bld.height, errors="coerce").astype(float) / FLOOR_HEIGHT_M)
+    fl = fl.round().clip(lower=1).fillna(1).to_numpy()
+    i, k = shapely.STRtree(lots.values).query(bld.geometry.representative_point().values, predicate="within")
+    o = pd.DataFrame({"lot": k, "fa": bld.geometry.area.to_numpy()[i] * fl[i], "fl": fl[i]})
+    n = len(lots)
+    return o.groupby("lot").fa.sum().reindex(range(n)).fillna(0).to_numpy(), o.groupby("lot").fl.max().reindex(range(n)).to_numpy()
+
+
 MAX_PLAUSIBLE_FAR = 50.0  # above any US building (the tallest Manhattan towers are near FAR 30-40 on their lots)
 
 
@@ -153,10 +171,19 @@ def jobs_rates(out: Path, jobs_block: np.ndarray, blk: np.ndarray) -> dict:
                      "EIA CBECS 2018 value. Range +/-25% (assumption).",
            "calibration_target_jobs": n_jobs}
     fit = dict(zip(cols, rates))
+    bounded = []
     for c, k in keys.items():
         r = fit.get(c, 0.0)
         v = float(round(1.0 / r, 1)) if r > 1e-9 else float(fallback[k])
+        # a fitted rate more than 4x away from the CBECS value means the block fit cannot separate this type (e.g.
+        # little floor area of it, or its jobs counted at other addresses): the CBECS value is used instead
+        if not fallback[k] / 4 <= v <= fallback[k] * 4:
+            bounded.append(f"{k} (fitted {v:,.0f})")
+            v = float(fallback[k])
         res[k] = {"value": v, "low": round(v * 0.8, 1), "high": round(v * 1.25, 1)}
+    if bounded:
+        res["replaced_by_cbecs"] = ", ".join(bounded)
+        res["source"] += " Fitted rates more than 4x from the CBECS value were replaced by it: " + res["replaced_by_cbecs"] + "."
     return res
 
 

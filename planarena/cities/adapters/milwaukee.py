@@ -232,6 +232,7 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
     df["max_far"] = np.maximum(bg.map(ctx).fillna(df.built_far[built].quantile(0.9)).to_numpy(), df.built_far.to_numpy())
     df["resid_far"] = df["comm_far"] = df["facil_far"] = df["max_far"]
     df["allowed"] = fam.map(lambda f: ZONING_FAMILY.get(f, ALL)).to_numpy().astype("int64")
+    df["zone16"] = np.array([TAX_INDEX.get(crosswalk.milwaukee_zone(z), -1) for z in zone], dtype="int16")
     alders = sorted(d for d in df.cd.unique() if d > 0)
     if history:
         df["lot_area"] = p.geometry.area.to_numpy()  # older files lack lot area in some years; use the polygon
@@ -244,7 +245,8 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
         "data_quality": {"missing_land_use": int((df.use < 0).sum()), "tax_keys": int(len(g)),
                          "condo_parcels": int((p.n_keys > 1).sum()), "zero_building_area": int((df.bldg_area <= 0).sum()),
                          "lots_outside_census_blocks": int(miss.sum()), "lot_area_from_polygon": n_lot_fixed, "floor_area_implausible_dropped": n_fa_dropped,
-                         "columns_missing_in_source": str(g["_missing"].dropna().iloc[0]) if "_missing" in g and g["_missing"].notna().any() else "", "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum()))},
+                         "columns_missing_in_source": str(g["_missing"].dropna().iloc[0]) if "_missing" in g and g["_missing"].notna().any() else "", "jobs_lodes": int(round(jobs_block[np.unique(blk)].sum())),
+                         "homes_census_2020": int(blocks.HU100.sum())},
         "columns": {"lot boundaries": "observed (city parcels)", "floor area": "observed (MPROP BLDG_AREA)",
                     "land use": "observed (MPROP land-use group)",
                     "homes": "observed (MPROP NR_UNITS on residential and mixed parcels only)",

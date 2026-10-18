@@ -19,7 +19,8 @@ Source: SCAG 2020 Annual Land Use (existing use, General Plan and zoning as comp
 | Homes | 1,476,275 | 1,496,435 (Census 2020 housing units) | 0.99 |
 | Jobs (fitted to LODES, so not a check) | 1,917,454 | 1,917,454 (LODES workplace jobs) | 1.00 |
 
-Fitted floor area per worker (sq ft): office 308, retail 1,062, other commercial 226, factory 1,067, storage 1,864, public facility 504, transport utility 284.
+Fitted floor area per worker (sq ft): office 308, retail 1,062, other commercial 1,378, factory 1,067, storage 1,864, public facility 504, transport utility 1,429.
+Replaced by the CBECS value because the fit was more than 4x away: other_commercial (fitted 226), transport_utility (fitted 284).
 
 ## Land-use classes
 
@@ -46,7 +47,7 @@ Plan and zoning layers often distinguish fewer classes than the existing-use lay
 | Unknown | 423 | 193 | 565 | | |
 
 Existing use already matches the plan's class on 75.4% of parcels, and its analysis group on 91.6%.
-The existing use is allowed by the zoning screen on 98.4% of parcels (legal non-conforming uses and specific plans account for the rest).
+The existing use is allowed by the zoning screen on 98.4% of parcels (legal non-conforming uses and planned developments account for the rest).
 
 ## Data quality
 
