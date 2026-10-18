@@ -97,3 +97,14 @@ def test_implausible_floor_area_is_dropped():
 
     fa, n = plausible_floor_area(np.array([268_563_964.0, 50_000.0]), np.array([26_524.0, 10_000.0]))
     assert n == 1 and fa[0] == 0 and fa[1] == 50_000
+
+
+def test_philadelphia_uses_and_zoning():
+    from planarena.cities.adapters.philadelphia import allowed, use_of
+    from planarena.config import USE_INDEX as U
+
+    assert use_of("1", "ROW PORCH FRONT") == "res" and use_of("3", "ROW MIXED-COM/RES-BLT AS RES") == "mix"
+    assert use_of("4", "SCHOOL") == "pub" and use_of("4", "PARKING GARAGE/DECK") == "prk" and use_of("6", None) == "vac"
+    assert use_of(None, float("nan")) == "unknown"
+    assert not (allowed("RSA5") >> U["ind"]) & 1 and (allowed("ICMX") >> U["ind"]) & 1
+    assert (allowed("SPPOA") >> U["opn"]) & 1 and not (allowed("SPPOA") >> U["res"]) & 1

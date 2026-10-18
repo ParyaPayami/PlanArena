@@ -121,7 +121,10 @@ def tiers():
         return None
     t = {n: _load(f"tier_a_vs_b_{n}") for n in names}
     raw = [t[n]["floor_area_by_block"]["total_ratio"] for n in names]
-    corr = [raw[i] / np.median([raw[j] for j in range(len(raw)) if j != i]) for i in range(len(raw))]
+    from planarena.cities.landuse_model import group
+
+    corr = [raw[i] / np.median([raw[j] for j in range(len(raw)) if group(names[j]) != group(names[i])])
+            for i in range(len(raw))]
     acc = [t[n]["land_use"]["accuracy"] for n in names]
     maj = [t[n]["land_use"]["majority_class_accuracy"] for n in names]
     fig, axes = plt.subplots(1, 2, figsize=(6.6, 2.6))

@@ -221,12 +221,15 @@ def floor_area_correction() -> tuple[float, list[str]]:
     """Median Tier A / Tier B floor-area ratio over the comparison cities (planarena.cities.compare), or 1."""
     from planarena.config import ROOT
 
+    files = {f.stem[len("tier_a_vs_b_"):]: f for f in (ROOT / "results" / "validation").glob("tier_a_vs_b_*.json")}
+    if "newyork" in files:  # Manhattan is part of New York City: count the city once
+        files.pop("manhattan", None)
     rs, names = [], []
-    for f in sorted((ROOT / "results" / "validation").glob("tier_a_vs_b_*.json")):
+    for name, f in sorted(files.items()):
         r = json.loads(f.read_text())["floor_area_by_block"].get("total_ratio")
         if r:
             rs.append(r)
-            names.append(f.stem[len("tier_a_vs_b_"):])
+            names.append(name)
     return (float(np.median(rs)), names) if rs else (1.0, [])
 
 

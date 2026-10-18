@@ -81,7 +81,7 @@ PlanArena opens with the Manhattan demo. The city name in the Studio's header op
 
 | Tier | Where | Lots | Land use, floor area, homes | Value and zoning |
 |---|---|---|---|---|
-| **B** (parcel records) | Manhattan demo and all of New York City (NYC MapPLUTO); Milwaukee (MPROP); every Massachusetts city and town (MassGIS L3); every Florida place (DOR parcel maps and tax roll) | assessors' parcels | from the records | value from the records; zoning simplified (Milwaukee district families), not interpreted (Massachusetts) or absent (Florida) |
+| **B** (parcel records) | Manhattan demo and all of New York City (NYC MapPLUTO); Philadelphia (OPA); Milwaukee (MPROP); every Massachusetts city and town (MassGIS L3); every Florida place (DOR parcel maps and tax roll) | assessors' parcels | from the records | value from the records; zoning simplified (Milwaukee district families), not interpreted (Massachusetts) or absent (Florida) |
 | **A** (national open data) | any other US place | pseudo-lots: each building's cell within its 2020 census block | estimated from Overture buildings, places and land use (a model trained on the Tier B cities); homes are Census 2020 housing units by block | none (hidden in the UI) |
 
 Every Tier A and Tier B city gets its own coefficients: energy use from EIA RECS 2020 (by state) and CBECS 2018 (by census division); emission factors from EPA eGRID2023 (by state) and the EPA GHG Emission Factors Hub; and jobs rates fitted to that city's LODES blocks. Each twin records, column by column, what is observed, estimated or missing (`twin_meta.json`; Methods dialog).
@@ -103,7 +103,7 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Manhattan | Lots | 45,808 pseudo-lots | 42,075 parcels |
 | Manhattan | Land use of built lots (accuracy; macro F1) | 63%; 0.274 (majority class 50%) | records |
 | Manhattan | Floor area by census block (total; log r; median error) | 1.22×; 0.797; 18% | records |
-| Manhattan | Floor area total after the correction learned from the other cities | 0.88× | records |
+| Manhattan | Floor area total after the correction learned from the other cities | 0.83× | records |
 | Manhattan | Homes by census block, Census 2020 vs city records (total; r) | 0.92×; 0.765 | records |
 | Manhattan | Jobs by census block vs LODES (r; in-sample) | 0.517 | 0.647 |
 | Manhattan | Building emissions vs LL84 2023, 5,634 buildings (total; median error) | 0.72×; 42% | 0.86×; 33% |
@@ -125,10 +125,24 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Milwaukee | Floor area total after the correction learned from the other cities | 1.17× | records |
 | Milwaukee | Homes by census block, Census 2020 vs city records (total; r) | 0.94×; 0.872 | records |
 | Milwaukee | Jobs by census block vs LODES (r; in-sample) | 0.628 | 0.567 |
-| Cambridge | Land use from a model trained on Gainesville, Manhattan, Milwaukee (accuracy; macro F1) | 89%; 0.316 (rules 87%; 0.311) | records |
-| Gainesville | Land use from a model trained on Cambridge, Manhattan, Milwaukee (accuracy; macro F1) | 85%; 0.286 (rules 84%; 0.288) | records |
-| Manhattan | Land use from a model trained on Cambridge, Gainesville, Milwaukee (accuracy; macro F1) | 60%; 0.244 (rules 63%; 0.274) | records |
-| Milwaukee | Land use from a model trained on Cambridge, Gainesville, Manhattan (accuracy; macro F1) | 91%; 0.300 (rules 91%; 0.287) | records |
+| New York | Lots | 832,352 pseudo-lots | 856,634 parcels |
+| New York | Land use of built lots (accuracy; macro F1) | 87%; 0.315 (majority class 84%) | records |
+| New York | Floor area by census block (total; log r; median error) | 1.17×; 0.866; 25% | records |
+| New York | Floor area total after the correction learned from the other cities | 0.80× | records |
+| New York | Homes by census block, Census 2020 vs city records (total; r) | 0.94×; 0.663 | records |
+| New York | Jobs by census block vs LODES (r; in-sample) | 0.529 | 0.626 |
+| Philadelphia | Lots | 412,620 pseudo-lots | 547,410 parcels |
+| Philadelphia | Land use of built lots (accuracy; macro F1) | 90%; 0.274 (majority class 89%) | records |
+| Philadelphia | Floor area by census block (total; log r; median error) | 1.69×; 0.824; 62% | records |
+| Philadelphia | Floor area total after the correction learned from the other cities | 1.28× | records |
+| Philadelphia | Homes by census block, Census 2020 vs city records (total; r) | 1.00×; 0.960 | records |
+| Philadelphia | Jobs by census block vs LODES (r; in-sample) | 0.496 | 0.544 |
+| Cambridge | Land use from a model trained on Gainesville, Manhattan, Milwaukee, Newyork, Philadelphia (accuracy; macro F1) | 89%; 0.363 (rules 87%; 0.311) | records |
+| Gainesville | Land use from a model trained on Cambridge, Manhattan, Milwaukee, Newyork, Philadelphia (accuracy; macro F1) | 85%; 0.321 (rules 84%; 0.288) | records |
+| Manhattan | Land use from a model trained on Cambridge, Gainesville, Milwaukee, Philadelphia (accuracy; macro F1) | 60%; 0.272 (rules 63%; 0.274) | records |
+| Milwaukee | Land use from a model trained on Cambridge, Gainesville, Manhattan, Newyork, Philadelphia (accuracy; macro F1) | 91%; 0.354 (rules 91%; 0.287) | records |
+| Newyork | Land use from a model trained on Cambridge, Gainesville, Milwaukee, Philadelphia (accuracy; macro F1) | 87%; 0.327 (rules 87%; 0.317) | records |
+| Philadelphia | Land use from a model trained on Cambridge, Gainesville, Manhattan, Milwaukee, Newyork (accuracy; macro F1) | 88%; 0.303 (rules 90%; 0.275) | records |
 | | | | |
 | New York City, 11,580 benchmarked buildings outside Manhattan | Emissions with national coefficients (total; median error) | 0.54×; 40% | |
 | New York City, 11,580 benchmarked buildings outside Manhattan | Emissions with manhattan ll84 coefficients (total; median error) | 0.81×; 32% (chosen) | |

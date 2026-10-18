@@ -1,6 +1,6 @@
 """Build any US place with the best data available for it.
 
-Tier B where an adapter covers the place (New York City: MapPLUTO; Milwaukee: MPROP; every Massachusetts city and town: MassGIS L3; every
+Tier B where an adapter covers the place (New York City: MapPLUTO; Milwaukee: MPROP; Philadelphia: OPA; every Massachusetts city and town: MassGIS L3; every
 Florida place: DOR parcel maps and tax roll), Tier A (national open data) everywhere else.
 
 Run:  python -I -m planarena.cities.build <GEOID or "City, ST">
@@ -14,11 +14,12 @@ from planarena.national import places
 
 MILWAUKEE = "5553000"
 NEW_YORK = "3651000"
+PHILADELPHIA = "4260000"
 
 
 def tier_for(geoid: str) -> str:
     pl = places.place(geoid)
-    return "B" if geoid in (MILWAUKEE, NEW_YORK) or pl["state"] in ("MA", "FL") else "A"
+    return "B" if geoid in (MILWAUKEE, NEW_YORK, PHILADELPHIA) or pl["state"] in ("MA", "FL") else "A"
 
 
 def build(target: str) -> dict:
@@ -30,6 +31,10 @@ def build(target: str) -> dict:
         from planarena.cities.adapters import nyc
 
         return nyc.build()
+    if geoid == PHILADELPHIA:
+        from planarena.cities.adapters import philadelphia
+
+        return philadelphia.build()
     if geoid == MILWAUKEE:
         from planarena.cities.adapters import milwaukee
 

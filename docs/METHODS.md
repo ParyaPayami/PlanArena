@@ -186,6 +186,11 @@ Florida (every place) uses the Department of Revenue 2026 parcel maps, which car
 
 There is no zoning in the roll, so floors are estimated from floor area and an assumed 40% coverage.
 
+Philadelphia uses the Office of Property Assessment records and the Water Department parcels. Each assessment point is placed in the parcel that contains it, and the records on one parcel are summed.
+- **Land use:** the OPA category, with institutions picked out from the building description.
+- **Parks:** land zoned parks and open space (SPPOA, SPPOP) is open space.
+- **Homes:** OPA has no unit count. Single-family records count as one home each; the rest of each census block's housing units go to its multi-family and mixed parcels by floor area (estimated).
+
 **Data checks in every Tier B adapter:**
 - recorded lot area is replaced by the polygon's area when the two differ by more than 3×;
 - floor area above FAR 50 is treated as unrecorded;

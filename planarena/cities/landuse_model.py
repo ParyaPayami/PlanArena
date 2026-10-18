@@ -3,7 +3,8 @@
 Inputs are only what Tier A has everywhere (planarena.cities.tier_a.lot_features: building size and height, Overture
 building classes, places and land-use polygons, census-block housing and population, and the rule-based label).
 Labels are the Tier B parcel use under each built pseudo-lot's representative point. Leave-one-city-out: train on the
-other Tier B cities, test on the held-out one, next to the rules on the same lots. The deployed model is trained on
+other Tier B cities, test on the held-out one, next to the rules on the same lots. Overlapping areas (Manhattan and
+New York City) are held out together. The deployed model is trained on
 all Tier B cities and used by the Tier A builder only if it beats the rules in every held-out city.
 
 Run:  python -I -m planarena.cities.landuse_model      (after planarena.cities.compare has built the Tier A twins)
@@ -21,6 +22,13 @@ from planarena.config import DATA, ROOT, USE_KEYS
 from planarena.models.common import SEED
 from planarena.national.common import NATIONAL
 
+
+
+GROUPS = {"manhattan": "nyc", "newyork": "nyc"}  # overlapping areas are held out together
+
+
+def group(city: str) -> str:
+    return GROUPS.get(city, city)
 
 
 def cities() -> list[str]:
@@ -101,7 +109,7 @@ def evaluate() -> dict:
                               "Within-city percentile ranks for continuous features and equal weight per city, all Tier B "
                               "cities with a Tier A test twin (reported here)"]}
     for test in data:
-        train = [c for c in data if c != test]
+        train = [c for c in data if group(c) != group(test)]
         if not train:
             continue
         X = pd.concat([data[c][0] for c in train], ignore_index=True)

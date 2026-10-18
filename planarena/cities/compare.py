@@ -10,6 +10,7 @@ Run:  python -I -m planarena.cities.compare [manhattan|milwaukee|cambridge|<Tier
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import geopandas as gpd
@@ -24,14 +25,15 @@ MANHATTAN = {"dir": PROCESSED, "state": "NY", "fips": "36", "label": "Manhattan"
 
 
 def config(city: str) -> dict:
-    """A Tier B city by short name ("manhattan", "milwaukee", "cambridge") or GEOID."""
+    """A Tier B city by short name ("manhattan", "milwaukee", "cambridge", "newyork") or GEOID."""
     if city == "manhattan":
         return MANHATTAN
     from planarena.cities import registry
     from planarena.national import places
 
     reg = {k: v for k, v in registry.cities().items() if v["tier"] == "B" and k != registry.DEFAULT}
-    gid = city if city in reg else next((k for k, v in reg.items() if v["label"].lower().startswith(city.lower())), None)
+    key = lambda t: re.sub(r"[^a-z]", "", t.lower())
+    gid = city if city in reg else next((k for k, v in reg.items() if key(v["label"]).startswith(key(city))), None)
     if gid is None:
         raise SystemExit(f"no Tier B city {city!r} is built")
     pl = places.place(gid)

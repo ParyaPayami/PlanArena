@@ -173,7 +173,9 @@ def _tiers() -> list[str]:
         if not t:
             continue
         lu, fa, hb, jb = t["land_use"], t["floor_area_by_block"], t["homes_by_block"], t["jobs_by_block"]
-        others = [load(f"tier_a_vs_b_{c}")["floor_area_by_block"]["total_ratio"] for c in names if c != city]
+        from planarena.cities.landuse_model import group
+
+        others = [load(f"tier_a_vs_b_{c}")["floor_area_by_block"]["total_ratio"] for c in names if group(c) != group(city)]
         corr = fa["total_ratio"] / float(np.median(others)) if others else None
         rows += [f"| {t['city']} | Lots | {num(t['tier_a']['n_parcels'])} pseudo-lots | {num(t['tier_b_parcels'])} parcels |",
                  f"| {t['city']} | Land use of built lots (accuracy; macro F1) | {pct(lu['accuracy'])}; {r3(lu['macro_f1'])} "
