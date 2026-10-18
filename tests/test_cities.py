@@ -76,3 +76,17 @@ def test_vector_tiles_and_points(client, tmp_path):
     assert feats and all(0 <= f["properties"]["i"] < n for f in feats)
     assert (tmp_path / str(z) / str(x) / f"{y}.pbf").exists()  # cached
     assert client.get(f"/city-tiles/{CITY}/3/0/0.pbf").status_code == 404  # outside the served zooms
+
+
+@pytest.mark.skipif(not registry.exists(CITY), reason="Milwaukee not built")
+def test_official_layers_are_served(client):
+    import numpy as np
+
+    h = {"X-PlanArena-City": CITY}
+    m = client.get("/api/meta", headers=h).json()
+    assert len(m["classes"]) == 16 and m["layers"]["existing"] and m["layers"]["zoning"] and not m["layers"]["plan"]
+    b = client.get("/api/layers", headers=h).content
+    lay = np.frombuffer(b, dtype="<i2").reshape(3, -1)
+    assert lay.shape[1] == m["n_parcels"] and (lay[0] >= 0).mean() > 0.99 and (lay[1] == -1).all()
+    p = client.get("/api/parcel/0", headers=h).json()
+    assert "existing_class" in p and p["plan_class"] is None and "zoning_class" in p

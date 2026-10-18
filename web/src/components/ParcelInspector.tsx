@@ -32,6 +32,7 @@ export default function ParcelInspector() {
     ? Object.entries(info.suitability).sort((a, b) => b[1] - a[1]).slice(0, 4)
     : [];
   void version;
+  const cls = (k?: string | null) => (k ? meta.classes?.find((c) => c.key === k)?.label ?? k : "none published");
   return (
     <div className={`inspector ${open ? "" : "closed"}`}>
       <div className="inspector-head" onClick={() => setOpen(!open)}>
@@ -43,6 +44,19 @@ export default function ParcelInspector() {
       </div>
       {open && (
         <>
+          {(info.existing_class || info.plan_class || info.zoning_class) && (
+            <div className="kv layers-kv">
+              <span title="The city's or regional agency's official existing land use">Existing use</span>
+              <b>{cls(info.existing_class)}</b>
+              <span title="The adopted land-use plan (future land use)">Adopted plan</span>
+              <b>
+                {info.plan_designation || cls(info.plan_class)}
+                {info.plan_consistent === false && <span className="tag warn small"> differs from existing</span>}
+              </b>
+              <span title="The use the zoning district is mapped for">Zoning class</span>
+              <b>{cls(info.zoning_class)}</b>
+            </div>
+          )}
           <div className="kv">
             <span>Zoning</span>
             <b>

@@ -330,3 +330,6 @@ button.danger { border-color: #6a2531; color: #ff9aa5; }
 .first-plan li.done { color: var(--muted); }
 .zoning-note { margin: 6px 0; }
 .zoning-note .warn { color: #e0a43a; }
+.class-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: 520px; font-size: 11px; border-radius: 12px; }
+.class-legend b { width: 100%; }
+.class-legend .legend-item { display: inline-flex; align-items: center; gap: 4px; }

@@ -54,6 +54,9 @@ interface State {
   highlight?: Highlight;
   focus?: { lon: number; lat: number; zoom: number; id: number };
   view3d: boolean;
+  /** what the map shows: the plan being edited, or one of the city's official layers */
+  mapLayer: MapLayer;
+  classLayers?: { existing: Int16Array; plan: Int16Array; zoning: Int16Array };
   tab: Tab;
   methodsOpen: boolean;
   toast?: { text: string; tone: "good" | "bad" | "info"; id: number };
@@ -75,12 +78,15 @@ interface State {
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   setTab: (t: Tab) => void;
   toggle3d: () => void;
+  setMapLayer: (l: MapLayer) => Promise<void>;
   setMethodsOpen: (b: boolean) => void;
   notify: (text: string, tone?: "good" | "bad" | "info") => void;
   changes: () => Changes;
 }
 
 const snap = (s: { use: Int16Array; far: Float32Array }): Snapshot => ({ use: s.use, far: s.far });
+
+export type MapLayer = "edit" | "existing" | "plan" | "zoning";
 
 export const useStore = create<State>((set, get) => ({
   useKeys: [],
@@ -94,6 +100,7 @@ export const useStore = create<State>((set, get) => ({
   evaluating: false,
   scope: "affected",
   view3d: false,
+  mapLayer: "edit",
   tab: "impact",
   methodsOpen: false,
 
@@ -199,6 +206,10 @@ export const useStore = create<State>((set, get) => ({
   flyTo: (lon, lat, zoom = 17) => set({ focus: { lon, lat, zoom, id: Date.now() } }),
   setTab: (tab) => set({ tab }),
   toggle3d: () => set((s) => ({ view3d: !s.view3d })),
+  setMapLayer: async (l) => {
+    if (l !== "edit" && !get().classLayers) set({ classLayers: await api.layers() });
+    set({ mapLayer: l });
+  },
   setMethodsOpen: (methodsOpen) => set({ methodsOpen }),
   notify: (text, tone = "info") => set({ toast: { text, tone, id: Date.now() } }),
 

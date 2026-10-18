@@ -14,7 +14,7 @@ import CityPicker from "../components/CityPicker";
 import FirstPlan from "../components/FirstPlan";
 import Toast from "../components/Toast";
 import { api, cityHref } from "../api";
-import { useStore, type Tab } from "../store";
+import { useStore, type MapLayer, type Tab } from "../store";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "impact", label: "Impact", icon: "📊" },
@@ -23,6 +23,13 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "studies", label: "Studies", icon: "🗂" },
   { key: "desk", label: "Desk", icon: "🧭" },
   { key: "data", label: "Import/Export", icon: "⇅" },
+];
+
+const LAYERS: { key: MapLayer; label: string; tip: string }[] = [
+  { key: "edit", label: "Plan you edit", tip: "Your scenario: the land use you paint" },
+  { key: "existing", label: "Existing", tip: "Official existing land use (the baseline)" },
+  { key: "plan", label: "Adopted plan", tip: "The city's adopted land-use plan (future land use)" },
+  { key: "zoning", label: "Zoning", tip: "The use each zoning district is mapped for" },
 ];
 
 const TOOLS: { key: MapMode; label: string; icon: string; tip: string }[] = [
@@ -124,6 +131,22 @@ export default function Studio() {
           <button onClick={s.reset} title="Back to the current land-use map">
             Reset
           </button>
+          <div className="seg" role="group" aria-label="Map layer">
+            {LAYERS.map((l) => {
+              const has = l.key === "edit" || !!meta.layers?.[l.key as "existing" | "plan" | "zoning"];
+              return (
+                <button
+                  key={l.key}
+                  className={s.mapLayer === l.key ? "on" : ""}
+                  disabled={!has}
+                  onClick={() => s.setMapLayer(l.key)}
+                  title={has ? l.tip : `${meta.city} publishes no ${l.label.toLowerCase()} layer`}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
+          </div>
           <button className={s.view3d ? "on" : ""} onClick={s.toggle3d} title="3D digital twin">
             {s.view3d ? "3D" : "2D"}
           </button>
@@ -192,7 +215,23 @@ export default function Studio() {
             s.notify(`Tax block ${b.block}: ${b.parcels.length} parcels`, "info");
           }}
           suggestionOverlay={s.overlay ?? (suitOverlay ? suit : null)}
+          classView={
+            s.mapLayer !== "edit" && s.classLayers && meta.classes
+              ? { cls: s.classLayers[s.mapLayer], classes: meta.classes, name: LAYERS.find((l) => l.key === s.mapLayer)!.label }
+              : null
+          }
         />
+        {s.mapLayer !== "edit" && meta.classes && (
+          <div className="map-legend class-legend">
+            <b>{LAYERS.find((l) => l.key === s.mapLayer)!.label}</b>
+            {meta.classes.map((c) => (
+              <span key={c.key} className="legend-item">
+                <span className="swatch" style={{ background: c.color }} /> {c.label}
+              </span>
+            ))}
+            <span className="legend-item muted small">Grey: no value. Painting edits the plan you edit.</span>
+          </div>
+        )}
         <ParcelInspector />
       </main>
       <section className="right">

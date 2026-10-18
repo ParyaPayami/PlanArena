@@ -123,7 +123,9 @@ def build() -> dict:
     gap = (fa_obs <= 0) & (fa_ov > 0) & built
     fa, n_fa_dropped = plausible_floor_area(np.where(gap, fa_ov, fa_obs), lot)
     floors = np.where(fa > 0, np.nan_to_num(fl_ov, nan=1.0), 0.0)
-    units = p.units.to_numpy().astype(float)
+    # the assessor's unit count also covers hotel rooms, storage units and other non-dwelling units: homes are
+    # counted on residential and mixed-use parcels only
+    units = np.where(np.isin(use_a, [U["res"], U["mix"]]), p.units.to_numpy().astype(float), 0.0)
 
     blocks = census.blocks(GEOID, bnd.bounds)
     inside = blocks.representative_point().within(bnd).to_numpy()
@@ -191,7 +193,7 @@ def build() -> dict:
                     "floor area": "observed living area for homes; estimated from Overture footprints for other "
                                   "buildings (the parcel layer has no commercial floor area)",
                     "floors and height": "estimated (Overture building floors or heights)",
-                    "homes": "observed (assessor unit counts)",
+                    "homes": "observed (assessor unit counts on residential and mixed-use parcels)",
                     "jobs": "observed by block (LODES), modelled by floor area",
                     "assessed value": "observed (Proposition 13 roll value: below market for long-held property)",
                     "year built": "observed (assessor effective year)", "landmarks and historic districts": "missing",

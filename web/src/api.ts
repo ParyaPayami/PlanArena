@@ -57,6 +57,14 @@ export interface CityEntry { id: string; label: string; built?: boolean; status?
 export const api = {
   cities: () => get<CityEntry[]>("/api/cities"),
   zoningSummary: (parcels: number[]) => post<ZoningSummary>("/api/zoning-summary", { parcels }),
+  /** existing use, adopted plan and zoning class of every parcel (int16 each, -1 = none) */
+  layers: async () => {
+    const r = await fetch("/api/layers", { headers: CITY_HEADER });
+    if (!r.ok) throw new Error(`/api/layers: ${r.status}`);
+    const b = await r.arrayBuffer();
+    const n = b.byteLength / 6;
+    return { existing: new Int16Array(b, 0, n), plan: new Int16Array(b, 2 * n, n), zoning: new Int16Array(b, 4 * n, n) };
+  },
   points: async () => {
     const r = await fetch("/api/points", { headers: CITY_HEADER });
     if (!r.ok) throw new Error(`/api/points: ${r.status}`);

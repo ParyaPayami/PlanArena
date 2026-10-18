@@ -46,6 +46,10 @@ export interface Meta {
   bbox: [number, number, number, number];
   levels: Record<string, string>;
   land_uses: LandUse[];
+  /** the 16 planning classes of the official layers (existing use, adopted plan, zoning) */
+  classes?: LandClass[];
+  /** which official layers this city publishes */
+  layers?: { existing: boolean; plan: boolean; zoning: boolean };
   indicators: IndicatorMeta[];
   baseline_city: Record<string, number>;
   stakeholders: Stakeholder[];
@@ -190,6 +194,14 @@ export interface Negotiation {
   ms: number;
 }
 
+export interface LandClass {
+  key: string;
+  label: string;
+  group: string;
+  color: string;
+  built: boolean;
+}
+
 export interface ParcelInfo {
   i: number;
   bbl: number;
@@ -216,6 +228,11 @@ export interface ParcelInfo {
   landmark: boolean;
   historic_district: boolean;
   allowed_uses: string[];
+  existing_class?: string | null;
+  plan_class?: string | null;
+  zoning_class?: string | null;
+  plan_designation?: string | null;
+  plan_consistent?: boolean | null;
   per_use: Record<string, Record<string, number>>;
   suitability?: Record<string, number>;
   redevelopment?: { p: number; percentile: number; likely_use: string; q: Record<string, number> };

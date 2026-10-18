@@ -7,7 +7,7 @@ import Map from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CITY } from "../api";
 import type { CityData, Highlight } from "../store";
-import type { LandUse } from "../types";
+import type { LandUse, LandClass } from "../types";
 
 const DARK_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
 const FLOOR_M = 3.5;
@@ -51,11 +51,15 @@ interface Props {
   onBlock?: (i: number, additive: boolean) => void;
   suggestionOverlay?: { top: number[]; p: number[] } | null;
   tileZoom?: [number, number];
+  /** colour by an official layer (16-class index per parcel) instead of the plan being edited */
+  classView?: { cls: Int16Array; classes: LandClass[]; name: string } | null;
 }
 
 export default function CityMap(props: Props) {
   const { data, landUses, use, far, version, selected, selVersion, preview, view3d, mode, highlight } = props;
   const colors = useMemo(() => landUses.map((u) => hexToRgb(u.color)), [landUses]);
+  const classView = props.classView;
+  const classColors = useMemo(() => (classView ? classView.classes.map((c) => hexToRgb(c.color)) : []), [classView]);
   const [box, setBox] = useState<null | { x0: number; y0: number; x1: number; y1: number; c0: number[] }>(null);
   const [lasso, setLasso] = useState<null | { screen: number[][]; geo: number[][] }>(null);
   // Refs mirror the drag state so a fast drag (start and end before a re-render) still selects.
@@ -94,6 +98,12 @@ export default function CityMap(props: Props) {
   const changedAt = (i: number) => use[i] !== base[i] || (far !== undefined && !Number.isNaN(far[i]));
 
   const fillAt = (i: number): [number, number, number, number] => {
+    if (classView) {
+      const k = classView.cls[i];
+      if (k < 0) return [90, 96, 110, 90];
+      const c = classColors[k];
+      return [c[0], c[1], c[2], 215];
+    }
     const pv = preview?.get(i);
     if (pv !== undefined) {
       const c = colors[pv];
@@ -109,7 +119,7 @@ export default function CityMap(props: Props) {
     const c = colors[u];
     return [c[0], c[1], c[2], changedAt(i) ? 250 : preview || highlight ? 80 : 190];
   };
-  const fillTriggers = [version, preview, props.suggestionOverlay, highlight?.key];
+  const fillTriggers = [version, preview, props.suggestionOverlay, highlight?.key, classView?.name];
   const polygonProps = {
     id: "parcels",
     data: features as unknown as GeoJSON.FeatureCollection["features"],
@@ -290,6 +300,10 @@ export default function CityMap(props: Props) {
         getTooltip={(info: PickingInfo) => {
           const i = pickIndex(info);
           if (i === null || mode === "paint") return null;
+          if (classView) {
+            const k = classView.cls[i];
+            return { text: `${classView.name}: ${k >= 0 ? classView.classes[k].label : "none"}`, className: "deck-tooltip" };
+          }
           const u = use[i];
           const label = u >= 0 ? landUses[u].label : "Unclassified";
           const was = base[i] !== u && base[i] >= 0 ? ` (was ${landUses[base[i]].label})` : "";

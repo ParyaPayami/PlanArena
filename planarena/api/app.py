@@ -29,6 +29,7 @@ from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
 from planarena.api import planio, store
 from planarena.cities import registry, tiles
 from planarena.config import LAND_USES, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
+from planarena.taxonomy import CLASSES
 from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
 from planarena.optimize.pareto import pareto as run_pareto
 from planarena.optimize.suggest import SuggestConfig, Suggester
@@ -303,6 +304,9 @@ def meta():
         "data_quality": e.meta.get("data_quality"), "n_parcels": e.n, "bbox": e.meta["bbox_wgs84"],
         "levels": e.meta["levels"],
         "land_uses": [{"key": u.key, "label": u.label, "color": u.color, "built": u.built} for u in LAND_USES],
+        "classes": [{"key": c.key, "label": c.label, "group": c.group, "color": c.color, "built": c.built} for c in CLASSES],
+        "layers": {k: bool((e.p[c] >= 0).any()) if c in e.p else False
+                   for k, c in (("existing", "lu16"), ("plan", "plan16"), ("zoning", "zone16"))},
         "indicators": [{"key": i.key, "label": i.label, "unit": i.unit, "pillar": i.pillar,
                         "direction": i.direction, "kind": i.kind, "provisional": e.provisional[i.key]} for i in INDICATORS],
         "baseline_city": {row["key"]: row["baseline"] for row in base["indicators"]},
@@ -332,7 +336,7 @@ def parcel(i: int):
         "built_far": float(row.built_far), "max_far": float(row.max_far), "resid_far": float(row.resid_far),
         "comm_far": float(row.comm_far), "facil_far": float(row.facil_far),
         "landmark": bool(row.landmark), "historic_district": bool(row.historic), "soft_site": bool(r["soft_sites"][i]),
-        "allowed_uses": allowed,
+        "allowed_uses": allowed, **_official_layers(row),
         "per_use": {USE_KEYS[u]: {k: float(pu[k][i, u]) for k in ("homes", "jobs", "value", "ghg", "runoff", "green_space")}
                     for u in range(len(USE_KEYS))},
     }
@@ -782,6 +786,25 @@ def cities():
                     "status": "built" if b else ("sources ready" if adapter else "sources being ingested")}
                    | ({k: v for k, v in b.items() if k not in ("id", "label")} if b else {}))
     return out
+
+
+def _official_layers(row) -> dict:
+    """The parcel's three official layers: existing use, adopted plan and zoning (16-class keys; None if missing)."""
+    cls = lambda c: CLASSES[int(row[c])].key if c in row and int(row[c]) >= 0 else None
+    ex, pl, zn = cls("lu16"), cls("plan16"), cls("zone16")
+    group = lambda k: next(c.group for c in CLASSES if c.key == k) if k else None
+    return {"existing_class": ex, "plan_class": pl, "zoning_class": zn,
+            "plan_designation": row.get("plan_designation") or None,
+            "plan_consistent": (group(ex) == group(pl)) if ex and pl else None}
+
+
+@app.get("/api/layers")
+def official_layers():
+    """Little-endian int16 arrays of the current city: existing use, adopted plan and zoning class of every parcel
+    (16-class index, -1 where the city has no such layer or the parcel no value)."""
+    p = runtime()["engine"].p
+    col = lambda c: (p[c] if c in p else pd.Series(-1, index=p.index)).to_numpy().astype("<i2").tobytes()
+    return Response(col("lu16") + col("plan16") + col("zone16"), media_type="application/octet-stream")
 
 
 @app.get("/api/points")
