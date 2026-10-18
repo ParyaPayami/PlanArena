@@ -7,6 +7,7 @@ the data maps to a class or is listed as unknown on purpose.
 from __future__ import annotations
 
 import math
+import re
 
 
 def _num(x) -> int | None:
@@ -588,3 +589,76 @@ def philadelphia_zone(zone) -> str:
 def milwaukee_zone(zone) -> str:
     z = zone.upper().strip() if isinstance(zone, str) else ""
     return MILWAUKEE_ZONE.get(z[:2], "unknown")
+
+
+# ----------------------------------------------------------------------------- LA County Assessor use codes
+# (UseCodeDescChar2 of the Parcel Data roll; a code ending in V is vacant land of that type)
+LA_COUNTY_USE = [("SINGLE FAMILY", "sf"), ("MANUFACTURED HOME PARK", "mf"), ("MANUFACTURED HOME", "sf"),
+                 ("DOUBLE, DUPLEX", "mf_small"), ("THREE UNITS", "mf_small"), ("FOUR UNITS", "mf_small"),
+                 ("FIVE OR MORE", "mf"), ("ROOMING", "mf"), ("STORE COMBINATION", "mix"), ("HOTEL", "hot"),
+                 ("OFFICE BUILDING", "off"), ("PROFESSIONAL BUILDING", "off"), ("BANK", "ret"), ("PARKING LOT", "prk"),
+                 ("WAREHOUSING", "whs"), ("OPEN STORAGE", "whs"), ("WHOLESALE", "whs"), ("LUMBER YARD", "whs"),
+                 ("MANUFACTURING", "ind"), ("FOOD PROCESSING", "ind"), ("MOTION PICTURE", "ind"),
+                 ("MINERAL PROCESSING", "ind"), ("PETROLEUM", "ind"), ("INDUSTRIAL", "ind"), ("HOSPITAL", "hlt"),
+                 ("HOMES FOR AGED", "hlt"), ("SCHOOL", "edu"), ("COLLEGE", "edu"), ("DAY CARE", "edu"),
+                 ("CHURCH", "civ"), ("GOVERNMENT OWNED", "civ"), ("CLUB, LODGE", "civ"), ("CEMETERY", "opn"),
+                 ("GOLF", "opn"), ("UTILITY", "tra"), ("RIGHTS OF WAY", "tra"), ("PIPELINE", "tra"), ("DUMP", "tra"),
+                 ("RIVERS", "opn"), ("THEATER", "ret"), ("ATHLETIC", "ret"), ("RACE TRACK", "ret"), ("BOWLING", "ret"),
+                 ("SKATING", "ret"), ("CAMP", "opn"), ("WATER RECREATION", "opn"), ("STORE", "ret"),
+                 ("RESTAURANT", "ret"), ("SHOPPING CENTER", "ret"), ("SUPERMARKET", "ret"), ("DEPARTMENT", "ret"),
+                 ("SERVICE STATION", "ret"), ("AUTO,", "ret"), ("REPAIR", "ret"), ("NURSERY", "ret"),
+                 ("KENNEL", "ret"), ("COMMERCIAL", "ret")]
+LA_COUNTY_GROUP = {"DRY FARM": "opn", "IRRIGATED FARM": "opn", "RECREATIONAL": "ret", "INSTITUTIONAL": "civ",
+                   "RESIDENTIAL": "sf", "COMMERCIAL": "ret", "INDUSTRIAL": "ind"}
+
+
+def la_county_use(use_code, desc1=None, desc2=None) -> str:
+    """LA County Assessor use code and its descriptions -> class."""
+    code = str(use_code).strip().upper() if use_code is not None else ""
+    if code.endswith("V"):
+        return "vac"
+    d2 = desc2.upper() if isinstance(desc2, str) else ""
+    for word, cls in LA_COUNTY_USE:
+        if word in d2:
+            return cls
+    return LA_COUNTY_GROUP.get(desc1.upper().strip(), "unknown") if isinstance(desc1, str) else "unknown"
+
+
+# ----------------------------------------------------------------------------- Dallas Central Appraisal District
+DCAD_STATE = {"A11": "sf", "A12": "sf", "A13": "mf", "A20": "sf", "E11": "sf", "O11": "sf", "B12": "mf_small",
+              "B11": "mf", "M31": "mf", "F10": "ret", "F20": "ind", "C11": "vac", "C12": "vac", "C13": "vac",
+              "C14": "vac", "O10": "vac", "D10": "opn", "J30": "tra", "J40": "tra", "J51": "tra"}
+
+
+def dcad(state_code, building_class=None, units=None) -> str:
+    """DCAD state property tax division code (LAND.CSV SPTD_CD) -> class; commercial and industrial improvements
+    are split by the commercial building class (as for the city's layer), residential by unit count."""
+    sc = str(state_code).strip().upper() if state_code is not None else ""
+    cls = DCAD_STATE.get(sc, "unknown")
+    bc = building_class.upper() if isinstance(building_class, str) else ""
+    if cls in ("ret", "ind") and bc:
+        for word, c in DALLAS_BUILDING:
+            if word in bc:
+                return c
+    n = _num(units)
+    if cls in ("sf", "mf") and n and sc not in ("A13",):
+        return "sf" if n <= 1 else "mf_small" if n <= 4 else "mf"
+    return cls
+
+
+# ----------------------------------------------------------------------------- Philadelphia2035 proposed land use
+# (the City Planning Commission's land-use categories, as in the district plans' Proposed Land Use maps)
+PHILADELPHIA_PLAN = {"Residential Low Density": "sf", "Residential Medium Density": "sf",  # rowhouses and twins
+                     "Residential High Density": "mf", "Commercial Consumer": "ret",
+                     "Commercial Business / Professional": "off", "Commercial Mixed Residential": "mix",
+                     "Industrial": "ind", "Civic/Institution": "civ", "Transportation": "tra",
+                     "Culture / Amusement": "ret", "Active Recreation": "opn", "Park / Open Space": "opn",
+                     "Cemetery": "opn", "Water": "opn", "Vacant": "vac"}
+
+
+def philadelphia_plan(label) -> str:
+    l = re.sub(r"\s+", " ", label).strip() if isinstance(label, str) else ""
+    for k, v in PHILADELPHIA_PLAN.items():
+        if l.lower().replace(" ", "") == k.lower().replace(" ", ""):
+            return v
+    return "unknown"

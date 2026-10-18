@@ -35,8 +35,10 @@ Write notes anywhere and send them to me; screenshots help.
 
 ## Other cities
 
-12. Click the city name at the top left. Open **Milwaukee, WI**, **Philadelphia, PA** or **New York, NY**. Paint a few parcels and check that the scoreboard reacts. Cities still being added are listed as "soon".
-13. In New York or Philadelphia (large cities), zoom out: parcels become dots; zoom in: parcel shapes load piece by piece. Selecting and painting should work at both zooms.
+12. Click the city name at the top left. All ten cities open (New York, Los Angeles, Chicago, Houston, Phoenix, Philadelphia, San Antonio, San Diego, Dallas, Milwaukee). Paint a few parcels and check that the scoreboard reacts.
+13. In a large city, zoom out: parcels become dots; zoom in: parcel shapes load piece by piece. Selecting and painting should work at both zooms.
+14. In Los Angeles or Dallas, use the map switch at the top: **Existing**, **Adopted plan** and **Zoning** colour every parcel by the city's official layer (16 classes, legend on the map). In Houston the plan and zoning buttons are greyed out (Houston has neither). Select a parcel: the inspector lists its existing use, plan designation and zoning class, and flags a plan that differs from the existing use.
+15. In Philadelphia, switch to **Adopted plan**. Districts whose plan map was digitised from the Philadelphia2035 PDF are coloured, and the others are grey (see `docs/ingestion/philadelphia.md` for which districts and their registration error). Compare one district with its PDF map: the colours should match lot by lot.
 
 ## Known limits (by design, or still open)
 

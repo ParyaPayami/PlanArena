@@ -115,8 +115,38 @@ def crosscity():
     return _save(fig, "crosscity")
 
 
+def layers():
+    r = _load("integration_cities")
+    if not r:
+        return None
+    from planarena.report import CITY_NAMES
+
+    cities = [g for g in CITY_NAMES if g in r and (r[g].get("temporal") or {}).get("gains")]
+    keys = [("E+C vs E", "+ context over E", A), ("E+C+Z vs E+C", "+ zoning over E+C", B),
+            ("E+C+P vs E+C", "+ plan over E+C", C)]
+    fig, ax = plt.subplots(figsize=(6.4, 0.42 * len(cities) + 0.9))
+    for i, g in enumerate(cities):
+        gains = r[g]["temporal"]["gains"]
+        for k, (key, label, col) in enumerate(keys):
+            if key not in gains:
+                continue
+            v, (lo, hi) = gains[key]["auc"]
+            y = i + (k - 1) * 0.22
+            ax.errorbar(v, y, xerr=[[v - lo], [hi - v]], fmt="o", ms=3.5, color=col, ecolor=col, capsize=2,
+                        label=label if i == 0 or not ax.get_legend_handles_labels()[1].count(label) else None)
+    ax.axvline(0, color=MUTED, lw=0.8)
+    ax.set_yticks(range(len(cities)), [CITY_NAMES[g] for g in cities])
+    ax.invert_yaxis()
+    ax.set_xlabel("Gain in AUC, out-of-time test window (95% bootstrap over 2 km tiles)")
+    handles, labels = ax.get_legend_handles_labels()
+    seen = dict(zip(labels, handles))
+    ax.legend(seen.values(), seen.keys(), frameon=False, fontsize=7, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.18))
+    ax.set_title("What each layer adds to predicting where development happens", fontsize=9, loc="left")
+    return _save(fig, "integration_layers")
+
+
 def main():
-    made = [f() for f in (integration, rolling, crosscity)]
+    made = [f() for f in (integration, rolling, crosscity, layers)]
     print("written:", ", ".join(m for m in made if m))
 
 

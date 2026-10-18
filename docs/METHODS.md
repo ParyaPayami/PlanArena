@@ -169,11 +169,29 @@ The GNN is kept only where the ablation shows that it adds accuracy; the redevel
 - locally designated historic properties protected;
 - aldermanic districts as districts.
 
+**Plan:** Milwaukee's comprehensive plan is a set of area plans published as PDFs on the city's website, which refuses scripted downloads. No GIS layer of them is published. The plan layer is therefore missing.
+
 Milwaukee regulates bulk with height, setback and density rules rather than one FAR. Its zoning screen is therefore simplified: the district family sets the allowed uses, and the context FAR (the 90th percentile of built FAR in the census block group, or the lot's own if higher) stands in for capacity.
 
 **Philadelphia** uses the Office of Property Assessment records and the Water Department parcels (`adapters/philadelphia.py`). Each assessment point is placed in the parcel that contains it, and the records on one parcel are summed.
 - **Land use:** the City Planning Commission's land-use layer: the smallest land-use polygon containing the parcel's representative point (street right-of-way polygons overlap blocks). Where only the two-digit code is given, the OPA category splits single- from multi-family homes and the building description picks out schools, hospitals, hotels and warehouses.
 - **Homes:** OPA has no unit count. Single-family records count as one home each; the rest of each census block's housing units go to its multi-family and mixed parcels by floor area (estimated, flagged).
+- **Adopted plan (digitised).** Philadelphia2035 publishes its land-use recommendations only as the "Proposed Land Use" maps in the 18 district plans (PDF; one document covers both Far Northeast districts). The maps are vector drawings of the Commission's land-use categories, lot by lot, and `planarena/sources/pdfplan.py` turns them into a parcel layer (`adapters/philadelphia_plan.py`):
+  1. **Legend.** Each swatch's fill colour is read with the label to its right.
+  2. **Colour matching.** Map fill colours are matched one to one to legend colours by perceptual distance (CIELAB ΔE, Hungarian assignment; the legend can be CMYK while the map is RGB). Pairs further apart than ΔE 45 are not matched.
+  3. **Visibility.** Maps often draw a wider area and clip it to the district. Only shapes that show on the page as poppler renders it are kept: the pixel colour at a point inside the shape must match that fill's rendered colour.
+  4. **Registration.** A similarity transform (scale, rotation, translation) is fitted:
+     - first, the rendered map's footprint is matched to the district parcels' footprint and to the district outline as images (rotations every 3° in ±90°, then every 0.5°; translation by FFT; Dice overlap);
+     - then it is refined by iterative closest point from each parcel centroid to the nearest shape centroid;
+     - the fit closer to the lots is kept.
+  5. **Classification.** Each parcel takes the category of the smallest shape containing its representative point.
+  6. **Checks.** Each district's map is used only if:
+     - the median parcel-to-shape distance is 10 ft or less;
+     - the plan agrees with the existing land use (16 classes) clearly more often than the same map shifted 300 ft.
+
+     Most land keeps its use in a plan, so a misregistered map fails this test. The registration error, coverage and both agreement rates are listed per district in the ingestion report.
+
+  The layer is flagged "digitised from the plan PDF". Districts whose map fails a check have no plan class.
 
 **Los Angeles** uses SCAG's 2020 Annual Land Use parcels and the LA County Assessor roll (`adapters/losangeles.py`).
 - **Three layers from one source:** existing land use (ALU20), the General Plan designation and the zone, both as compiled by SCAG in 2019. Where a specific plan governs, its own code is used. SCAG translates designations and zones into its code list, which has only generic housing codes, so residential designations and zones are classed by the city's own density categories (Low Medium I/II with R2 and RD zones are 2–4 homes; Medium and above, with R3–R5, are 5+).
@@ -235,3 +253,37 @@ Milwaukee regulates bulk with height, setback and density rules rather than one 
 - with it and candidates restricted to the likeliest fifth for redevelopment (model trained on 2015→2020).
 
 Recommended parcels are compared with 2025: redeveloped or not, and whether the recommended use appeared.
+
+## 11. Does combining the layers help? Component ablation across cities
+
+`planarena/models/integration.py` tests the claim behind PlanArena on observed history: that knowing what exists, what zoning permits, what the adopted plan intends and the neighbourhood context together predicts where change happens, what it becomes and how much housing it adds better than any of them alone.
+
+**Panels.** One row per lot at t0, every attribute measured at t0 or before:
+- **Los Angeles:** LA County Assessor rolls of January 2021, 2023 and 2025; existing use from SCAG 2020; General Plan and zoning as compiled by SCAG in 2019, so both precede every window.
+- **Dallas:** DCAD certified files 2022, 2024 and 2026; existing use at t0 from DCAD's own state codes (the city's survey is 2025); forwardDallas! (adopted 2024) and zoning are current layers.
+- **New York:** MapPLUTO 21v1, 23v1 and 25v3.1; zoning from each release; no citywide plan.
+- **Milwaukee:** MPROP 2021, 2023 and 2025 (zoning from each year); development is a new building (MPROP floor area is not consistent over time).
+- **Phoenix and San Diego:** the regional agency's land-use vintages (MAG 2022, 2024, 2026; SANDAG 2023, 2024, 2025). Development is a change to a built use of another analysis group (or more homes); unit counts at t0 are not available, so these two have no homes scenario.
+- **Left out:** lots already under construction at t0 (SCAG 1700, MAG "Developing", SANDAG 95xx), whose completion would be trivial to predict.
+
+**Outcome.** A building completed after t0, or floor area up by more than 25% and 2,000 sq ft (as in the Manhattan transition model); homes added = the increase in recorded homes.
+
+**Feature blocks:**
+- **E, existing:** analysis group of the existing use, lot area, floor area, built FAR, building age, homes, land-value share of the assessed value.
+- **C, context:** the share of lots within 400 m built (or changed use) in the five years before t0, and the neighbours' land-use mix.
+- **Z, zoning:** the zoning class, whether the existing use departs from it, and the step in homes intensity from the existing use to the zoning class.
+- **P, plan:** the same for the adopted plan.
+
+All are portable classes and ratios, with no city-specific codes.
+
+**Protocol:**
+1. **Out-of-time holdout (headline).** LightGBM fitted on the first window and scored on the next (Los Angeles, New York and Milwaukee: 2021→2023, then 2023→2025; Dallas and Phoenix: 2022→2024, then 2024→2026; San Diego: 2023→2024, then 2024→2025).
+2. **Spatial cross-fitting** on the full window (five folds of 2 km tiles), as a second view.
+3. **Scores.** Each block set gets AUC, average precision and precision in the top 1% and 5% of lots. The gain from adding a block has a 95% bootstrap interval over 2 km tiles.
+4. **Destination.** Among developed lots, the class they became is predicted by the existing use (no change), the zoning class, the plan class and the models.
+5. **Scenario assessment.** Homes added by district are compared with:
+   - zoning build-out (every lot at the homes density its zoning class reaches in the city today, the 90th percentile);
+   - plan build-out;
+   - those increments weighted by the out-of-time likelihood;
+   - the five-year trend.
+6. **Leakage control where plan and zoning are current layers.** Lots whose zoning case or plan polygon dates from t0 or later (Phoenix: zoning case year and plan insert date; San Diego: zoning implementation date) are left out in a conservative variant, reported beside the main one. Los Angeles's layers predate every window and need no such control.

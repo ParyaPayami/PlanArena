@@ -86,6 +86,21 @@ def report(target: str) -> str:
                   "(legal non-conforming uses and planned developments account for the rest)."]
     else:
         lines += ["The city has no zoning layer: every use is allowed."]
+    dig = meta.get("plan_digitised")
+    if dig:
+        lines += ["", "## Adopted plan digitised from PDF maps", "",
+                  "Each district plan's land-use map, registered to the district's parcels (METHODS section 9). A map "
+                  "is used if its median parcel-to-shape distance is at most 10 ft and the plan agrees with the existing "
+                  "use clearly more often than the same map shifted 300 ft.", "",
+                  "| District | Used | PDF pages | Median / 90th pct. error (ft) | Parcels covered | Agrees with existing use "
+                  "| Same, map shifted 300 ft |", "|---|---|---|---|---:|---:|---:|"]
+        for d, v in sorted(dig.items()):
+            if v.get("used"):
+                lines.append(f"| {d} | yes | {', '.join(map(str, v['pages']))} | {v['median_error_ft']} / "
+                             f"{v['p90_error_ft']} | {_pct(v['coverage'])} | {_pct(v['agreement_with_existing'])} | "
+                             f"{_pct(v['agreement_if_shifted_300ft'])} |")
+            else:
+                lines.append(f"| {d} | no: {v.get('reason', '')} | | | | | |")
     lines += ["", "## Data quality", "", "| Check | Value |", "|---|---:|"]
     lines += [f"| {k.replace('_', ' ')} | {v:,} |" if isinstance(v, (int, float)) else f"| {k.replace('_', ' ')} | {v} |"
               for k, v in q.items()]

@@ -7,7 +7,7 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 ## Working title and question
 
-**Question:** For each parcel and scenario, PlanArena distinguishes what exists (official land use), what is permitted (zoning), what is planned (the adopted future land use), what is likely (redevelopment model) and what is recommended (optimizer). Does this integration give plan assessments closer to what actually gets built than capacity-based scenario buildout (the approach of density-based scenario tools)?
+**Question:** For each parcel and scenario, PlanArena distinguishes what exists (official land use), what is permitted (zoning), what is planned (the adopted future land use), what is likely (redevelopment model) and what is recommended (optimizer). Does combining these layers improve predictions of where change happens and what it becomes, and give scenario assessments closer to what actually gets built than capacity-based build-out (the approach of density-based scenario tools)? The test is historical and across cities, with each layer removed in turn (component ablation, VALIDATION section H, METHODS section 11).
 
 **Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports to, and analyses scenarios from, ArcGIS Urban; it does not compete with it as a design tool. UrbanFootprint and CommunityViz are reviewed with UrbanSim in [RELATED_TOOLS.md](RELATED_TOOLS.md): none publishes a land-use optimizer; the methods PlanArena adopts from them (growth-target allocation, pro forma feasibility, build-out, constraint screens) are listed there.
 
@@ -17,11 +17,12 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 | # | Claim | Evidence (VALIDATION.md section → result file) | Limits to state |
 |---|---|---|---|
+| 0 | **Main claim (as section H shows it).** Out of time, in seven cities:<br>• Recent development and neighbour mix (context) add the most predictive value for where development happens, significantly in five cities.<br>• Zoning and the adopted plan add smaller gains on top of context: significant in some cities, large only in Phoenix, and absent in Los Angeles.<br>• Zoning and plan classes name what developed lots became far better than "no change", and the full model does better still.<br>• Likelihood-weighted totals of homes added fall between 0.8× and 2.6× of what was built (four cities), against 76–193× for zoning or plan build-out.<br>• The five-year trend ranks districts better than any projection.<br>• A model fitted on other cities predicts less well than the city's own model, except in Milwaukee. | H → `integration_cities.json` (per city: `results/validation/integration/`); [figures/integration_layers.png](figures/integration_layers.png) | Plan layers exist in four of the seven test cities, and plan and zoning are current layers in three (conservative variant reported; some gains do not survive it). Windows are short (1–2 years). Chicago's outcome is a permit, not a completed building. In Phoenix and San Diego the first land-use vintage starts the training window, so the recent-change feature exists only in the test window. Gains are in AUC; average precision and precision among the top 1% and 5% of lots are in the result files. |
 | 1 | An open, parcel-level impact engine whose change predictions beat transition-type baselines for homes and building emissions | C → `change_prediction.json` | Jobs at block level show no skill; density-only changes and access effects are not validated |
 | 2 | Likelihood-weighted projections of three Manhattan rezonings are close to the homes built by 2025; capacity-based projections are not | G → `integration_replay.json` | Three cases; few redeveloped sites; the comparison is near-term (to 2025), while reviews project full build-out |
 | 3 | The redevelopment model is tested over time (rolling origin, 2015–2025) and its labels are audited against certificates of occupancy | D → `rolling_origin.json` | Labels are noisy (audit precision is a lower bound); probabilities shift with the market |
 | 4 | The model transfers from Manhattan to Milwaukee, and pooling helps; the reverse transfer is weak | D → `crosscity_redevelopment.json` | Two cities; new-building label only; Milwaukee pairs miss split and merged parcels |
-| 5 | The three-layer workflow (existing, plan, zoning) runs in ten large US cities from official parcel-level land use | Per-city ingestion reports (to come) | Plan and zoning layers are missing in some cities; classifications are crosswalked by hand |
+| 5 | The three-layer workflow (existing, plan, zoning) runs in ten large US cities from official parcel-level land use | Per-city ingestion reports, `docs/ingestion/` | Plan and zoning layers are missing in some cities; classifications are crosswalked by hand |
 | 6 | Realism layers change what the optimizer recommends | G → `realism_ablation.json` | Plausibility is not desirability; plan scores are heuristic "best found" |
 
 **Not claimed:**
@@ -73,8 +74,25 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 ## Before submission
 
-- [ ] Clean-clone `make reproduce` matches the committed results (or the differences are explained).
-- [ ] Every reference passes `check_refs`, has a citation-log row with a page, and was read by the author.
+**Evidence**
+- [ ] Clean-clone `make reproduce` matches the committed results (or the differences are explained). It now builds all ten cities, digitises Philadelphia's plan and runs section H; expect most of a day.
+- [ ] Spot-check the digitised Philadelphia plan against the PDF maps: three districts, about 50 parcels each, recorded in a table.
+- [ ] Review each city's crosswalk (source code → 16 classes) as a planner, since the classes are crosswalked by hand. List the changes.
+- [ ] Decide whether the paper's impact claims stay Manhattan-only. Energy, emissions and jobs are validated only against New York City data; the other nine cities use national coefficients.
+
+**Writing**
+- [ ] Draft sections 1–7 above, quoting numbers from VALIDATION.md only.
+- [ ] System diagram (by hand).
+- [ ] Every reference passes `check_refs`, has a citation-log row with a page, and was read by the author. There is no `refs.bib` yet, and `citation_log.csv` has only its header.
 - [ ] Advisor review (Dr. Schermer).
 - [ ] AI-assistance statement.
-- [ ] Data and code availability statement (repository, data manifest, licences: Overture CDLA/ODbL, city open-data terms).
+
+**Release**
+- [ ] Choose a licence for the code (none is set) and add a CITATION.cff.
+- [ ] Data and code availability statement covering the repository, the data manifest and the licences:
+  - Overture: CDLA/ODbL;
+  - each city's and agency's open-data terms (SCAG, CMAP, NCTCOG/DCAD, Bexar AD, Maricopa County, SANDAG, Cook County, OPA, MPROP, MapPLUTO);
+  - the Philadelphia2035 district plans.
+
+  Check whether each source allows its derived parcel layers to be redistributed. Where it does not, release the code and the manifest only.
+- [ ] Public repository and an archived release with a DOI (for example Zenodo).

@@ -77,7 +77,7 @@ def group_of(code: int) -> int:
 
 
 NEW_COLS = ["Taxkey", "InactiveFl", "FK_LandUse", "Residentia", "YearBuilt", "NR_STORIES", "BLDG_AREA", "AssessValu",
-            "TotalLandV", "AssessExem", "TotalLandE", "ZoningCFN", "FK_Histori", "BuildingTy", "StreetNumb", "StreetDire",
+            "TotalLandV", "AssessExem", "TotalLandE", "FK_Zoning", "FK_Histori", "BuildingTy", "StreetNumb", "StreetDire",
             "StreetName", "StreetType", "DistrictNa"]
 
 
@@ -115,7 +115,7 @@ def read_mprop(path) -> pd.DataFrame:
         "TAXKEY": m.Taxkey, "HOUSE_NR_LO": m.StreetNumb, "SDIR": m.StreetDire, "STREET": m.StreetName, "STTYPE": m.StreetType,
         "C_A_LAND": m.TotalLandV, "C_A_TOTAL": m.AssessValu, "C_A_EXM_LAND": m.TotalLandE, "C_A_EXM_TOTAL": m.AssessExem,
         "BLDG_TYPE": m.BuildingTy, "NR_STORIES": m.NR_STORIES, "NR_UNITS": m.Residentia, "BLDG_AREA": m.BLDG_AREA,
-        "YR_BUILT": m.YearBuilt, "LOT_AREA": "0", "ZONING": m.ZoningCFN, "LAND_USE": code.astype(str),
+        "YR_BUILT": m.YearBuilt, "LOT_AREA": "0", "ZONING": m.FK_Zoning, "LAND_USE": code.astype(str),
         "LAND_USE_GP": code.map(group_of).astype(str), "GEO_ALDER": m.DistrictNa.str.extract(r"(\d+)")[0],
         "HIST_CODE": m.FK_Histori, "YR_ASSMT": None, "_missing": "LOT_AREA"})
 

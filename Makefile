@@ -3,7 +3,7 @@
 #   make results        rerun the models and validation on data already downloaded
 #   make compare        list result files that differ from the committed ones
 #   (a reproduction in another folder:  python -I -m planarena.tools.compare_results <folder>)
-# Needs Python 3.13, curl, pdftotext (poppler) and Node 20+ for the web app.
+# Needs Python 3.13, curl, poppler (pdftotext, pdfinfo, pdftoppm) and Node 20+ for the web app.
 # Downloaded data is untrusted: every step that reads it runs Python in isolated mode (-I).
 
 PYTHON ?= python3.13   # the version requirements.txt is pinned for
@@ -53,11 +53,18 @@ vote:
 	$(RUN) planarena.agents.voting
 	$(PY) -c "from planarena.agents.voting import sensitivity_all_districts as f; f()"
 
-# The cities with official parcel-level land use, and the cross-city and integration tests.
+CITY_LIST := "New York" "Los Angeles" Chicago Houston Phoenix Philadelphia "San Antonio" "San Diego" Dallas Milwaukee
+
+# The ten cities from official parcel-level land use (Philadelphia's plan is digitised from its PDF district plans,
+# then the city is rebuilt with it), their ingestion reports, and the cross-city and integration tests.
 cities:
-	$(RUN) planarena.cities.build "New York"
+	for c in $(CITY_LIST); do $(RUN) planarena.cities.build "$$c" || exit 1; done
+	$(RUN) planarena.cities.adapters.philadelphia_plan
 	$(RUN) planarena.cities.build Philadelphia
-	$(RUN) planarena.cities.build Milwaukee
+	for c in $(CITY_LIST); do $(RUN) planarena.cities.ingestion "$$c" > /dev/null || exit 1; done
+	$(RUN) planarena.cities.ingestion --summary > /dev/null
+	$(RUN) planarena.models.integration
+	$(RUN) planarena.models.integration transfer
 	$(RUN) planarena.cities.mke_history
 	$(RUN) planarena.models.crosscity
 	$(RUN) planarena.models.replay

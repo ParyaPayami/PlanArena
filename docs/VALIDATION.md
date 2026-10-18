@@ -294,3 +294,67 @@ Model used for each rezoning (training pairs known by the adoption year; extende
 | precedent filter + likelihood layer | 118 | 0.0% | 21.2% | 0.0% | 2.734 |
 
 For reference, 1.4% of all lots and 5.2% of the likeliest fifth were redeveloped. The plan score is the optimizer's own objective; search is heuristic, so a constraint can change the plan found in either direction.
+
+## H. Integration value across cities: component ablation on observed history
+
+Out-of-time test: fitted on the first window, scored on the next (METHODS section 11). AUC of each block set; E existing, C context, Z zoning, P adopted plan.
+
+| City | Windows (train → test) | Lots | Developed in test | E | E+C | E+C+Z | E+C+P | E+C+Z+P |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Los Angeles | 2021–2023 → 2023–2025 | 667,844 | 2,222 | 0.864 | 0.892 | 0.894 | 0.892 | 0.894 |
+| Dallas | 2022–2024 → 2024–2026 | 291,841 | 3,916 | 0.898 | 0.918 | 0.922 | 0.920 | 0.923 |
+| New York | 2021–2023 → 2023–2025 | 856,901 | 4,064 | 0.892 | 0.914 | 0.919 | – | – |
+| Milwaukee | 2021–2023 → 2023–2025 | 147,539 | 85 | 0.911 | 0.896 | 0.924 | – | – |
+| Phoenix | 2022–2024 → 2024–2026 | 503,635 | 1,835 | 0.859 | 0.793 | 0.842 | 0.847 | 0.853 |
+| San Diego | 2023–2024 → 2024–2025 | 272,281 | 202 | 0.571 | 0.687 | 0.684 | 0.707 | 0.703 |
+| Chicago | 2021–2023 → 2023–2025 | 606,294 | 1,548 | 0.824 | 0.888 | 0.891 | – | – |
+
+Gain in AUC from adding a block (out-of-time; 95% bootstrap interval over 2 km tiles; * the interval excludes zero):
+
+| City | + context over E | + zoning over E+C | + plan over E+C | + zoning and plan over E+C |
+|---|---|---|---|---|
+| Los Angeles | +0.028 [+0.020, +0.036] * | +0.002 [-0.001, +0.005] | -0.000 [-0.004, +0.003] | +0.002 [-0.001, +0.006] |
+| Dallas | +0.020 [+0.015, +0.025] * | +0.004 [+0.002, +0.005] * | +0.002 [+0.001, +0.003] * | +0.005 [+0.003, +0.007] * |
+| New York | +0.023 [+0.018, +0.029] * | +0.004 [+0.003, +0.007] * | – | – |
+| Milwaukee | -0.015 [-0.079, +0.048] | +0.029 [-0.031, +0.075] | – | – |
+| Phoenix | -0.066 [-0.139, +0.001] | +0.049 [+0.009, +0.091] * | +0.054 [+0.005, +0.100] * | +0.060 [+0.024, +0.088] * |
+| San Diego | +0.116 [+0.053, +0.170] * | -0.003 [-0.022, +0.018] | +0.021 [+0.003, +0.039] * | +0.017 [-0.004, +0.038] |
+| Chicago | +0.063 [+0.049, +0.078] * | +0.004 [+0.001, +0.007] * | – | – |
+
+Conservative variant (lots rezoned or re-planned after t0 left out, where plan and zoning are current layers):
+
+| City | Lots left out (developed) | + zoning over E+C | + plan over E+C |
+|---|---|---|---|
+| Phoenix | 1,436 (5) | +0.055 [+0.017, +0.088] * | +0.041 [+0.004, +0.073] * |
+| San Diego | 33,355 (28) | -0.009 [-0.029, +0.015] | -0.011 [-0.033, +0.007] |
+| Chicago | 17,974 (159) | -0.001 [-0.005, +0.003] | – |
+
+What developed lots became (out-of-time window): share named correctly by each layer and by the full model, as a 16-class use and as one of the nine analysis groups:
+
+| City | Developed lots | Existing use (no change) | Zoning class | Plan class | Model (layers) |
+|---|---:|---|---|---|---|
+| Los Angeles | 1,883 | 57% / 79% | 70% / 87% | 70% / 87% | 74% / 89% (E+C+Z+P) |
+| Dallas | 3,910 | 37% / 40% | 61% / 65% | 80% / 89% | 86% / 95% (E+C+Z+P) |
+| New York | 4,002 | 24% / 37% | 49% / 65% | – | 54% / 70% (E+Z) |
+| Milwaukee | 78 | 18% / 18% | 37% / 77% | – | 63% / 76% (E+Z) |
+| Phoenix | 1,835 | 0% / 35% | 64% / 74% | 47% / 62% | 75% / 81% (E+C+Z+P) |
+| San Diego | 202 | 0% / 52% | 14% / 74% | 27% / 70% | 64% / 75% (E+C+Z+P) |
+
+Homes added in the test window, by district: projections against what was built (ratio of totals; Spearman correlation across districts):
+
+| City | Observed homes | Zoning build-out | Plan build-out | Likely × zoning | Likely × plan | Five-year trend |
+|---|---:|---|---|---|---|---|
+| Los Angeles | 22,853 | 192.64× (0.10) | 188.54× (0.24) | 0.81× (0.46) | 0.81× (0.52) | 0.59× (0.70) |
+| Dallas | 10,926 | 140.72× (-0.00) | 126.94× (0.34) | 2.64× (0.00) | 1.69× (0.30) | 1.25× (0.72) |
+| New York | 116,776 | 75.92× (0.34) | – | 0.96× (0.55) | – | 0.47× (0.81) |
+| Milwaukee | 3,798 | 115.42× (-0.23) | – | 0.97× (-0.37) | – | 0.32× (0.51) |
+
+Transfer: fitted on the other cities with a building outcome, scored on the city (AUC, other cities / own city):
+
+| City | E | E+C | E+C+Z | E+C+Z+P |
+|---|---|---|---|---|
+| Los Angeles | 0.719 / 0.864 | 0.817 / 0.892 | 0.828 / 0.894 | 0.837 / 0.894 |
+| Dallas | 0.844 / 0.898 | 0.877 / 0.918 | 0.878 / 0.922 | 0.877 / 0.923 |
+| New York | 0.825 / 0.892 | 0.874 / 0.914 | 0.868 / 0.919 | 0.866 / 0.919 |
+| Milwaukee | 0.959 / 0.911 | 0.965 / 0.896 | 0.966 / 0.924 | 0.967 / 0.924 |
+| Chicago | 0.742 / 0.824 | 0.808 / 0.888 | 0.804 / 0.891 | 0.822 / 0.891 |

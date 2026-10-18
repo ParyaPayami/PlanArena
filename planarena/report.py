@@ -165,6 +165,85 @@ def _integration() -> list[str]:
 
 
 # ----------------------------------------------------------------------------- VALIDATION.md
+CITY_NAMES = {"0644000": "Los Angeles", "4819000": "Dallas", "3651000": "New York", "5553000": "Milwaukee",
+              "0455000": "Phoenix", "0666000": "San Diego", "1714000": "Chicago"}
+
+
+def _gain(g: dict | None, k: str) -> str:
+    if not g:
+        return "–"
+    v, (lo, hi) = g[k]
+    star = "" if lo <= 0 <= hi else " *"
+    return f"{v:+.3f} [{lo:+.3f}, {hi:+.3f}]{star}"
+
+
+def _integration_cities() -> list[str]:
+    r = load("integration_cities")
+    if not r:
+        return []
+    cities = [g for g in CITY_NAMES if g in r]
+    L = ["Out-of-time test: fitted on the first window, scored on the next (METHODS section 11). AUC of each block "
+         "set; E existing, C context, Z zoning, P adopted plan.", "",
+         "| City | Windows (train → test) | Lots | Developed in test | E | E+C | E+C+Z | E+C+P | E+C+Z+P |",
+         "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for g in cities:
+        t = r[g].get("temporal")
+        if not t:
+            continue
+        a = lambda k: r3(t["sets"][k]["auc"]) if k in t["sets"] else "–"
+        L.append(f"| {CITY_NAMES[g]} | {t['train'][0]}–{t['train'][1]} → {t['test'][0]}–{t['test'][1]} | "
+                 f"{num(t['n_lots'])} | {num(t['developed'])} | {a('E')} | {a('E+C')} | {a('E+C+Z')} | {a('E+C+P')} | {a('E+C+Z+P')} |")
+    L += ["", "Gain in AUC from adding a block (out-of-time; 95% bootstrap interval over 2 km tiles; * the interval "
+          "excludes zero):", "", "| City | + context over E | + zoning over E+C | + plan over E+C | + zoning and plan over E+C |",
+          "|---|---|---|---|---|"]
+    for g in cities:
+        t = r[g].get("temporal")
+        if not t:
+            continue
+        gg = t["gains"]
+        L.append(f"| {CITY_NAMES[g]} | {_gain(gg.get('E+C vs E'), 'auc')} | {_gain(gg.get('E+C+Z vs E+C'), 'auc')} | "
+                 f"{_gain(gg.get('E+C+P vs E+C'), 'auc')} | {_gain(gg.get('E+C+Z+P vs E+C'), 'auc')} |")
+    cons = [g for g in cities if r[g].get("temporal_conservative")]
+    if cons:
+        L += ["", "Conservative variant (lots rezoned or re-planned after t0 left out, where plan and zoning are current "
+              "layers):", "", "| City | Lots left out (developed) | + zoning over E+C | + plan over E+C |", "|---|---|---|---|"]
+        for g in cons:
+            c = r[g]["temporal_conservative"]
+            L.append(f"| {CITY_NAMES[g]} | {num(c['left_out_test'])} ({num(c['left_out_developed'])}) | "
+                     f"{_gain(c['gains'].get('E+C+Z vs E+C'), 'auc')} | {_gain(c['gains'].get('E+C+P vs E+C'), 'auc')} |")
+    L += ["", "What developed lots became (out-of-time window): share named correctly by each layer and by the full "
+          "model, as a 16-class use and as one of the nine analysis groups:", "",
+          "| City | Developed lots | Existing use (no change) | Zoning class | Plan class | Model (layers) |", "|---|---:|---|---|---|---|"]
+    for g in cities:
+        d = (r[g].get("temporal") or {}).get("destination")
+        if not d or not d["n"]:  # Chicago: permits do not record what the lot became
+            continue
+        f = lambda x: f"{pct(x['class'])} / {pct(x['group'])}" if x and x.get("coverage") else "–"
+        st = next((k for k in ("E+C+Z+P", "E+Z+P", "E+Z", "E+C", "E") if k in d["models"]), None)
+        L.append(f"| {CITY_NAMES[g]} | {num(d['n'])} | {f(d['layers'].get('existing (no change)'))} | "
+                 f"{f(d['layers'].get('zoning class'))} | {f(d['layers'].get('plan class'))} | "
+                 f"{f(d['models'][st]) + f' ({st})' if st else '–'} |")
+    L += ["", "Homes added in the test window, by district: projections against what was built (ratio of totals; "
+          "Spearman correlation across districts):", "",
+          "| City | Observed homes | Zoning build-out | Plan build-out | Likely × zoning | Likely × plan | Five-year trend |",
+          "|---|---:|---|---|---|---|---|"]
+    for g in cities:
+        sc = (r[g].get("temporal") or {}).get("scenario")
+        if not sc:
+            continue
+        f = lambda k: f"{times(sc[k]['ratio_total'])} ({sc[k]['district_spearman']:.2f})" if k in sc else "–"
+        L.append(f"| {CITY_NAMES[g]} | {num(sc['city_total']['observed'])} | {f('zoning_buildout')} | {f('plan_buildout')} | "
+                 f"{f('likely_zoning')} | {f('likely_plan')} | {f('trend')} |")
+    tr = r.get("transfer")
+    if tr:
+        L += ["", "Transfer: fitted on the other cities with a building outcome, scored on the city (AUC, other "
+              "cities / own city):", "", "| City | E | E+C | E+C+Z | E+C+Z+P |", "|---|---|---|---|---|"]
+        for g in [c for c in CITY_NAMES if c in tr]:
+            f = lambda k: f"{r3(tr[g][k]['other_cities']['auc'])} / {r3(tr[g][k]['own_city']['auc'])}" if k in tr[g] else "–"
+            L.append(f"| {CITY_NAMES[g]} | {f('E')} | {f('E+C')} | {f('E+C+Z')} | {f('E+C+Z+P')} |")
+    return L
+
+
 def render_validation() -> str:
     L = ["# Validation (generated)", "",
          "<!-- GENERATED by python -I -m planarena.report. Do not edit by hand. -->", "",
@@ -402,6 +481,8 @@ def render_validation() -> str:
               f"| One stakeholder given three seats (each in turn) | same winner in a median {pct(x['median_share_of_seat_allocations_with_same_winner'])} of seat allocations |", ""]
     if _integration():
         L += ["## G. Integration value: likelihood-weighted vs capacity-based projections", ""] + _integration() + [""]
+    if _integration_cities():
+        L += ["## H. Integration value across cities: component ablation on observed history", ""] + _integration_cities() + [""]
     return "\n".join(L).rstrip() + "\n"
 
 
