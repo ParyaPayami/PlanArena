@@ -81,7 +81,7 @@ PlanArena opens with the Manhattan demo. The city name in the Studio's header op
 
 | Tier | Where | Lots | Land use, floor area, homes | Value and zoning |
 |---|---|---|---|---|
-| **B** (parcel records) | Manhattan (NYC MapPLUTO); Milwaukee (MPROP); every Massachusetts city and town (MassGIS L3); every Florida place (DOR parcel maps and tax roll) | assessors' parcels | from the records | value from the records; zoning simplified (Milwaukee district families), not interpreted (Massachusetts) or absent (Florida) |
+| **B** (parcel records) | Manhattan demo and all of New York City (NYC MapPLUTO); Milwaukee (MPROP); every Massachusetts city and town (MassGIS L3); every Florida place (DOR parcel maps and tax roll) | assessors' parcels | from the records | value from the records; zoning simplified (Milwaukee district families), not interpreted (Massachusetts) or absent (Florida) |
 | **A** (national open data) | any other US place | pseudo-lots: each building's cell within its 2020 census block | estimated from Overture buildings, places and land use (a model trained on the Tier B cities); homes are Census 2020 housing units by block | none (hidden in the UI) |
 
 Every Tier A and Tier B city gets its own coefficients: energy use from EIA RECS 2020 (by state) and CBECS 2018 (by census division); emission factors from EPA eGRID2023 (by state) and the EPA GHG Emission Factors Hub; and jobs rates fitted to that city's LODES blocks. Each twin records, column by column, what is observed, estimated or missing (`twin_meta.json`; Methods dialog).
@@ -106,7 +106,7 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Manhattan | Floor area total after the correction learned from the other cities | 0.88× | records |
 | Manhattan | Homes by census block, Census 2020 vs city records (total; r) | 0.92×; 0.765 | records |
 | Manhattan | Jobs by census block vs LODES (r; in-sample) | 0.517 | 0.647 |
-| Manhattan | Building emissions vs LL84 2023, 5,638 buildings (total; median error) | 0.69×; 42% | 0.82×; 33% |
+| Manhattan | Building emissions vs LL84 2023, 5,634 buildings (total; median error) | 0.72×; 42% | 0.86×; 33% |
 | Cambridge | Lots | 13,045 pseudo-lots | 12,933 parcels |
 | Cambridge | Land use of built lots (accuracy; macro F1) | 87%; 0.306 (majority class 82%) | records |
 | Cambridge | Floor area by census block (total; log r; median error) | 1.32×; 0.874; 36% | records |
@@ -129,6 +129,9 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Gainesville | Land use from a model trained on Cambridge, Manhattan, Milwaukee (accuracy; macro F1) | 85%; 0.286 (rules 84%; 0.288) | records |
 | Manhattan | Land use from a model trained on Cambridge, Gainesville, Milwaukee (accuracy; macro F1) | 60%; 0.244 (rules 63%; 0.274) | records |
 | Milwaukee | Land use from a model trained on Cambridge, Gainesville, Manhattan (accuracy; macro F1) | 91%; 0.300 (rules 91%; 0.287) | records |
+| | | | |
+| New York City, 11,580 benchmarked buildings outside Manhattan | Emissions with national coefficients (total; median error) | 0.54×; 40% | |
+| New York City, 11,580 benchmarked buildings outside Manhattan | Emissions with manhattan ll84 coefficients (total; median error) | 0.81×; 32% (chosen) | |
 
 Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities.
 A land-use model trained on the other Tier B cities and tested on each held-out one did not beat the rules in every held-out city, so Tier A uses the rules (5 model variants tried; `results/validation/landuse_model.json`).
@@ -161,7 +164,7 @@ Models are in D and the optimizer in E.
 <!-- BEGIN GENERATED: key_results -->
 | Class | What is tested | Result |
 |---|---|---|
-| A | Building emissions vs LL84 2023 (fitted on 2024; mostly the same buildings) | total 0.99×; log–log r 0.803; median building error 31% |
+| A | Building emissions vs LL84 2023 (fitted on 2024; mostly the same buildings) | total 1.04×; log–log r 0.807; median building error 31% |
 | A | Jobs vs LODES 2023 | tract r 0.843, block r 0.727; median tract error 36% |
 | A | Homes from observed floor area (295 developed lots) | 1.039× recorded homes; median error 27% |
 | B | East Harlem FEIS sites, same floor area and use | 0.859× the FEIS homes (site r 0.940) |
@@ -170,7 +173,7 @@ Models are in D and the optimizer in E.
 | C | Change in emissions after real use changes (193 buildings) | r 0.857 (baseline 0.090); total 1.00× |
 | C | Change in jobs by census block | r 0.068: no useful skill |
 | D | Redevelopment within 5 years, temporal holdout 2020→2025 | LightGBM AUC 0.847, precision in top 1% 26% (base rate 1.4%); best baseline Land-value share of assessed value AUC 0.754 |
-| A | Building-level emissions error vs a single citywide intensity | median 31% vs 29% (totals 0.99× vs 0.92×) |
+| A | Building-level emissions error vs a single citywide intensity | median 31% vs 29% (totals 1.04× vs 0.96×) |
 | A | Jobs rates tested forward (fit 2015, test 2023), block median error | fitted rates 46%; CBECS 45%; flat rate 48% |
 | D | Redevelopment, rolling origin (15 tests, 1-, 3- and 5-year horizons) | AUC 0.847–0.952; above the best simple baseline in every test |
 | D | Labels vs DOB certificates of occupancy (2020→2025) | 55% of labelled lots have a certificate (a lower bound); labels are noisy |

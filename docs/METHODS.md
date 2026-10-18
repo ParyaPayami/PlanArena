@@ -176,7 +176,22 @@ Massachusetts (every city and town) uses the MassGIS Level 3 assessors' parcels:
 
 Zoning codes are kept but not interpreted (all uses allowed; context FAR). Districts are tract groups, as for Tier A.
 
-**Which builder runs** (`planarena/cities/build.py`): Milwaukee and Massachusetts places get Tier B; every other place gets Tier A.
+New York City as a whole uses the citywide MapPLUTO release with the same schema and zoning rules as the Manhattan demo (`planarena/cities/adapters/nyc.py`). Its energy and emission coefficients are chosen on held-out buildings. The two candidates are national (RECS/CBECS, eGRID New York State) and the Manhattan LL84 calibration. Both are scored against LL84 2023 emissions of buildings outside Manhattan, and the one with the smaller median error is kept. Jobs rates are fitted to the city's LODES blocks either way.
+
+Florida (every place) uses the Department of Revenue 2026 parcel maps, which carry the real-property roll:
+- land use from the DOR use code;
+- effective floor area of all improvements;
+- residential units, year built and just value;
+- stacked condominium units summed to one lot.
+
+There is no zoning in the roll, so floors are estimated from floor area and an assumed 40% coverage.
+
+**Data checks in every Tier B adapter:**
+- recorded lot area is replaced by the polygon's area when the two differ by more than 3×;
+- floor area above FAR 50 is treated as unrecorded;
+- LL84 records with a site EUI above 1,000 kBtu/sq ft are dropped as reporting errors (`calibrate.plausible_ll84`), in the calibration and in every validation.
+
+**Which builder runs** (`planarena/cities/build.py`): New York City, Milwaukee, Massachusetts and Florida places get Tier B; every other place gets Tier A.
 
 **Tier A (national open data, any place).**
 - **Area:** the place's TIGER boundary; 2020 census blocks whose representative point lies inside it.

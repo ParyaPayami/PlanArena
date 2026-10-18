@@ -2,17 +2,17 @@
   "test": "Existing conditions in detail: where the aggregate agreement hides local error.\n\nEmissions: errors by land use, building size and district; buildings present in both LL84 years vs one;\nheld-out buildings (EUIs refitted on a random half of LL84 2024 buildings, tested on the other half);\na citywide single-EUI baseline. Jobs: a citywide jobs-per-floor-area baseline, and errors by district.",
   "emissions_2023": {
     "all": {
-      "n": 6238,
-      "median_abs_pct_error": 0.307,
-      "log_r": 0.803,
-      "total_ratio": 0.995
+      "n": 6234,
+      "median_abs_pct_error": 0.306,
+      "log_r": 0.807,
+      "total_ratio": 1.036
     },
     "by_use": {
       "com": {
-        "n": 1242,
+        "n": 1240,
         "median_abs_pct_error": 0.329,
-        "log_r": 0.842,
-        "total_ratio": 0.953
+        "log_r": 0.85,
+        "total_ratio": 1.033
       },
       "ind": {
         "n": 50,
@@ -27,16 +27,16 @@
         "total_ratio": 0.963
       },
       "pub": {
-        "n": 637,
-        "median_abs_pct_error": 0.555,
-        "log_r": 0.66,
-        "total_ratio": 1.032
+        "n": 636,
+        "median_abs_pct_error": 0.553,
+        "log_r": 0.675,
+        "total_ratio": 1.132
       },
       "res": {
-        "n": 2513,
+        "n": 2512,
         "median_abs_pct_error": 0.3,
-        "log_r": 0.795,
-        "total_ratio": 1.055
+        "log_r": 0.796,
+        "total_ratio": 1.057
       },
       "tra": {
         "n": 23,
@@ -47,22 +47,22 @@
     },
     "by_size": {
       "100k-500k": {
-        "n": 1840,
+        "n": 1838,
         "median_abs_pct_error": 0.317,
-        "log_r": 0.6,
-        "total_ratio": 0.963
+        "log_r": 0.611,
+        "total_ratio": 1.051
       },
       "20k-100k": {
-        "n": 3996,
-        "median_abs_pct_error": 0.302,
-        "log_r": 0.5,
-        "total_ratio": 1.067
+        "n": 3995,
+        "median_abs_pct_error": 0.301,
+        "log_r": 0.501,
+        "total_ratio": 1.07
       },
       "<20k": {
-        "n": 126,
-        "median_abs_pct_error": 0.392,
-        "log_r": 0.285,
-        "total_ratio": 0.396
+        "n": 125,
+        "median_abs_pct_error": 0.383,
+        "log_r": 0.279,
+        "total_ratio": 0.63
       },
       ">500k": {
         "n": 276,
@@ -79,16 +79,16 @@
         "total_ratio": 1.149
       },
       "102": {
-        "n": 582,
-        "median_abs_pct_error": 0.322,
-        "log_r": 0.654,
-        "total_ratio": 0.935
+        "n": 581,
+        "median_abs_pct_error": 0.321,
+        "log_r": 0.658,
+        "total_ratio": 1.168
       },
       "103": {
-        "n": 312,
-        "median_abs_pct_error": 0.36,
-        "log_r": 0.721,
-        "total_ratio": 0.989
+        "n": 311,
+        "median_abs_pct_error": 0.353,
+        "log_r": 0.736,
+        "total_ratio": 1.002
       },
       "104": {
         "n": 456,
@@ -103,10 +103,10 @@
         "total_ratio": 1.024
       },
       "106": {
-        "n": 473,
+        "n": 472,
         "median_abs_pct_error": 0.288,
-        "log_r": 0.87,
-        "total_ratio": 0.816
+        "log_r": 0.885,
+        "total_ratio": 1.023
       },
       "107": {
         "n": 676,
@@ -115,16 +115,16 @@
         "total_ratio": 1.168
       },
       "108": {
-        "n": 810,
-        "median_abs_pct_error": 0.296,
-        "log_r": 0.825,
-        "total_ratio": 1.142
+        "n": 809,
+        "median_abs_pct_error": 0.295,
+        "log_r": 0.829,
+        "total_ratio": 1.148
       },
       "109": {
         "n": 437,
-        "median_abs_pct_error": 0.37,
-        "log_r": 0.617,
-        "total_ratio": 1.175
+        "median_abs_pct_error": 0.366,
+        "log_r": 0.634,
+        "total_ratio": 1.206
       },
       "110": {
         "n": 324,
@@ -147,29 +147,29 @@
     },
     "by_overlap": {
       "2023 only": {
-        "n": 260,
-        "median_abs_pct_error": 0.386,
-        "log_r": 0.766,
-        "total_ratio": 0.877
+        "n": 259,
+        "median_abs_pct_error": 0.384,
+        "log_r": 0.777,
+        "total_ratio": 0.888
       },
       "in 2023 and 2024": {
-        "n": 5978,
-        "median_abs_pct_error": 0.305,
-        "log_r": 0.805,
-        "total_ratio": 1.0
+        "n": 5975,
+        "median_abs_pct_error": 0.304,
+        "log_r": 0.808,
+        "total_ratio": 1.043
       }
     },
     "baseline_single_citywide_eui": {
-      "n": 6238,
+      "n": 6234,
       "median_abs_pct_error": 0.294,
-      "log_r": 0.802,
-      "total_ratio": 0.923
+      "log_r": 0.807,
+      "total_ratio": 0.962
     },
     "held_out_buildings": {
-      "n": 3274,
+      "n": 3271,
       "median_abs_pct_error": 0.297,
-      "log_r": 0.79,
-      "total_ratio": 0.951,
+      "log_r": 0.797,
+      "total_ratio": 0.979,
       "note": "EUIs refitted on a random half of LL84 2024 buildings; tested on 2023 buildings not in that half"
     }
   },

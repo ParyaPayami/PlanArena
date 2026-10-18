@@ -52,7 +52,7 @@ export default function CityPicker() {
           <div className="modal methods" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Choose a city">
             <h2>Choose a city</h2>
             <p className="muted small">
-              <b>Tier B</b> cities use official parcel records (Manhattan, Milwaukee, and every Massachusetts and
+              <b>Tier B</b> cities use official parcel records (New York City, Milwaukee, and every Massachusetts and
               Florida city and town). <b>Tier A</b> works for any US city or town: lots are
               estimated from Overture buildings within 2020 census blocks; homes come from the Census and jobs from
               LEHD LODES by block; land use and floor area are estimated; there is no zoning or assessed value.

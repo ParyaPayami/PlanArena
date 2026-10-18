@@ -197,6 +197,14 @@ def _tiers() -> list[str]:
                         f"(rules {pct(h['rules']['accuracy'])}; {r3(h['rules']['macro_f1'])}) | records |")
     if not rows:
         return []
+    nc = load("nyc_citywide_coefficients")
+    if nc:
+        rows.append("| | | | |")
+        for name, s in nc["scores"].items():
+            rows.append(f"| New York City, {num(s['buildings_outside_manhattan'])} benchmarked buildings outside Manhattan | "
+                        f"Emissions with {name.replace('_', ' ')} coefficients (total; median error) | "
+                        f"{times(s['total_ratio'])}; {pct(s['median_abs_pct_error'])}"
+                        f"{' (chosen)' if name == nc['chosen'] else ''} | |")
     return ["Tier A runs for any US place from national open data (Census 2020 blocks, LODES, Overture Maps, EIA and EPA). "
             "To measure what that costs, the Tier A pipeline is run inside cities that also have parcel records "
             "(Tier B) and scored against them (`planarena/cities/compare.py`).", "",

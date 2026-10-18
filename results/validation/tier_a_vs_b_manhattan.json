@@ -1,5 +1,5 @@
 {
-  "test": "Tier A pseudo-lots from Census blocks and Overture buildings are scored against the city's parcel records (land use,\nfloor area, homes) and LODES 2023 (jobs), and in Manhattan against LL84 2023 (building emissions), next to the\nTier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1) and Milwaukee (MPROP).\nWrites results/validation/tier_a_vs_b_<city>.json.",
+  "test": "Tier A pseudo-lots from Census blocks and Overture buildings are scored against the city's parcel records (land use,\nfloor area, homes) and LODES 2023 (jobs), and in Manhattan against LL84 2023 (building emissions), next to the\nTier B result for the same test. Cities: Manhattan (MapPLUTO 25v3.1), Milwaukee (MPROP) and Massachusetts towns (MassGIS L3).\nWrites results/validation/tier_a_vs_b_<city>.json.",
   "city": "Manhattan",
   "tier_a": {
     "n_parcels": 45808,
@@ -132,18 +132,18 @@
   "height_observed_share": 0.993,
   "emissions_ll84_2023": {
     "tier_a": {
-      "n": 5638,
-      "total_ratio": 0.687,
-      "pearson_r": 0.496,
-      "log_r": 0.682,
+      "n": 5634,
+      "total_ratio": 0.722,
+      "pearson_r": 0.575,
+      "log_r": 0.683,
       "median_abs_pct_error": 0.425
     },
     "tier_b": {
-      "n": 5638,
-      "total_ratio": 0.822,
-      "pearson_r": 0.407,
-      "log_r": 0.73,
-      "median_abs_pct_error": 0.333
+      "n": 5634,
+      "total_ratio": 0.864,
+      "pearson_r": 0.477,
+      "log_r": 0.734,
+      "median_abs_pct_error": 0.332
     },
     "note": "Same LL84 buildings for both tiers. Tier A uses national RECS/CBECS energy intensities and the eGRID New York State electricity factor; the observed values use the LL97 factors, so part of the Tier A gap is the grid factor."
   },

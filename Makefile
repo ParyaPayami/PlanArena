@@ -55,6 +55,7 @@ vote:
 
 # Tier B Milwaukee, two Tier A places, and Tier A scored against Tier B in Manhattan and Milwaukee.
 cities:
+	$(RUN) planarena.cities.adapters.nyc
 	$(RUN) planarena.cities.adapters.milwaukee
 	$(RUN) planarena.cities.tier_a "Wauwatosa, WI"
 	$(RUN) planarena.cities.tier_a "Shorewood, WI"

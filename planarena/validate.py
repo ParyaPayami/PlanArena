@@ -62,11 +62,11 @@ def _logr(a, b):
 
 # ----------------------------------------------------------------------------- 1. emissions
 def emissions() -> dict:
-    from planarena.calibrate import LL97
+    from planarena.calibrate import LL97, plausible_ll84
     from planarena.indicators.engine import load_engine
 
     f = RAW / "ll84_2023" / "ll84_manhattan_2023_bbl.json"
-    d = pd.DataFrame(json.loads(f.read_text()))
+    d = plausible_ll84(pd.DataFrame(json.loads(f.read_text())))
     for c in list(LL97) + ["property_gfa_calculated"]:
         d[c] = pd.to_numeric(d.get(c), errors="coerce")
     d["bbl"] = pd.to_numeric(d.nyc_borough_block_and_lot.astype(str).str.split(";").str[0].str.strip(), errors="coerce")
@@ -644,7 +644,7 @@ def changes(min_sqft: float = 2000.0) -> dict:
     """
     import pyogrio
 
-    from planarena.calibrate import LL97
+    from planarena.calibrate import LL97, plausible_ll84
     from planarena.indicators.engine import load_engine
     from planarena.models.common import spatial_folds
     from planarena.models.transition import size_class
@@ -698,7 +698,7 @@ def changes(min_sqft: float = 2000.0) -> dict:
     ev["d_value"] = p1.assess_tot.to_numpy()[ev.j1] / gf - ev.i0.map(lambda ii: float(p0.assess_tot.iloc[ii].sum()))
 
     def ll84(f, bbl_field="nyc_borough_block_and_lot"):
-        d = pd.DataFrame(json.loads(Path(f).read_text()))
+        d = plausible_ll84(pd.DataFrame(json.loads(Path(f).read_text())))
         for c in LL97:
             d[c] = pd.to_numeric(d.get(c), errors="coerce")
         d["bbl"] = pd.to_numeric(d[bbl_field].astype(str).str.split(";").str[0].str.strip(), errors="coerce")
@@ -893,7 +893,7 @@ def existing_breakdowns(seed: int = 0) -> dict:
     """
     import pyogrio
 
-    from planarena.calibrate import GROUPS, LL97
+    from planarena.calibrate import GROUPS, LL97, plausible_ll84
     from planarena.indicators.engine import load_engine
     from planarena.models.transition import SIZE_LABELS, size_class
 
@@ -901,7 +901,7 @@ def existing_breakdowns(seed: int = 0) -> dict:
     U_ = {k: v for k, v in USE_INDEX.items()}
     ef = e._cval("emissions_tco2e_per_kbtu")
     def ll84(f):
-        d = pd.DataFrame(json.loads(Path(f).read_text()))
+        d = plausible_ll84(pd.DataFrame(json.loads(Path(f).read_text())))
         for c in list(LL97) + ["property_gfa_calculated"]:
             d[c] = pd.to_numeric(d.get(c), errors="coerce")
         d["bbl"] = pd.to_numeric(d.nyc_borough_block_and_lot.astype(str).str.split(";").str[0].str.strip(), errors="coerce")

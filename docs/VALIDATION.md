@@ -8,7 +8,7 @@ Every number below is read from `results/**/*.json`, produced by `planarena/vali
 
 **Emissions, same year as fitting (LL84 2024):** 9,188 buildings; log–log r 0.816; median absolute error 29%; total modelled / metered 1.00×.
 
-**Emissions, another year (LL84 2023, coefficients fitted on 2024):** 6,238 buildings; log–log r 0.803; median absolute error 31%; total 0.99× (4.758 vs 4.784 Mt). Most buildings appear in both years, so this is not a test on unseen buildings. The aggregate agrees far better than individual buildings do.
+**Emissions, another year (LL84 2023, coefficients fitted on 2024):** 6,234 buildings; log–log r 0.807; median absolute error 31%; total 1.04× (4.756 vs 4.591 Mt). Most buildings appear in both years, so this is not a test on unseen buildings. The aggregate agrees far better than individual buildings do.
 
 **Jobs against LEHD LODES 2023:** total modelled 2,480,984 (scaled to QCEW) vs LODES 2,504,522. In sample: the rates are fitted on LODES 2023. Out-of-sample evidence is the forward test in jobs_rates.json.
 
@@ -23,20 +23,20 @@ Every number below is read from `results/**/*.json`, produced by `planarena/vali
 
 | Group | Buildings | Median error | log–log r | Total ratio |
 |---|---:|---:|---:|---:|
-| All (PlanArena) | 6,238 | 31% | 0.803 | 0.99× |
-| Baseline: one citywide intensity × floor area | 6,238 | 29% | 0.802 | 0.92× |
-| Held-out buildings (intensities refitted on the other half) | 3,274 | 30% | 0.790 | 0.95× |
-| Buildings 2023 only | 260 | 39% | 0.766 | 0.88× |
-| Buildings in 2023 and 2024 | 5,978 | 30% | 0.805 | 1.00× |
-| Use: com | 1,242 | 33% | 0.842 | 0.95× |
+| All (PlanArena) | 6,234 | 31% | 0.807 | 1.04× |
+| Baseline: one citywide intensity × floor area | 6,234 | 29% | 0.807 | 0.96× |
+| Held-out buildings (intensities refitted on the other half) | 3,271 | 30% | 0.797 | 0.98× |
+| Buildings 2023 only | 259 | 38% | 0.777 | 0.89× |
+| Buildings in 2023 and 2024 | 5,975 | 30% | 0.808 | 1.04× |
+| Use: com | 1,240 | 33% | 0.850 | 1.03× |
 | Use: ind | 50 | 69% | 0.620 | 1.05× |
 | Use: mix | 1,773 | 26% | 0.855 | 0.96× |
-| Use: pub | 637 | 56% | 0.660 | 1.03× |
-| Use: res | 2,513 | 30% | 0.795 | 1.05× |
+| Use: pub | 636 | 55% | 0.675 | 1.13× |
+| Use: res | 2,512 | 30% | 0.796 | 1.06× |
 | Use: tra | 23 | 56% | 0.555 | 1.03× |
-| Size: 100k-500k sq ft | 1,840 | 32% | 0.600 | 0.96× |
-| Size: 20k-100k sq ft | 3,996 | 30% | 0.500 | 1.07× |
-| Size: <20k sq ft | 126 | 39% | 0.285 | 0.40× |
+| Size: 100k-500k sq ft | 1,838 | 32% | 0.611 | 1.05× |
+| Size: 20k-100k sq ft | 3,995 | 30% | 0.501 | 1.07× |
+| Size: <20k sq ft | 125 | 38% | 0.279 | 0.63× |
 | Size: >500k sq ft | 276 | 30% | 0.344 | 1.00× |
 
 **Jobs by block (blocks with ≥100 jobs, n = 1,942):** median error 45% for PlanArena against 48% for a flat rate per sq ft of non-residential floor area.
@@ -269,7 +269,7 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Manhattan | Floor area total after the correction learned from the other cities | 0.88× | records |
 | Manhattan | Homes by census block, Census 2020 vs city records (total; r) | 0.92×; 0.765 | records |
 | Manhattan | Jobs by census block vs LODES (r; in-sample) | 0.517 | 0.647 |
-| Manhattan | Building emissions vs LL84 2023, 5,638 buildings (total; median error) | 0.69×; 42% | 0.82×; 33% |
+| Manhattan | Building emissions vs LL84 2023, 5,634 buildings (total; median error) | 0.72×; 42% | 0.86×; 33% |
 | Cambridge | Lots | 13,045 pseudo-lots | 12,933 parcels |
 | Cambridge | Land use of built lots (accuracy; macro F1) | 87%; 0.306 (majority class 82%) | records |
 | Cambridge | Floor area by census block (total; log r; median error) | 1.32×; 0.874; 36% | records |
@@ -292,6 +292,9 @@ Tier A runs for any US place from national open data (Census 2020 blocks, LODES,
 | Gainesville | Land use from a model trained on Cambridge, Manhattan, Milwaukee (accuracy; macro F1) | 85%; 0.286 (rules 84%; 0.288) | records |
 | Manhattan | Land use from a model trained on Cambridge, Gainesville, Milwaukee (accuracy; macro F1) | 60%; 0.244 (rules 63%; 0.274) | records |
 | Milwaukee | Land use from a model trained on Cambridge, Gainesville, Manhattan (accuracy; macro F1) | 91%; 0.300 (rules 91%; 0.287) | records |
+| | | | |
+| New York City, 11,580 benchmarked buildings outside Manhattan | Emissions with national coefficients (total; median error) | 0.54×; 40% | |
+| New York City, 11,580 benchmarked buildings outside Manhattan | Emissions with manhattan ll84 coefficients (total; median error) | 0.81×; 32% (chosen) | |
 
 Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities.
 A land-use model trained on the other Tier B cities and tested on each held-out one did not beat the rules in every held-out city, so Tier A uses the rules (5 model variants tried; `results/validation/landuse_model.json`).

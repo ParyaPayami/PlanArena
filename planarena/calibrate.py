@@ -63,6 +63,17 @@ GROUPS = {
 }
 
 
+MAX_SITE_EUI = 1000.0  # kBtu per sq ft: above any building type (hospitals and data centres stay below)
+
+
+def plausible_ll84(d: pd.DataFrame) -> pd.DataFrame:
+    """LL84 records without reporting errors: site EUI, where reported, at most MAX_SITE_EUI. (Some records report
+    tens or hundreds of thousands, e.g. one Bronx senior-living building at 561,197 kBtu/sq ft.)"""
+    if "site_eui_kbtu_ft" not in d:
+        return d
+    return d[~(pd.to_numeric(d["site_eui_kbtu_ft"], errors="coerce") > MAX_SITE_EUI)]
+
+
 def fetch_ll84(query: str = LL84_QUERY, out=LL84_FILE) -> None:
     REF.mkdir(parents=True, exist_ok=True)
     subprocess.run(["curl", "-s", "-m", "180", "-G", query.split("?")[0],
@@ -207,7 +218,7 @@ def pluto_use_intensities() -> tuple[dict, dict]:
 
     if not LL84_BBL_FILE.exists():
         fetch_ll84(LL84_BBL_QUERY, LL84_BBL_FILE)
-    d = pd.DataFrame(json.loads(LL84_BBL_FILE.read_text()))
+    d = plausible_ll84(pd.DataFrame(json.loads(LL84_BBL_FILE.read_text())))
     for c in list(LL97) + ["property_gfa_calculated"]:
         d[c] = pd.to_numeric(d.get(c), errors="coerce")
     d["bbl"] = pd.to_numeric(d.nyc_borough_block_and_lot.astype(str).str.split(";").str[0].str.strip(), errors="coerce")
@@ -242,7 +253,7 @@ def validate_emissions() -> dict:
     if not LL84_BBL_FILE.exists():
         fetch_ll84(LL84_BBL_QUERY, LL84_BBL_FILE)
     e = load_engine()
-    d = pd.DataFrame(json.loads(LL84_BBL_FILE.read_text()))
+    d = plausible_ll84(pd.DataFrame(json.loads(LL84_BBL_FILE.read_text())))
     for c in d.columns[2:]:
         d[c] = pd.to_numeric(d[c], errors="coerce")
     d["bbl"] = pd.to_numeric(d.nyc_borough_block_and_lot.astype(str).str.split(";").str[0].str.strip(), errors="coerce")

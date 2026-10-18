@@ -82,7 +82,7 @@ def build_tier_a(city: str) -> Path:
 
 
 def compare(city: str = "manhattan") -> dict:
-    from planarena.calibrate import LL97
+    from planarena.calibrate import LL97, plausible_ll84
     from planarena.indicators.engine import load_engine
     from planarena.national.census import lodes_jobs
 
@@ -137,7 +137,7 @@ def compare(city: str = "manhattan") -> dict:
     bbl_of = pb.bbl.to_numpy()
     # 4. building emissions vs LL84 2023 (LL97 factors), per MapPLUTO lot with an LL84 record
     if c["emissions"]:
-        d = pd.DataFrame(json.loads((RAW / "ll84_2023" / "ll84_manhattan_2023_bbl.json").read_text()))
+        d = plausible_ll84(pd.DataFrame(json.loads((RAW / "ll84_2023" / "ll84_manhattan_2023_bbl.json").read_text())))
         for col in LL97:
             d[col] = pd.to_numeric(d.get(col), errors="coerce")
         d["bbl"] = pd.to_numeric(d.nyc_borough_block_and_lot.astype(str).str.split(";").str[0].str.strip(), errors="coerce")

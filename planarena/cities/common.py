@@ -124,7 +124,10 @@ def write_web(gl: gpd.GeoDataFrame, df: pd.DataFrame, web: Path) -> None:
     ok = shapely.is_valid(snapped) & ~shapely.is_empty(snapped)
     w["geometry"] = np.where(ok, snapped, g)
     opts = {"COORDINATE_PRECISION": 6, "RFC7946": "YES"}
-    w.to_file(web / "parcels.geojson", driver="GeoJSON", engine="pyogrio", layer_options=opts)
+    from planarena.cities.tiles import map_mode
+
+    if map_mode(len(df)) == "geojson":  # large cities are drawn from vector tiles and points instead
+        w.to_file(web / "parcels.geojson", driver="GeoJSON", engine="pyogrio", layer_options=opts)
     for cd, part in w.groupby("cd"):
         part.to_file(web / "levels" / f"{cd}.geojson", driver="GeoJSON", engine="pyogrio", layer_options=opts)
 
