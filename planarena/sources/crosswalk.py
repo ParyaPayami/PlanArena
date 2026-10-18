@@ -649,16 +649,23 @@ def dcad(state_code, building_class=None, units=None) -> str:
 # ----------------------------------------------------------------------------- Philadelphia2035 proposed land use
 # (the City Planning Commission's land-use categories, as in the district plans' Proposed Land Use maps)
 PHILADELPHIA_PLAN = {"Residential Low Density": "sf", "Residential Medium Density": "sf",  # rowhouses and twins
-                     "Residential High Density": "mf", "Commercial Consumer": "ret",
-                     "Commercial Business / Professional": "off", "Commercial Mixed Residential": "mix",
-                     "Industrial": "ind", "Civic/Institution": "civ", "Transportation": "tra",
-                     "Culture / Amusement": "ret", "Active Recreation": "opn", "Park / Open Space": "opn",
-                     "Cemetery": "opn", "Water": "opn", "Vacant": "vac"}
+                     "Residential Two-Family Attached": "mf_small", "Residential High Density": "mf",
+                     "Commercial Consumer": "ret", "Commercial Business / Professional": "off",
+                     "Commercial Mixed Residential": "mix", "Industrial": "ind", "Civic/Institution": "civ",
+                     "Transportation": "tra", "Greened Right-of-Way": "opn", "Culture / Amusement": "ret",
+                     "Active Recreation": "opn", "Park / Open Space": "opn", "Cemetery": "opn", "Water": "opn",
+                     "Vacant": "vac", "Vacant Land": "vac"}
+# Some district plans drop the group word in the legend ("Low Density" under a "Residential" heading)
+PHILADELPHIA_PLAN_SHORT = {"Low Density": "sf", "Medium Density": "sf", "High Density": "mf", "Consumer": "ret",
+                           "Business / Professional": "off", "Mixed Residential": "mix"}
 
 
 def philadelphia_plan(label) -> str:
-    l = re.sub(r"\s+", " ", label).strip() if isinstance(label, str) else ""
-    for k, v in PHILADELPHIA_PLAN.items():
-        if l.lower().replace(" ", "") == k.lower().replace(" ", ""):
-            return v
+    """Category of a Philadelphia2035 Proposed Land Use legend label; spacing and punctuation vary between plans."""
+    key = lambda x: re.sub(r"[^a-z]", "", x.lower())
+    k = key(label) if isinstance(label, str) else ""
+    for table in (PHILADELPHIA_PLAN, PHILADELPHIA_PLAN_SHORT):
+        for name, v in table.items():
+            if k == key(name):
+                return v
     return "unknown"

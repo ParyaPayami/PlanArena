@@ -98,6 +98,7 @@ def crossref(doi: str) -> dict | None:
             year = int(parts[0][0])
             break
     return {"title": (m.get("title") or [""])[0], "first_family": norm(((m.get("author") or [{}])[0]).get("family", "")),
+            "first_editor": norm(((m.get("editor") or [{}])[0]).get("family", "")),
             "year": year, "container": (m.get("container-title") or [""])[0]}
 
 
@@ -142,7 +143,10 @@ def check_entry(e: dict, resolve=None) -> dict:
         problems = []
         if similar(e.get("title", ""), rec["title"]) < 0.85:
             problems.append(f"title differs: bib '{e.get('title', '')[:80]}' vs record '{rec['title'][:80]}'")
-        if rec.get("first_family") and first_family(e.get("author", "")) != rec["first_family"]:
+        if not e.get("author") and e.get("editor"):  # an edited book: compare editors (its record may list a foreword author)
+            if rec.get("first_editor") and first_family(e["editor"]) != rec["first_editor"]:
+                problems.append(f"first editor differs: bib '{first_family(e['editor'])}' vs record '{rec['first_editor']}'")
+        elif rec.get("first_family") and first_family(e.get("author", "")) != rec["first_family"]:
             problems.append(f"first author differs: bib '{first_family(e.get('author', ''))}' vs record '{rec['first_family']}'")
         if rec.get("year") and e.get("year", "").isdigit() and abs(int(e["year"]) - rec["year"]) > 1:
             problems.append(f"year differs: bib {e['year']} vs record {rec['year']}")

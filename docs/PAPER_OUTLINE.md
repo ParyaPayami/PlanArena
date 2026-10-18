@@ -1,6 +1,6 @@
 # Systems paper: outline and evidence map
 
-A planning document for the PlanArena systems paper (Phase 3). It contains no results and no references:
+A planning document for the PlanArena systems paper (Phase 3). It contains no results; references are in [refs.bib](refs.bib):
 - **Numbers:** quote them from [VALIDATION.md](VALIDATION.md), which `planarena/report.py` generates from `results/`.
 - **References:** every one is found by its identifier, checked with `python -I -m planarena.tools.check_refs`, logged in [citation_log.csv](citation_log.csv) with the page that supports the claim, and read by the author.
 - **AI assistance:** disclosed in the manuscript.
@@ -9,7 +9,9 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 **Question:** For each parcel and scenario, PlanArena distinguishes what exists (official land use), what is permitted (zoning), what is planned (the adopted future land use), what is likely (redevelopment model) and what is recommended (optimizer). Does combining these layers improve predictions of where change happens and what it becomes, and give scenario assessments closer to what actually gets built than capacity-based build-out (the approach of density-based scenario tools)? The test is historical and across cities, with each layer removed in turn (component ablation, VALIDATION section H, METHODS section 11).
 
-**Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports to, and analyses scenarios from, ArcGIS Urban; it does not compete with it as a design tool. UrbanFootprint and CommunityViz are reviewed with UrbanSim in [RELATED_TOOLS.md](RELATED_TOOLS.md): none publishes a land-use optimizer; the methods PlanArena adopts from them (growth-target allocation, pro forma feasibility, build-out, constraint screens) are listed there.
+**Literature:** [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) (74 verified sources in eight themes, and the gap).
+
+**Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports its layers and scenarios to ArcGIS Urban as import files (`planarena/integrations/urban_export.py`). Reading Urban scenarios back needs the Urban API and the author's sign-in, and is not built. PlanArena does not compete with Urban as a design tool. UrbanFootprint and CommunityViz are reviewed with UrbanSim in [RELATED_TOOLS.md](RELATED_TOOLS.md): none publishes a land-use optimizer; the methods PlanArena adopts from them (growth-target allocation, pro forma feasibility, build-out, constraint screens) are listed there.
 
 **Target venue:** a planning-analytics journal (for example *Environment and Planning B*). Not the journal that rejected the earlier PIMALUOS submission.
 
@@ -83,7 +85,8 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 **Writing**
 - [ ] Draft sections 1–7 above, quoting numbers from VALIDATION.md only.
 - [ ] System diagram (by hand).
-- [ ] Every reference passes `check_refs`, has a citation-log row with a page, and was read by the author. There is no `refs.bib` yet, and `citation_log.csv` has only its header.
+- [x] Bibliography: 74 sources in [refs.bib](refs.bib), all passing `check_refs` ([reference_check.md](reference_check.md)); themes and gap in [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md).
+- [ ] Read each source, then fill `read_by`, `date_read` and the page in [citation_log.csv](citation_log.csv). Start with the 11 marked † (no abstract was available).
 - [ ] Advisor review (Dr. Schermer).
 - [ ] AI-assistance statement.
 

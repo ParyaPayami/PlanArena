@@ -76,4 +76,7 @@ def test_philadelphia_plan_categories_all_map():
         assert crosswalk.philadelphia_plan(label) != "unknown"
     assert crosswalk.philadelphia_plan("Commercial Business/Professional") == "off"  # legend spacing varies
     assert crosswalk.philadelphia_plan("Park/Open Space") == "opn"
+    for short, cls in (("Low Density", "sf"), ("Consumer", "ret"), ("Civic Institution", "civ"), ("Culture Amusement", "ret"),
+                       ("Greened Right of Way", "opn"), ("Vacant Land", "vac"), ("Mixed Residential", "mix")):
+        assert crosswalk.philadelphia_plan(short) == cls  # legends drop the group word or the slash
     assert crosswalk.philadelphia_plan("Something else") == "unknown"

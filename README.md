@@ -108,6 +108,20 @@ Each city also gets its own coefficients:
 .venv/bin/python -I -m planarena.cities.ingestion "Los Angeles"    # the ingestion report
 ```
 
+## ArcGIS Urban
+
+`planarena/integrations/urban_export.py` writes a city, or one district of it, as the data an ArcGIS Urban model imports:
+- space-use types (the nine groups);
+- zoning types and boundaries;
+- land-use types and boundaries;
+- parcels with existing use, plan, zoning, floor area, homes and jobs.
+
+Given a plan saved from the Studio, the parcels also carry its scenario. A README in the output lists the import order and field mapping. You upload the files to ArcGIS Online yourself; PlanArena sends nothing.
+
+```bash
+.venv/bin/python -I -m planarena.integrations.urban_export "Dallas" --district 14 --plan my_plan.csv   # -> exports/urban/dallas
+```
+
 ## Coefficients: every value has a source and a range
 
 <!-- BEGIN GENERATED: coefficients -->

@@ -39,6 +39,7 @@ Write notes anywhere and send them to me; screenshots help.
 13. In a large city, zoom out: parcels become dots; zoom in: parcel shapes load piece by piece. Selecting and painting should work at both zooms.
 14. In Los Angeles or Dallas, use the map switch at the top: **Existing**, **Adopted plan** and **Zoning** colour every parcel by the city's official layer (16 classes, legend on the map). In Houston the plan and zoning buttons are greyed out (Houston has neither). Select a parcel: the inspector lists its existing use, plan designation and zoning class, and flags a plan that differs from the existing use.
 15. In Philadelphia, switch to **Adopted plan**. Districts whose plan map was digitised from the Philadelphia2035 PDF are coloured, and the others are grey (see `docs/ingestion/philadelphia.md` for which districts and their registration error). Compare one district with its PDF map: the colours should match lot by lot.
+16. Export a district for ArcGIS Urban (README, "ArcGIS Urban"). Upload `parcels.geojson` and `zoning.geojson` to ArcGIS Online and import them, with the type tables, in Urban's data manager in the order the export's README gives. Note any field Urban rejects.
 
 ## Known limits (by design, or still open)
 

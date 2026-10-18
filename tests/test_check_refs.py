@@ -36,3 +36,13 @@ def test_fabricated_entry_with_real_doi_fails_and_real_entry_passes():
     r = check_entry(fake, FAKE_RESOLVER)
     assert r["status"] == "mismatch" and "title differs" in r["details"] and "first author differs" in r["details"]
     assert check_entry(noid, FAKE_RESOLVER)["status"] == "unverifiable"
+
+
+def test_edited_book_is_checked_by_its_editors():
+    book = parse_bib("@book{h, editor = {Brandt, Felix and Conitzer, Vincent}, title = {Handbook of Computational Social "
+                     "Choice}, year = {2016}, doi = {10.1017/CBO9781107446984}}")[0]
+    rec = {"title": "Handbook of Computational Social Choice", "first_family": "moulin", "first_editor": "brandt",
+           "year": 2016, "container": ""}  # the record lists the foreword's author first
+    resolve = {"doi": lambda d: rec, "arxiv": lambda a: None, "isbn": lambda i: None}
+    assert check_entry(book, resolve)["status"] == "ok"
+    assert check_entry({**book, "editor": "Someone, Else"}, resolve)["status"] == "mismatch"

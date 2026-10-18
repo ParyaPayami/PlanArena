@@ -218,6 +218,8 @@ Milwaukee regulates bulk with height, setback and density rules rather than one 
 
 **San Diego** uses SANDAG's Land Use 2025 (104 codes) over the county assessor's parcels in the city (`adapters/sandiego.py`), with the city's General Plan land use (community plan designations; residential by the designation's highest density) and base zoning. Assessor unit counts split housing and give the homes; living area gives residential floor area; other floor area and floors come from Overture (estimated). Districts: the community planning areas.
 
+**Classes.** The three official layers use 16 classes, so the plan and zoning comparisons keep their detail. Impacts are computed for the nine analysis groups each class maps to (`planarena/taxonomy.py`). The impact coefficients are calibrated and validated for these nine groups; finer classes would add coefficients that no local data validate.
+
 **Ingestion report.** `planarena/cities/ingestion.py` writes `docs/ingestion/<city>.md` for review before a city is used: the parcel count, each layer's coverage, the 16-class distributions of existing use, plan and zoning, how often the existing use matches the plan (class and analysis group), the share of existing uses the zoning screen allows, homes against Census 2020 housing units, and the fitted floor area per worker.
 
 **Data checks in every adapter:**
