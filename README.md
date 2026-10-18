@@ -90,7 +90,7 @@ Each city's **baseline is the land use its own government or regional planning a
 | Chicago | CMAP Land Use Inventory 2023 + Cook County Assessor | none citywide | City zoning districts | 1.05 |
 | Houston | City of Houston land use (HCAD) | none (no land-use map) | none (Houston has no zoning) | 0.95 |
 | Phoenix | Maricopa Assessor property use + MAG 2026 | General Plan (city code table) | City zoning | 0.99 |
-| Philadelphia | City Planning Commission land use + OPA | published only as PDF maps | Zoning Code (OPA) | 0.99 |
+| Philadelphia | City Planning Commission land use + OPA | Philadelphia2035 district plans, digitised from the PDF maps (15 of 17 plans, 83% of parcels) | Zoning Code (OPA) | 0.99 |
 | San Antonio | Bexar Appraisal District property class | Future Land Use (adopted area plans, 61% of parcels) | City zoning | 0.99 |
 | San Diego | SANDAG Land Use 2025 + County Assessor | General Plan and community plans | City base zones | 1.02 |
 | Dallas | City existing land use (2026) + DCAD | forwardDallas! 2.0 placetypes (2024) | City base zoning | 0.98 |
