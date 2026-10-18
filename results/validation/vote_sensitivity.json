@@ -1,7 +1,7 @@
 {
   "test": "How much the simulated outcome depends on its assumptions, in one district.\n\n1. utility weights: each stakeholder's indicator weights drawn from a Dirichlet centred on the assumed weights\n2. candidate generation: random feasible plans (not built from the stakeholder utilities) added to the ballot\n3. residents' indifference threshold (JND) swept\n4. seat allocations: equal seats, then each stakeholder with three seats",
   "summary": {
-    "median_winner_unchanged_under_weight_draws": 0.5825,
+    "median_winner_unchanged_under_weight_draws": 0.535,
     "districts_winner_unchanged_with_random_candidates": 12,
     "districts_winner_beats_every_random_plan": 12,
     "districts_residents_winner_stable_across_jnd": 12,
@@ -13,7 +13,7 @@
       "scope": "cd:101",
       "winner": "blend-environment-city",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.375,
+      "winner_unchanged_under_weight_draws": 0.36,
       "random_candidates": 10,
       "winner_with_random_candidates": "blend-environment-city",
       "winner_unchanged_with_random_candidates": true,
@@ -38,11 +38,11 @@
     },
     {
       "scope": "cd:102",
-      "winner": "ideal-business",
-      "candidates": 18,
-      "winner_unchanged_under_weight_draws": 0.315,
+      "winner": "blend-developer-business",
+      "candidates": 19,
+      "winner_unchanged_under_weight_draws": 0.435,
       "random_candidates": 10,
-      "winner_with_random_candidates": "ideal-business",
+      "winner_with_random_candidates": "blend-developer-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
       "residents_winner_by_jnd": {
@@ -54,14 +54,14 @@
       },
       "residents_winner_stable_across_jnd": true,
       "winner_by_seats": {
-        "equal": "ideal-business",
+        "equal": "blend-developer-business",
         "developer x3": "ideal-developer",
-        "residents x3": "blend-residents-city",
-        "environment x3": "blend-environment-business",
+        "residents x3": "balanced",
+        "environment x3": "blend-environment-city",
         "city x3": "blend-developer-business",
-        "business x3": "ideal-business"
+        "business x3": "blend-developer-business"
       },
-      "share_of_seat_allocations_with_same_winner": 0.333
+      "share_of_seat_allocations_with_same_winner": 0.5
     },
     {
       "scope": "cd:103",
@@ -94,7 +94,7 @@
       "scope": "cd:104",
       "winner": "blend-residents-city",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.305,
+      "winner_unchanged_under_weight_draws": 0.31,
       "random_candidates": 10,
       "winner_with_random_candidates": "blend-residents-city",
       "winner_unchanged_with_random_candidates": true,
@@ -138,7 +138,7 @@
         "equal": "blend-residents-business",
         "developer x3": "blend-residents-business",
         "residents x3": "blend-residents-business",
-        "environment x3": "blend-environment-business",
+        "environment x3": "ideal-environment",
         "city x3": "blend-residents-business",
         "business x3": "ideal-business"
       },
@@ -200,11 +200,11 @@
     },
     {
       "scope": "cd:108",
-      "winner": "blend-city-business",
+      "winner": "blend-developer-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.43,
+      "winner_unchanged_under_weight_draws": 0.365,
       "random_candidates": 10,
-      "winner_with_random_candidates": "blend-city-business",
+      "winner_with_random_candidates": "blend-developer-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
       "residents_winner_by_jnd": {
@@ -216,20 +216,20 @@
       },
       "residents_winner_stable_across_jnd": true,
       "winner_by_seats": {
-        "equal": "blend-city-business",
-        "developer x3": "blend-developer-business",
-        "residents x3": "blend-residents-city",
-        "environment x3": "blend-environment-business",
+        "equal": "blend-developer-business",
+        "developer x3": "blend-developer-city",
+        "residents x3": "blend-developer-residents",
+        "environment x3": "blend-environment-city",
         "city x3": "blend-city-business",
         "business x3": "ideal-business"
       },
-      "share_of_seat_allocations_with_same_winner": 0.333
+      "share_of_seat_allocations_with_same_winner": 0.167
     },
     {
       "scope": "cd:109",
       "winner": "ideal-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.42,
+      "winner_unchanged_under_weight_draws": 0.435,
       "random_candidates": 10,
       "winner_with_random_candidates": "ideal-business",
       "winner_unchanged_with_random_candidates": true,
@@ -256,7 +256,7 @@
       "scope": "cd:110",
       "winner": "blend-city-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.885,
+      "winner_unchanged_under_weight_draws": 0.8,
       "random_candidates": 10,
       "winner_with_random_candidates": "blend-city-business",
       "winner_unchanged_with_random_candidates": true,
@@ -283,17 +283,17 @@
       "scope": "cd:111",
       "winner": "blend-developer-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.52,
+      "winner_unchanged_under_weight_draws": 0.245,
       "random_candidates": 10,
       "winner_with_random_candidates": "blend-developer-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
       "residents_winner_by_jnd": {
-        "0.0": "blend-developer-residents",
-        "0.005": "blend-developer-residents",
-        "0.01": "blend-developer-residents",
-        "0.05": "blend-developer-residents",
-        "0.1": "blend-developer-residents"
+        "0.0": "ideal-residents",
+        "0.005": "ideal-residents",
+        "0.01": "ideal-residents",
+        "0.05": "ideal-residents",
+        "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
       "winner_by_seats": {
@@ -310,7 +310,7 @@
       "scope": "cd:112",
       "winner": "ideal-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.645,
+      "winner_unchanged_under_weight_draws": 0.635,
       "random_candidates": 10,
       "winner_with_random_candidates": "ideal-business",
       "winner_unchanged_with_random_candidates": true,
@@ -325,10 +325,10 @@
       "residents_winner_stable_across_jnd": true,
       "winner_by_seats": {
         "equal": "ideal-business",
-        "developer x3": "blend-city-business",
+        "developer x3": "blend-developer-business",
         "residents x3": "blend-residents-city",
         "environment x3": "blend-environment-city",
-        "city x3": "blend-city-business",
+        "city x3": "blend-developer-business",
         "business x3": "ideal-business"
       },
       "share_of_seat_allocations_with_same_winner": 0.333

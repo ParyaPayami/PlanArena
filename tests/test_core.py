@@ -314,3 +314,20 @@ def test_transition_features_read_only_the_decision_year_snapshot(tmp_path, monk
     data = [p for p in opened if tmp_path not in p.parents]
     assert data and all(p.parent == history.snapshot_dir(t) for p in data), data
     assert x.shape[0] == len(real_pq(history.snapshot_dir(t) / "parcels.parquet"))
+
+
+def test_deployed_precedent_table_is_current():
+    """The table the optimizer uses must be the date-aware one built from every annual pair (a stale table from an
+    earlier version was caught by a clean-clone reproduction)."""
+    import json
+
+    from planarena.config import PROCESSED
+    from planarena.models.history import RELEASES
+
+    f = PROCESSED / "conversion_precedent.json"
+    if not f.exists():
+        pytest.skip("precedent table not built (python -I -m planarena.models.transition precedent)")
+    t = json.loads(f.read_text())
+    years = sorted(RELEASES)
+    assert t.get("as_of") == years[-1]
+    assert set(t.get("pairs", [])) == {f"{a}->{b}" for a, b in zip(years, years[1:])}

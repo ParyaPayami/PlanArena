@@ -17,9 +17,20 @@ Each reviewer comment maps to the change made, the test that guards it, and the 
 | **References** could not be audited | `check_refs` resolves every `.bib` entry by DOI (Crossref), arXiv ID or ISBN (Open Library) and fails on any mismatch in title, first author or year. A citation log records claim → source → page; the author reads every source | `test_fabricated_entry_with_real_doi_fails_and_real_entry_passes` | `planarena/tools/check_refs.py`; [citation_log.csv](citation_log.csv) |
 | **Evidence bundle** missing | `make reproduce` runs download → twin → history → calibration → models → validation → report. Each input's URL, query and SHA-256 is recorded | `test_docs_are_current` | `Makefile`; `results/data_manifest.json`; `data/raw/*/SOURCE.json` |
 
+## Reproduction (clean clone, 2026-10-17)
+
+`make reproduce` was run on a fresh clone with its own Python environment; downloaded inputs were shared, everything derived from them was rebuilt. Findings and fixes:
+- Every model artifact (twin, graph, GNN weights, pattern and redevelopment layers) was rebuilt bit for bit.
+- The deployed conversion-precedent table in the working copy predated its date-aware version; it was regenerated, and the optimizer, vote and sensitivity results were recomputed with it. `test_deployed_precedent_table_is_current` now guards this.
+- The rezoning, FEIS and homes replays in the working copy predated the recalibration; they were recomputed.
+- `orjson` (needed by the API) was missing from `requirements.txt`; it is pinned now.
+- The fetch step rewrote an existing GeoPackage extract (same contents, new bytes); it now leaves a verified extract alone.
+
+After the fixes, every result file the clone produced is identical to the committed one, apart from run times. To check a reproduction: `python -I -m planarena.tools.compare_results <clone folder>`.
+
 ## Still open
 
-- **Reproduction on a clean clone.** `make reproduce` has to be run on a fresh checkout. NYC Open Data tables (LL84, DOB) are live, so a new download can differ from the recorded hashes; the manifest shows which.
+- **Live inputs.** NYC Open Data tables (LL84, DOB) are live, so a new download can differ from the recorded hashes; the manifest shows which.
 - **Effects without validation.** Accessibility, runoff, and emissions of buildings below the LL84 size threshold.
 - **Jobs at block level.** Changes have no useful skill; this is reported, not fixed.
 - **Practitioner evaluation.** Out of scope; it would need human-participant review.

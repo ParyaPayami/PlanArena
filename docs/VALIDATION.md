@@ -17,7 +17,7 @@ Every number below is read from `results/**/*.json`, produced by `planarena/vali
 | tract | 310 | 0.843 | 0.847 | 36% |
 | block | 3,390 | 0.727 | 0.736 | 46% |
 
-**Homes from floor area (records of 295 lots developed 2015–2025):** given the observed use and floor area, PlanArena estimates 22,333 homes against 20,516 recorded (1.089×; log–log r 0.894; median error 28%). Reference, CEQR 900 sq ft per home on the observed residential floor area: 1.099×.
+**Homes from floor area (records of 295 lots developed 2015–2025):** given the observed use and floor area, PlanArena estimates 21,307 homes against 20,516 recorded (1.039×; log–log r 0.903; median error 27%). Reference, CEQR 900 sq ft per home on the observed residential floor area: 1.099×.
 
 **Where the emissions estimate is weak (LL84 2023):**
 
@@ -52,17 +52,17 @@ Every number below is read from `results/**/*.json`, produced by `planarena/vali
 
 ## B. Consistency with planning calculations
 
-**East Harlem (2017), FEIS projected sites:** 68 parsed, 68 matched. With the FEIS floor area and use, PlanArena gives 5,775 homes against the FEIS's 5,959 (0.969×, site-level log r 0.973); from zoning alone 5,353 (0.898×). Parse check: floor areas match the FEIS totals; homes differ by the FEIS's per-row rounding.
+**East Harlem (2017), FEIS projected sites:** 68 parsed, 68 matched. With the FEIS floor area and use, PlanArena gives 5,117 homes against the FEIS's 5,959 (0.859×, site-level log r 0.940); from zoning alone 4,793 (0.804×). Parse check: floor areas match the FEIS totals; homes differ by the FEIS's per-row rounding.
 
-**SoHo/NoHo (2021), FEIS projected sites:** 26 parsed (total 1,861 homes, the appendix total; the FEIS text reports 1,858). On 23 sites matched to 2020 lots: 1,820 vs 1,752 (1.039×, site-level log r 0.976).
+**SoHo/NoHo (2021), FEIS projected sites:** 26 parsed (total 1,861 homes, the appendix total; the FEIS text reports 1,858). On 23 sites matched to 2020 lots: 1,757 vs 1,752 (1.003×, site-level log r 0.956).
 
 **PlanArena's own development-site screen on the rezoned lots** (`planarena/indicators/rwcds.py`):
 
 | Rezoning | Screened sites | FEIS increment | PlanArena at max FAR | At 0.8 × max | Built by 2025 | Share of FEIS increment |
 |---|---:|---:|---:|---:|---:|---:|
-| East Harlem (2017) | 131 | 3,488 (to 2027) | 5,950 (1.71×) | 4,705 | +319 | 9% |
+| East Harlem (2017) | 131 | 3,488 (to 2027) | 5,145 (1.48×) | 4,061 | +319 | 9% |
 | Inwood (2018) | 48 | 3,908 (to 2033) | 3,668 (0.94×) | 2,934 | +565 | 14% |
-| SoHo/NoHo (2021) | 78 | 1,826 (to 2031) | 2,449 (1.34×) | 1,942 | -51 | -3% |
+| SoHo/NoHo (2021) | 78 | 1,826 (to 2031) | 2,027 (1.11×) | 1,605 | -51 | -3% |
 
 The FEIS selects 'projected' sites more narrowly than this screen, which also captures sites the FEIS treats as 'potential'. Mandatory Inclusionary Housing bonus floor area is not modelled.
 
@@ -96,11 +96,11 @@ Jobs change by 2020 census block (LODES 2015 → 2023, net of the trend of block
 
 | Delta form | Median overlap | Lowest overlap |
 |---|---:|---:|
-| replacement | 0.903 | 0.658 |
-| difference | 0.970 | 0.771 |
-| hybrid | 0.903 | 0.658 |
+| replacement | 0.901 | 0.658 |
+| difference | 0.964 | 0.771 |
+| hybrid | 0.901 | 0.658 |
 
-Agreement between forms (median overlap): replacement vs hybrid 1.000; difference vs hybrid 0.827; replacement vs difference 0.827.
+Agreement between forms (median overlap): replacement vs hybrid 1.000; difference vs hybrid 0.820; replacement vs difference 0.820.
 
 ## D. Models
 
@@ -221,7 +221,7 @@ Within-period spatial cross-validation (right-hand columns) is not a guide to fo
 
 ## E. Optimizer (best plan found, not a global optimum)
 
-Exhaustive search over every plan with up to 2 changes in 20 single-block study areas (4–32 candidate moves each; 15 with a positive optimum). First-order search alone found the exhaustive optimum in 73% of them (mean gap 11.9%); with the exact re-scoring step, 93% (median 0.28 s). This says nothing about district or city scale.
+Exhaustive search over every plan with up to 2 changes in 20 single-block study areas (4–33 candidate moves each; 15 with a positive optimum). First-order search alone found the exhaustive optimum in 73% of them (mean gap 11.9%); with the exact re-scoring step, 93% (median 0.28 s). This says nothing about district or city scale.
 
 **District scale** (Every district, budget 10 changes, objective = overall score - conversion penalty x changes (GNN term off). Exact-evaluation heuristics search the 150 best first-order moves. No method guarantees a global optimum; 'share of best found' compares each method with the best plan any method found.)
 
@@ -229,10 +229,10 @@ Exhaustive search over every plan with up to 2 changes in 20 single-block study 
 |---|---:|---:|---:|
 | surrogate top moves | 92.6% | 0 | 0.02 |
 | first order | 96.4% | 1 | 0.13 |
-| first order plus exact polish | 97.4% | 1 | 1.18 |
-| greedy exact | 100.0% | 12 | 26.68 |
-| simulated annealing | 93.0% | 0 | 7.7 |
-| random restarts 50 | 65.9% | 0 | 0.97 |
+| first order plus exact polish | 97.4% | 1 | 1.14 |
+| greedy exact | 100.0% | 12 | 25.87 |
+| simulated annealing | 94.8% | 0 | 7.54 |
+| random restarts 50 | 65.9% | 0 | 0.94 |
 
 ## F. Simulated stakeholder scenarios
 
@@ -240,19 +240,19 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 
 | Finding (12 districts, one seat each) | Districts |
 |---|---|
-| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 9 of 12 |
+| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 7 of 12 |
 | All nine rules agree | 0 of 12 |
 | The council winner beats no change in both simulated electorates | 12 of 12 |
 | The simulated residents' winner is the council's winner | 1 of 12 |
 | The council winner is also the Nash bargaining solution | 0 of 12 |
-| One insincere ballot could change the Schulze result | 4 of 12 |
-| Median robustness of the winner (coefficients and seats varied, 200 draws) | 73.0% |
+| One insincere ballot could change the Schulze result | 6 of 12 |
+| Median robustness of the winner (coefficients and seats varied, 200 draws) | 75.8% |
 
 **Sensitivity of the simulated outcome:**
 
 | Change to the assumptions | Result |
 |---|---|
-| Stakeholder utility weights redrawn (Dirichlet around the assumed weights) | winner unchanged in a median 58% of draws |
+| Stakeholder utility weights redrawn (Dirichlet around the assumed weights) | winner unchanged in a median 54% of draws |
 | Ten random feasible plans added to the ballot (not built from the utilities) | winner unchanged in 12 of 12 districts; beats every random plan head to head in 12 |
 | Residents' indifference threshold swept 0–0.1 points | residents' winner stable in 12 of 12 districts |
 | One stakeholder given three seats (each in turn) | same winner in a median 33% of seat allocations |

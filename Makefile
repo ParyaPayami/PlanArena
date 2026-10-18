@@ -2,6 +2,7 @@
 #   make reproduce      full run on a clean clone (downloads about 17 GB; several hours on a laptop)
 #   make results        rerun the models and validation on data already downloaded
 #   make compare        list result files that differ from the committed ones
+#   (a reproduction in another folder:  python -I -m planarena.tools.compare_results <folder>)
 # Needs Python 3.13, curl, pdftotext (poppler) and Node 20+ for the web app.
 # Downloaded data is untrusted: every step that reads it runs Python in isolated mode (-I).
 

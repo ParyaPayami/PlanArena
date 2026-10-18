@@ -163,9 +163,9 @@ Models are in D and the optimizer in E.
 |---|---|---|
 | A | Building emissions vs LL84 2023 (fitted on 2024; mostly the same buildings) | total 0.99×; log–log r 0.803; median building error 31% |
 | A | Jobs vs LODES 2023 | tract r 0.843, block r 0.727; median tract error 36% |
-| A | Homes from observed floor area (295 developed lots) | 1.089× recorded homes; median error 28% |
-| B | East Harlem FEIS sites, same floor area and use | 0.969× the FEIS homes (site r 0.973) |
-| B | SoHo/NoHo FEIS sites, same floor area and use | 1.039× (site r 0.976) |
+| A | Homes from observed floor area (295 developed lots) | 1.039× recorded homes; median error 27% |
+| B | East Harlem FEIS sites, same floor area and use | 0.859× the FEIS homes (site r 0.940) |
+| B | SoHo/NoHo FEIS sites, same floor area and use | 1.003× (site r 0.956) |
 | C | Change in homes after real use changes (3,234) | r 0.872 (baseline 0.435); total 1.29× |
 | C | Change in emissions after real use changes (193 buildings) | r 0.857 (baseline 0.090); total 1.00× |
 | C | Change in jobs by census block | r 0.068: no useful skill |
@@ -237,13 +237,13 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 
 | Finding (12 districts, one seat each) | Districts |
 |---|---|
-| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 9 of 12 |
+| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 7 of 12 |
 | All nine rules agree | 0 of 12 |
 | The council winner beats no change in both simulated electorates | 12 of 12 |
 | The simulated residents' winner is the council's winner | 1 of 12 |
 | The council winner is also the Nash bargaining solution | 0 of 12 |
-| One insincere ballot could change the Schulze result | 4 of 12 |
-| Median robustness of the winner (coefficients and seats varied, 200 draws) | 73.0% |
+| One insincere ballot could change the Schulze result | 6 of 12 |
+| Median robustness of the winner (coefficients and seats varied, 200 draws) | 75.8% |
 <!-- END GENERATED: vote -->
 
 ## Honesty rules built in

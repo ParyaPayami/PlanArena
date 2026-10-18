@@ -39,6 +39,9 @@ def fetch() -> dict:
             for name in z.namelist():  # extract only plain file names into our own folder
                 if "/" not in name.strip("/") and ".." not in name:
                     z.extract(name, ext)
+    src = DIR / "SOURCE.json"
+    if OUT.exists() and src.exists() and json.loads(src.read_text()).get("extract_sha256") == sha256(OUT):
+        return json.loads(src.read_text())  # already extracted: re-writing a GeoPackage changes its bytes
     g = pyogrio.read_dataframe(ext / "MapPLUTO.shp", where="Borough = 'MN'")
     pyogrio.write_dataframe(g, OUT, driver="GPKG")
     meta = {"release": RELEASE, "url": URL, "archive_sha256": sha256(ZIP), "extract": OUT.name,
