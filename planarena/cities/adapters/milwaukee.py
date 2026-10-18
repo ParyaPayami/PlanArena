@@ -24,7 +24,7 @@ import shapely
 from planarena.cities.common import finish_twin, local_crs, plausible_floor_area, reconcile_lot_area
 from planarena.cities.registry import city_dir, register
 from planarena.sources import crosswalk
-from planarena.taxonomy import INDEX as TAX_INDEX, group_of
+from planarena.taxonomy import INDEX as TAX_INDEX, group_of as class_group
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
 from planarena.national import census, places
 from planarena.national.common import download
@@ -161,7 +161,7 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
     # official land use -> 16 classes (planarena/sources/crosswalk.py); the analysis group follows from the class
     g["lu16"] = [TAX_INDEX.get(crosswalk.milwaukee(c, gp, u), -1)
                  for c, gp, u in zip(g.LAND_USE, g.LAND_USE_GP, g.NR_UNITS)]
-    g["use_i"] = [group_of(c) for c in g.lu16]
+    g["use_i"] = [class_group(c) for c in g.lu16]
     g["addr"] = (g.HOUSE_NR_LO.fillna("").str.lstrip("0") + " " + g.SDIR.fillna("") + " " + g.STREET.fillna("") + " "
                  + g.STTYPE.fillna("")).str.split().str.join(" ")
     # condominium units -> one parcel (sum quantities, keep the most common use, the first geometry)
@@ -190,7 +190,7 @@ def build(mprop_path=None, out=None, year: int | None = None) -> dict:
     jobs_block = jobs.reindex(blocks.GEOID).fillna(0).to_numpy()
 
     lu16 = p.lu16.to_numpy().astype(int)
-    use_a = np.array([group_of(c) for c in lu16])
+    use_a = np.array([class_group(c) for c in lu16])
     lot, n_lot_fixed = reconcile_lot_area(p.lot_area.to_numpy().astype(float), p.geometry.area.to_numpy())
     fa, n_fa_dropped = plausible_floor_area(p.bldg_area.fillna(0).to_numpy().astype(float), lot)
     res = np.isin(use_a, [U["res"]])
