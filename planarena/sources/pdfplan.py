@@ -178,11 +178,7 @@ def visible(polys, fills: np.ndarray, images: list, widths: list, dpi: int = 300
         for w, (dx, dy) in enumerate(win):
             px[w, m] = img[np.clip(cy + dy, 0, img.shape[0] - 1), np.clip(cx + dx, 0, img.shape[1] - 1)]
     lab_px = _lab(px)
-    # the paper: white, and the page's own background where it is tinted (its most common colour)
-    sample = np.round(np.vstack([im[::7, ::7].reshape(-1, 3) for im in images]), 2)
-    u, n = np.unique(sample, axis=0, return_counts=True)
-    paper = _lab(np.array([[1.0, 1.0, 1.0], u[n.argmax()]]))
-    white = paper[0]
+    paper = _lab(np.array([[1.0, 1.0, 1.0]]))
     rendered = np.zeros((len(uf), 3))
     for i in range(len(uf)):
         c = px[4, own == i]  # centre pixels
@@ -197,9 +193,7 @@ def visible(polys, fills: np.ndarray, images: list, widths: list, dpi: int = 300
     C = np.vstack([_lab(rendered), paper])
     d = np.linalg.norm(lab_px[:, :, None, :] - C[None, None], axis=3)  # window x shape x colour
     mine = d[:, np.arange(len(polys)), own]
-    ok = ((mine <= tol) & (mine <= d.min(2) + 1e-6)).any(0)
-    near_paper = np.linalg.norm(C[:-2, None] - paper[None], axis=2).min(1) <= 3  # a fill drawn in the paper colour
-    return ok & ~near_paper[own], (C[:-2][~near_paper], paper)
+    return ((mine <= tol) & (mine <= d.min(2) + 1e-6)).any(0), (C[:-1], paper)
 
 
 def map_mask(images: list, colours: tuple, exclude: list, dpi: int = 300, step: int = 2,
@@ -224,15 +218,23 @@ def map_mask(images: list, colours: tuple, exclude: list, dpi: int = 300, step: 
     return np.hstack(parts), 72.0 * step / dpi
 
 
-def main_frame(polys, mask: tuple, gap_pt: float = 6.0) -> tuple[np.ndarray, tuple]:
+def main_frame(polys, mask: tuple, gutters=(), gap_pt: float = 20.0, gutter_pt: float = 36.0) -> tuple[np.ndarray, tuple]:
     """Keep the largest map on the spread: insets (an area redrawn at a larger scale) and locator maps are separate
-    patches of map colour. Patches closer than `gap_pt` are one map (a map drawn across the gutter stays whole).
+    patches of map colour. Patches closer than `gap_pt` are one map, and so are patches facing each other across a
+    gutter (x positions in `gutters`, page units) within `gutter_pt`: a map drawn across two pages stays whole.
     Returns which shapes lie in it and the mask restricted to it."""
     from scipy.ndimage import binary_dilation, label
 
     img, px = mask
     r = max(1, int(round(gap_pt / px / 2)))
-    lab, n = label(binary_dilation(img, iterations=r))
+    grown = binary_dilation(img, iterations=r)
+    w = int(round(gutter_pt / px))
+    for g in gutters:
+        c = int(round(g / px))
+        lo, hi = max(c - w, 0), min(c + w, img.shape[1])
+        rows = grown[:, lo:c].any(1) & grown[:, c:hi].any(1)
+        grown[rows, lo:hi] = True
+    lab, n = label(grown)
     if n <= 1:
         return np.ones(len(polys), bool), mask
     pts = shapely.point_on_surface(polys)
@@ -465,7 +467,7 @@ def digitise(pdf_path, district, parcels, phrases=("Proposed Land Use", "Future 
                 if len(polys) < 200:
                     continue
                 mask = map_mask(imgs, rendered, excl)
-                inside, mask = main_frame(polys, mask)
+                inside, mask = main_frame(polys, mask, gutters=np.cumsum([float(p.width) for p in pages])[:-1])
                 polys, pl = polys[inside], pl[inside]
                 if len(polys) < 200:
                     continue

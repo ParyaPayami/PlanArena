@@ -94,7 +94,7 @@ Each city's **baseline is the land use its own government or regional planning a
 | San Antonio | Bexar Appraisal District property class | Future Land Use (adopted area plans, 61% of parcels) | City zoning | 0.99 |
 | San Diego | SANDAG Land Use 2025 + County Assessor | General Plan and community plans | City base zones | 1.02 |
 | Dallas | City existing land use (2026) + DCAD | forwardDallas! 2.0 placetypes (2024) | City base zoning | 0.98 |
-| Milwaukee | City of Milwaukee MPROP | published only as PDF maps | Zoning Code (MPROP) | 1.06 |
+| Milwaukee | City of Milwaukee MPROP | none as data (area-plan PDFs; the city's website refuses scripted downloads) | Zoning Code (MPROP) | 1.06 |
 
 All ten are built. Each has an ingestion report in [docs/ingestion/](docs/ingestion/) (coverage of each layer, the 16-class distributions, how often the existing use matches the plan, homes against the Census, and what is estimated), with a cross-city summary in [docs/ingestion/README.md](docs/ingestion/README.md). In the Studio, the map switches between the plan you edit and the city's official existing use, adopted plan and zoning.
 
