@@ -156,78 +156,37 @@ The GNN is kept only where the ablation shows that it adds accuracy; the redevel
 
 `make reproduce` downloads every input, rebuilds the twins, recalibrates, retrains, reruns every validation and regenerates the docs. `planarena/tools/fetch_open_data.py` records each input's URL, query and SHA-256 in `data/raw/*/SOURCE.json` and `results/data_manifest.json`. `make compare` lists result files that differ from the committed ones.
 
-## 9. Cities beyond Manhattan
+## 9. The ten cities
 
-**Tier B (parcel records).** An adapter maps a city's parcel file into the `parcels.parquet` schema (`planarena/cities/adapters/`). Milwaukee uses the Master Property File and the city's parcel polygons:
+**Principle.** Each city's baseline is the land use its government or regional planning agency publishes for every parcel. The adopted plan (future land use) and zoning are separate layers; nothing is estimated. City adapters (`planarena/cities/adapters/`) map each source into the `parcels.parquet` schema; `planarena/cities/build.py` lists the ten cities.
+
+**New York City** (all boroughs) uses the citywide MapPLUTO release with the same schema and zoning rules as the Manhattan demo (`adapters/nyc.py`). Its energy and emission coefficients are chosen on held-out buildings. The two candidates are national (RECS/CBECS, eGRID New York State) and the Manhattan LL84 calibration. Both are scored against LL84 2023 emissions of buildings outside Manhattan, and the one with the smaller median error is kept. Jobs rates are fitted to the city's LODES blocks either way.
+
+**Milwaukee** uses the Master Property File and the city's parcel polygons (`adapters/milwaukee.py`):
 - land use from the MPROP land-use group (parking codes 7521, 7523 and 7525 become parking);
-- floor area, units, stories, year built and assessed value (including exempt value) from the record;
-- condominium units are summed to their parcel;
-- locally designated historic properties are protected;
-- districts are aldermanic districts.
+- floor area, units (residential and mixed groups only), stories, year built and assessed value (including exempt value);
+- condominium units summed to their parcel;
+- locally designated historic properties protected;
+- aldermanic districts as districts.
 
-Milwaukee regulates bulk with height, setback and density rules rather than one FAR. Its zoning screen is therefore simplified: the district family sets the allowed uses, and the context FAR (below) stands in for capacity.
+Milwaukee regulates bulk with height, setback and density rules rather than one FAR. Its zoning screen is therefore simplified: the district family sets the allowed uses, and the context FAR (the 90th percentile of built FAR in the census block group, or the lot's own if higher) stands in for capacity.
 
-Massachusetts (every city and town) uses the MassGIS Level 3 assessors' parcels:
-- tax-parcel polygons, with right-of-way polygons dropped and multi-part parcels joined;
-- assessing records summed to their parcel (LOC_ID) for condominiums;
-- land use from the Department of Revenue property-type code (first three characters), with overrides from the town's code descriptions (vacant, parking, housing authority, conservation, utilities);
-- dwellings counted only on residential and mixed records;
-- residential area from RES_AREA where recorded.
-
-Zoning codes are kept but not interpreted (all uses allowed; context FAR). Districts are tract groups, as for Tier A.
-
-New York City as a whole uses the citywide MapPLUTO release with the same schema and zoning rules as the Manhattan demo (`planarena/cities/adapters/nyc.py`). Its energy and emission coefficients are chosen on held-out buildings. The two candidates are national (RECS/CBECS, eGRID New York State) and the Manhattan LL84 calibration. Both are scored against LL84 2023 emissions of buildings outside Manhattan, and the one with the smaller median error is kept. Jobs rates are fitted to the city's LODES blocks either way.
-
-Florida (every place) uses the Department of Revenue 2026 parcel maps, which carry the real-property roll:
-- land use from the DOR use code;
-- effective floor area of all improvements;
-- residential units, year built and just value;
-- stacked condominium units summed to one lot.
-
-There is no zoning in the roll, so floors are estimated from floor area and an assumed 40% coverage.
-
-Philadelphia uses the Office of Property Assessment records and the Water Department parcels. Each assessment point is placed in the parcel that contains it, and the records on one parcel are summed.
+**Philadelphia** uses the Office of Property Assessment records and the Water Department parcels (`adapters/philadelphia.py`). Each assessment point is placed in the parcel that contains it, and the records on one parcel are summed.
 - **Land use:** the OPA category, with institutions picked out from the building description.
 - **Parks:** land zoned parks and open space (SPPOA, SPPOP) is open space.
-- **Homes:** OPA has no unit count. Single-family records count as one home each; the rest of each census block's housing units go to its multi-family and mixed parcels by floor area (estimated).
+- **Homes:** OPA has no unit count. Single-family records count as one home each; the rest of each census block's housing units go to its multi-family and mixed parcels by floor area (estimated, flagged).
 
-**Data checks in every Tier B adapter:**
+**Data checks in every adapter:**
 - recorded lot area is replaced by the polygon's area when the two differ by more than 3×;
 - floor area above FAR 50 is treated as unrecorded;
 - LL84 records with a site EUI above 1,000 kBtu/sq ft are dropped as reporting errors (`calibrate.plausible_ll84`), in the calibration and in every validation.
 
-**Which builder runs** (`planarena/cities/build.py`): New York City, Milwaukee, Massachusetts and Florida places get Tier B; every other place gets Tier A.
-
-**Tier A (national open data, any place).**
-- **Area:** the place's TIGER boundary; 2020 census blocks whose representative point lies inside it.
-- **Lots:** Overture buildings are assigned to blocks by representative point. A building of under 60 m² within 25 m of a larger one is accessory: it adds no lot and no floor area for homes or jobs. Within each block, each building's lot is its Voronoi cell (seeded at its representative point), clipped to the block and to 30 m around the building. Block land outside every cell becomes lots without buildings when larger than 5,000 sq ft.
-- **Floor area:** footprint × floors, with floors = height / 3.5 m. A missing height takes the block median, then the city median.
-- **Land use (rules):**
-  1. the building's Overture class;
-  2. otherwise the most common use of the Overture places inside the lot (hospitals are public facilities);
-  3. otherwise the Overture land-use polygon under the lot;
-  4. otherwise residential if the block has housing units;
-  5. otherwise industrial for footprints over 20,000 sq ft, else commercial.
-
-  Each lot records which rule decided (`use_confidence`).
-- **Homes:** each block's 2020 housing units are allocated to its residential and mixed lots by residential floor area (mixed use: 70% residential, an assumption), then rounded so block totals are kept.
-- **Jobs:** floor area per worker by type is fitted by non-negative least squares to the place's LODES block totals, as in Manhattan.
-- **Capacity without zoning:** the context FAR is the 90th percentile of built FAR among built lots in the census block group, or the lot's own built FAR if higher. All uses are allowed.
-- **Districts:** census tracts grouped by k-means on their centroids, about 75,000 residents each.
-
 **Coefficients in every city other than Manhattan:**
-- Residential site EUI: RECS 2020 by state.
-- Non-residential site EUI: CBECS 2018 by census division and use (national where a cell has fewer than 30 buildings).
-- Emission factors: eGRID2023 state electricity rates and the EPA Emission Factors Hub (AR5 GWPs), weighted by each use's fuel mix.
-- Persons per household: Census 2020 population per housing unit (which understates household size, because vacant units are included).
-
-**Tier A against Tier B** (`planarena/cities/compare.py`). The Tier A pipeline is run inside a Tier B city, on that city's outline. It is scored there on:
-- land use of built pseudo-lots, against the parcel under each lot's representative point;
-- floor area and homes, by census block;
-- jobs by block, against LODES;
-- in Manhattan, building emissions against LL84.
-
-**Land-use model for Tier A** (`planarena/cities/landuse_model.py`). LightGBM on the national features of each built pseudo-lot (`lot_features.parquet`), trained on the Tier B cities and tested on a held-out Tier B city, next to the rules on the same lots. It replaces the rules only if it beats them in every held-out city; the variants tried are listed in the result file.
+- residential site EUI: RECS 2020 by state;
+- non-residential site EUI: CBECS 2018 by census division and use (national where a cell has fewer than 30 buildings);
+- emission factors: eGRID2023 state electricity rates and the EPA Emission Factors Hub (AR5 GWPs), weighted by each use's fuel mix;
+- persons per household: Census 2020 population per housing unit (an understatement, because vacant units are included);
+- jobs: floor area per worker by type, fitted by non-negative least squares to the city's LODES blocks.
 
 **Map data for large cities.** Above 100,000 parcels, the web app loads compact parcel points (use, district, position, size) instead of one GeoJSON file. Parcel polygons come as Mapbox vector tiles at zooms 13–15, cut from the twin's own geometry and cached on disk. Selection tools work on the points, so they behave the same in both modes.
 

@@ -102,7 +102,7 @@ export default function Studio() {
           <div>
             <div className="brand-name">PlanArena</div>
             <div className="brand-sub">
-              <CityPicker /> · {meta.n_parcels.toLocaleString()} {meta.tier === "A" ? "pseudo-lots" : "parcels"}
+              <CityPicker /> · {meta.n_parcels.toLocaleString()} parcels
             </div>
           </div>
         </div>

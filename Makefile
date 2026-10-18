@@ -53,30 +53,19 @@ vote:
 	$(RUN) planarena.agents.voting
 	$(PY) -c "from planarena.agents.voting import sensitivity_all_districts as f; f()"
 
-# Tier B Milwaukee, two Tier A places, and Tier A scored against Tier B in Manhattan and Milwaukee.
+# The cities with official parcel-level land use, and the cross-city and integration tests.
 cities:
-	$(RUN) planarena.cities.adapters.nyc
-	$(RUN) planarena.cities.adapters.philadelphia
-	$(RUN) planarena.cities.adapters.milwaukee
-	$(RUN) planarena.cities.tier_a "Wauwatosa, WI"
-	$(RUN) planarena.cities.tier_a "Shorewood, WI"
-	$(RUN) planarena.cities.adapters.massgis Cambridge
-	$(RUN) planarena.cities.adapters.florida Gainesville
-	$(RUN) planarena.cities.compare milwaukee
-	$(RUN) planarena.cities.compare manhattan
-	$(RUN) planarena.cities.compare cambridge
-	$(RUN) planarena.cities.compare gainesville
-	$(RUN) planarena.cities.compare newyork
-	$(RUN) planarena.cities.compare philadelphia
-	$(RUN) planarena.cities.landuse_model
+	$(RUN) planarena.cities.build "New York"
+	$(RUN) planarena.cities.build Philadelphia
+	$(RUN) planarena.cities.build Milwaukee
 	$(RUN) planarena.cities.mke_history
 	$(RUN) planarena.models.crosscity
 	$(RUN) planarena.models.replay
 	$(RUN) planarena.models.ablate_recs
 
-# Any US place, with the best data available for it:  make city PLACE="Austin, TX"
+# One city:  make city CITY="Chicago"
 city:
-	$(RUN) planarena.cities.build "$(PLACE)"
+	$(RUN) planarena.cities.build "$(CITY)"
 
 validate:
 	$(RUN) planarena.validate all

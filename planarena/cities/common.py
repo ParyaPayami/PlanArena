@@ -24,6 +24,38 @@ def reconcile_lot_area(recorded: np.ndarray, polygon: np.ndarray) -> tuple[np.nd
     return np.where(ok, recorded, polygon).astype(float), int((~ok).sum())
 
 
+def local_crs(lat: float, lon: float) -> str:
+    """Transverse Mercator centred on the city, in US feet (the units the engine uses everywhere)."""
+    return f"+proj=tmerc +lat_0={lat:.5f} +lon_0={lon:.5f} +k=1 +x_0=0 +y_0=0 +datum=NAD83 +units=us-ft +no_defs"
+
+
+def round_by_block(x: np.ndarray, blk: np.ndarray) -> np.ndarray:
+    """Integer units whose block sums equal the rounded block totals (largest remainder)."""
+    out = np.floor(x)
+    rem = x - out
+    target = pd.Series(x).groupby(blk).sum().round()
+    short = (target - pd.Series(out).groupby(blk).sum()).astype(int)
+    order = pd.DataFrame({"b": blk, "r": rem}).sort_values("r", ascending=False)
+    order["rank"] = order.groupby("b").cumcount()
+    add = order[order["rank"] < order.b.map(short)].index
+    out[add] += 1
+    return out
+
+
+def districts(blocks: gpd.GeoDataFrame, blk: np.ndarray) -> np.ndarray:
+    """Planning areas where the city publishes none: census tracts grouped by k-means on their centroids, about
+    75,000 residents each (1-15)."""
+    from scipy.cluster.vq import kmeans2
+
+    tract = blocks.GEOID.str[:11]
+    t = pd.DataFrame({"tract": tract, "x": blocks.geometry.centroid.x, "y": blocks.geometry.centroid.y,
+                      "pop": blocks.POP100}).groupby("tract").agg(x=("x", "mean"), y=("y", "mean"), pop=("pop", "sum"))
+    k = min(int(np.clip(round(t["pop"].sum() / 75000), 1, 15)), len(t))
+    lab = np.zeros(len(t), int) if k == 1 else kmeans2(t[["x", "y"]].to_numpy(), k, seed=7, minit="++")[1]
+    code = dict(zip(t.index, lab + 1))
+    return tract.map(code).to_numpy()[blk].astype("int32")
+
+
 MAX_PLAUSIBLE_FAR = 50.0  # above any US building (the tallest Manhattan towers are near FAR 30-40 on their lots)
 
 

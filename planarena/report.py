@@ -164,59 +164,6 @@ def _integration() -> list[str]:
     return L
 
 
-def _tiers() -> list[str]:
-    """Tier A (national open data) scored against Tier B parcel records in the same city."""
-    rows = []
-    names = sorted(f.stem[len("tier_a_vs_b_"):] for f in (RES / "validation").glob("tier_a_vs_b_*.json"))
-    for city in sorted(names, key=lambda c: (c != "manhattan", c)):
-        t = load(f"tier_a_vs_b_{city}")
-        if not t:
-            continue
-        lu, fa, hb, jb = t["land_use"], t["floor_area_by_block"], t["homes_by_block"], t["jobs_by_block"]
-        from planarena.cities.landuse_model import group
-
-        others = [load(f"tier_a_vs_b_{c}")["floor_area_by_block"]["total_ratio"] for c in names if group(c) != group(city)]
-        corr = fa["total_ratio"] / float(np.median(others)) if others else None
-        rows += [f"| {t['city']} | Lots | {num(t['tier_a']['n_parcels'])} pseudo-lots | {num(t['tier_b_parcels'])} parcels |",
-                 f"| {t['city']} | Land use of built lots (accuracy; macro F1) | {pct(lu['accuracy'])}; {r3(lu['macro_f1'])} "
-                 f"(majority class {pct(lu['majority_class_accuracy'])}) | records |",
-                 f"| {t['city']} | Floor area by census block (total; log r; median error) | {times(fa['total_ratio'])}; "
-                 f"{r3(fa['log_r'])}; {pct(fa['median_abs_pct_error'])} | records |",
-                 f"| {t['city']} | Floor area total after the correction learned from the other cities | {times(corr)} | records |",
-                 f"| {t['city']} | Homes by census block, Census 2020 vs city records (total; r) | {times(hb['total_ratio'])}; "
-                 f"{r3(hb['pearson_r'])} | records |",
-                 f"| {t['city']} | Jobs by census block vs LODES (r; in-sample) | {r3(jb['tier_a']['pearson_r'])} | {r3(jb['tier_b']['pearson_r'])} |"]
-        em = t.get("emissions_ll84_2023")
-        if em:
-            rows.append(f"| {t['city']} | Building emissions vs LL84 2023, {num(em['tier_a']['n'])} buildings (total; median error) | "
-                        f"{times(em['tier_a']['total_ratio'])}; {pct(em['tier_a']['median_abs_pct_error'])} | "
-                        f"{times(em['tier_b']['total_ratio'])}; {pct(em['tier_b']['median_abs_pct_error'])} |")
-    lm = load("landuse_model")
-    if lm:
-        for city, h in lm["held_out"].items():
-            rows.append(f"| {city.title()} | Land use from a model trained on {', '.join(x.title() for x in h['trained_on'])} "
-                        f"(accuracy; macro F1) | {pct(h['model']['accuracy'])}; {r3(h['model']['macro_f1'])} "
-                        f"(rules {pct(h['rules']['accuracy'])}; {r3(h['rules']['macro_f1'])}) | records |")
-    if not rows:
-        return []
-    nc = load("nyc_citywide_coefficients")
-    if nc:
-        rows.append("| | | | |")
-        for name, s in nc["scores"].items():
-            rows.append(f"| New York City, {num(s['buildings_outside_manhattan'])} benchmarked buildings outside Manhattan | "
-                        f"Emissions with {name.replace('_', ' ')} coefficients (total; median error) | "
-                        f"{times(s['total_ratio'])}; {pct(s['median_abs_pct_error'])}"
-                        f"{' (chosen)' if name == nc['chosen'] else ''} | |")
-    return ["Tier A runs for any US place from national open data (Census 2020 blocks, LODES, Overture Maps, EIA and EPA). "
-            "To measure what that costs, the Tier A pipeline is run inside cities that also have parcel records "
-            "(Tier B) and scored against them (`planarena/cities/compare.py`).", "",
-            "| City | Test | Tier A | Tier B |", "|---|---|---|---|"] + rows + [
-            "", "Tier A has no assessed values or zoning; those indicators are hidden in Tier A cities."] + (
-            [f"A land-use model trained on the other Tier B cities and tested on each held-out one {'beat' if lm['model_beats_rules_everywhere'] else 'did not beat'} "
-             f"the rules in every held-out city, so Tier A uses {'the model' if lm['model_beats_rules_everywhere'] else 'the rules'} "
-             f"({len(lm['variants_tried'])} model variants tried; `results/validation/landuse_model.json`)."] if lm else [])
-
-
 # ----------------------------------------------------------------------------- VALIDATION.md
 def render_validation() -> str:
     L = ["# Validation (generated)", "",
@@ -284,6 +231,17 @@ def render_validation() -> str:
         L.append("")
 
     # B. Planning calculations
+    nc = load("nyc_citywide_coefficients")
+    if nc:
+        L += ["### New York City as a whole: which energy and emission coefficients", "",
+              "Scored on LL84 2023 buildings outside Manhattan, which neither candidate was fitted on "
+              f"(`planarena/cities/adapters/nyc.py`; {num(nc['records_excluded_implausible_eui'])} records with a site "
+              "EUI above 1,000 kBtu/sq ft excluded as reporting errors).", "",
+              "| Coefficients | Buildings | Total (model / reported) | Median building error |", "|---|---:|---:|---:|"]
+        for name, sc in nc["scores"].items():
+            L.append(f"| {name.replace('_', ' ')}{' (chosen)' if name == nc['chosen'] else ''} | "
+                     f"{num(sc['buildings_outside_manhattan'])} | {times(sc['total_ratio'])} | {pct(sc['median_abs_pct_error'])} |")
+        L.append("")
     L += ["## B. Consistency with planning calculations", ""]
     eh, sn, rz = load("east_harlem_rezoning"), load("soho_noho_rezoning"), load("rezoning_replays")
     if eh:
@@ -442,10 +400,8 @@ def render_validation() -> str:
               f"| Ten random feasible plans added to the ballot (not built from the utilities) | winner unchanged in {x['districts_winner_unchanged_with_random_candidates']} of {n} districts; beats every random plan head to head in {x['districts_winner_beats_every_random_plan']} |",
               f"| Residents' indifference threshold swept 0–0.1 points | residents' winner stable in {x['districts_residents_winner_stable_across_jnd']} of {n} districts |",
               f"| One stakeholder given three seats (each in turn) | same winner in a median {pct(x['median_share_of_seat_allocations_with_same_winner'])} of seat allocations |", ""]
-    if _tiers():
-        L += ["## G. Any US city: Tier A against Tier B", ""] + _tiers() + [""]
     if _integration():
-        L += ["## H. Integration value: likelihood-weighted vs capacity-based projections", ""] + _integration() + [""]
+        L += ["## G. Integration value: likelihood-weighted vs capacity-based projections", ""] + _integration() + [""]
     return "\n".join(L).rstrip() + "\n"
 
 
@@ -543,7 +499,6 @@ def readme_blocks() -> dict[str, str]:
     vs = load("vote_summary")
     blocks["vote"] = _vote_text(vs) if vs else ""
     blocks["gnn_cv"] = "\n".join(_cv_tables())
-    blocks["tiers"] = "\n".join(_tiers())
     return blocks
 
 

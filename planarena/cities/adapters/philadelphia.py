@@ -23,9 +23,9 @@ import numpy as np
 import pandas as pd
 import shapely
 
-from planarena.cities.common import finish_twin, plausible_floor_area, reconcile_lot_area
+from planarena.cities.common import (districts, finish_twin, local_crs, plausible_floor_area, reconcile_lot_area,
+                                     round_by_block)
 from planarena.cities.registry import city_dir, register
-from planarena.cities.tier_a import _districts, _round_by_block, local_crs
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
 from planarena.national import census, places
 from planarena.national.common import download
@@ -151,7 +151,7 @@ def build() -> dict:
     left = np.clip(blocks.HU100.to_numpy() - pd.Series(sf).groupby(blk).sum().reindex(range(len(blocks)), fill_value=0).to_numpy(), 0, None)
     tot = pd.Series(other_res).groupby(blk).sum().reindex(range(len(blocks)), fill_value=0).to_numpy()
     units = sf + np.divide(other_res * left[blk], tot[blk], out=np.zeros(len(p)), where=tot[blk] > 0)
-    units = _round_by_block(units, blk)
+    units = round_by_block(units, blk)
     nonres = fa - res_area
     com_like = np.isin(use_a, [U["com"], U["mix"]])
     ll = gpd.GeoSeries(rp, crs=crs).to_crs(WEB_CRS)
@@ -176,7 +176,7 @@ def build() -> dict:
     df["max_far"] = np.maximum(bg.map(ctx).fillna(df.built_far[built].quantile(0.9)).to_numpy(), df.built_far.to_numpy())
     df["resid_far"] = df["comm_far"] = df["facil_far"] = df["max_far"]
     df["allowed"] = zone.map(allowed).to_numpy().astype("int64")
-    df["cd"] = _districts(df, blocks, blk)
+    df["cd"] = districts(blocks, blk)
     meta = finish_twin(df, p.geometry.values, crs, out, "PA", float(blocks.POP100.sum() / max(blocks.HU100.sum(), 1)),
                        jobs_block, blk, log, {
         "city": pl["label"], "geoid": GEOID, "tier": "B",

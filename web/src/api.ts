@@ -52,9 +52,7 @@ export interface ZoningSummary {
   max_far: { min: number; median: number; max: number }; built_far: { min: number; median: number; max: number };
   districts: Record<string, number>; allowed_on_all: string[];
 }
-export interface CityEntry { id: string; label: string; tier: string; source?: string; parcels?: number }
-export interface PlaceHit { geoid: string; label: string; state: string; kind: string; land_km2: number; built: boolean; tier: "A" | "B" }
-export interface BuildJob { geoid: string; label?: string; status: "running" | "done" | "failed"; step?: string; elapsed?: number; log?: string }
+export interface CityEntry { id: string; label: string; built?: boolean; status?: string; tier?: string; source?: string; parcels?: number }
 
 export const api = {
   cities: () => get<CityEntry[]>("/api/cities"),
@@ -64,9 +62,6 @@ export const api = {
     if (!r.ok) throw new Error(`/api/points: ${r.status}`);
     return r.arrayBuffer();
   },
-  places: (q: string) => get<PlaceHit[]>(`/api/places?q=${encodeURIComponent(q)}`),
-  buildCity: (geoid: string) => send<BuildJob>("POST", `/api/cities/${geoid}/build`),
-  buildStatus: (geoid: string) => get<BuildJob>(`/api/cities/${geoid}/build`),
   meta: () => get<Meta>("/api/meta"),
   parcel: (i: number) => get<ParcelInfo>(`/api/parcel/${i}`),
   suitability: () => get<{ top: number[]; p: number[] }>("/api/suitability"),

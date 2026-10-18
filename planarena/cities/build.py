@@ -1,58 +1,49 @@
-"""Build any US place with the best data available for it.
+"""The ten PlanArena cities and how each is built from official parcel-level land use.
 
-Tier B where an adapter covers the place (New York City: MapPLUTO; Milwaukee: MPROP; Philadelphia: OPA; every Massachusetts city and town: MassGIS L3; every
-Florida place: DOR parcel maps and tax roll), Tier A (national open data) everywhere else.
+Every city's baseline is the land use its own government (or regional planning agency) publishes for each parcel;
+the adopted plan (future land use) and zoning are separate layers. Nothing is estimated: a city whose official data
+is not yet ingested is listed as not built.
 
-Run:  python -I -m planarena.cities.build <GEOID or "City, ST">
+Run:  python -I -m planarena.cities.build "<city>"      (or a Census place GEOID)
 """
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 
-from planarena.national import places
+# GEOID -> (label, adapter module under planarena.cities.adapters, or None while its sources are being ingested)
+CITIES = {
+    "3651000": ("New York, NY", "nyc"),
+    "0644000": ("Los Angeles, CA", None),
+    "1714000": ("Chicago, IL", None),
+    "4835000": ("Houston, TX", None),
+    "0455000": ("Phoenix, AZ", None),
+    "4260000": ("Philadelphia, PA", "philadelphia"),
+    "4865000": ("San Antonio, TX", None),
+    "0666000": ("San Diego, CA", None),
+    "4819000": ("Dallas, TX", None),
+    "5553000": ("Milwaukee, WI", "milwaukee"),
+}
 
-MILWAUKEE = "5553000"
-NEW_YORK = "3651000"
-PHILADELPHIA = "4260000"
 
-
-def tier_for(geoid: str) -> str:
-    pl = places.place(geoid)
-    return "B" if geoid in (MILWAUKEE, NEW_YORK, PHILADELPHIA) or pl["state"] in ("MA", "FL") else "A"
+def resolve(target: str) -> str:
+    """GEOID of one of the ten cities, from a GEOID or a name such as 'Chicago' or 'Dallas, TX'."""
+    if target in CITIES:
+        return target
+    key = target.lower().replace(",", " ").split()
+    for geoid, (label, _) in CITIES.items():
+        if key and label.lower().replace(",", " ").split()[: len(key)] == key:
+            return geoid
+    raise SystemExit(f"{target!r} is not one of the PlanArena cities: " + ", ".join(v[0] for v in CITIES.values()))
 
 
 def build(target: str) -> dict:
-    hit = [places.place(target)] if target.isdigit() else places.search(target, 1)
-    if not hit:
-        raise SystemExit(f"no US place matches {target!r}")
-    geoid = hit[0]["geoid"]
-    if geoid == NEW_YORK:
-        from planarena.cities.adapters import nyc
-
-        return nyc.build()
-    if geoid == PHILADELPHIA:
-        from planarena.cities.adapters import philadelphia
-
-        return philadelphia.build()
-    if geoid == MILWAUKEE:
-        from planarena.cities.adapters import milwaukee
-
-        return milwaukee.build()
-    if hit[0]["state"] == "MA":
-        from planarena.cities.adapters import massgis
-
-        try:
-            return massgis.build(geoid)
-        except SystemExit as e:  # no L3 file for this place (e.g. a CDP inside a town): fall back to Tier A
-            print(f"MassGIS: {e}; building Tier A instead", flush=True)
-    if hit[0]["state"] == "FL":
-        from planarena.cities.adapters import florida
-
-        return florida.build(geoid)
-    from planarena.cities.tier_a import build_city
-
-    return build_city(geoid)
+    geoid = resolve(target)
+    label, adapter = CITIES[geoid]
+    if adapter is None:
+        raise SystemExit(f"{label}: official land-use sources are not ingested yet")
+    return importlib.import_module(f"planarena.cities.adapters.{adapter}").build()
 
 
 if __name__ == "__main__":

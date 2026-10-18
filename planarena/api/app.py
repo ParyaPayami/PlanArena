@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
-import sys
 import threading
 import time
 from collections import OrderedDict
@@ -771,73 +769,19 @@ def sample_plan():
 
 # ----------------------------------------------------------------------------- static web app
 # ----------------------------------------------------------------------------- cities
-_BUILDS: dict[str, dict] = {}
-_BUILD_LOCK = threading.Lock()
-
-
 @app.get("/api/cities")
 def cities():
-    """Cities already built (Manhattan, Tier B parcel cities and Tier A places)."""
-    return list(registry.cities().values())
-
-
-@app.get("/api/places")
-def place_search(q: str, limit: int = 12):
-    """Any US place (Census gazetteer): incorporated places, CDPs and New England towns."""
-    from planarena.national import places
-
-    hits = places.search(q, min(max(limit, 1), 30))
-    from planarena.cities.build import tier_for
+    """The PlanArena cities: the Manhattan demo and the ten cities with official parcel-level land use, built or not."""
+    from planarena.cities.build import CITIES
 
     built = registry.cities()
-    return [h | {"built": h["geoid"] in built, "tier": tier_for(h["geoid"])} for h in hits]
-
-
-def _run_build(geoid: str) -> None:
-    job = _BUILDS[geoid]
-    log = registry.city_dir(geoid) / "build.log"
-    log.parent.mkdir(parents=True, exist_ok=True)
-    with open(log, "w") as fh:
-        p = subprocess.run([sys.executable, "-I", "-m", "planarena.cities.build", geoid], cwd=ROOT,
-                           stdout=fh, stderr=subprocess.STDOUT)
-    job["status"] = "done" if p.returncode == 0 else "failed"
-    job["log"] = log.read_text()[-4000:]
-    with store.connect() as db:
-        store.audit(db, "city_built", {"city": geoid, "status": job["status"]})
-
-
-@app.post("/api/cities/{geoid}/build", status_code=202)
-def build_city(geoid: str):
-    """Build a twin of any US place: Tier B where parcel records are supported, otherwise Tier A (a few minutes)."""
-    from planarena.national import places
-
-    if not re.fullmatch(r"\d{7}|\d{10}", geoid):
-        raise HTTPException(400, "GEOID must be a 7-digit place or 10-digit New England town code")
-    try:
-        pl = places.place(geoid)
-    except KeyError:
-        raise HTTPException(404, "unknown place") from None
-    with _BUILD_LOCK:
-        job = _BUILDS.get(geoid)
-        if job and job["status"] == "running":
-            return job
-        if any(j["status"] == "running" for j in _BUILDS.values()):
-            raise HTTPException(429, "another city is being built; try again when it finishes")
-        job = _BUILDS[geoid] = {"geoid": geoid, "label": pl["label"], "status": "running", "started": time.time()}
-    threading.Thread(target=_run_build, args=(geoid,), daemon=True).start()
-    return job
-
-
-@app.get("/api/cities/{geoid}/build")
-def build_status(geoid: str):
-    job = _BUILDS.get(geoid)
-    if job is None:
-        if registry.exists(geoid):
-            return {"geoid": geoid, "status": "done"}
-        raise HTTPException(404, "no build for this place")
-    log = registry.city_dir(geoid) / "build.log"
-    tail = log.read_text().strip().splitlines()[-1:] if log.exists() else []
-    return job | {"step": tail[0] if tail else "starting", "elapsed": round(time.time() - job["started"])}
+    out = [built[registry.DEFAULT]] if registry.DEFAULT in built else []
+    for geoid, (label, adapter) in CITIES.items():
+        b = built.get(geoid)
+        out.append({"id": geoid, "label": label, "built": b is not None,
+                    "status": "built" if b else ("sources ready" if adapter else "sources being ingested")}
+                   | ({k: v for k, v in b.items() if k not in ("id", "label")} if b else {}))
+    return out
 
 
 @app.get("/api/points")

@@ -1,107 +1,50 @@
-import { useEffect, useRef, useState } from "react";
-import { api, cityHref, type BuildJob, type CityEntry, type PlaceHit } from "../api";
+import { useEffect, useState } from "react";
+import { api, cityHref, type CityEntry } from "../api";
 import { useStore } from "../store";
 
-/** Switch to any built city, or build a Tier A twin of any US place from national open data. */
+/** The PlanArena cities: each built from the land use its own government publishes for every parcel. */
 export default function CityPicker() {
   const meta = useStore((s) => s.meta)!;
   const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const [hits, setHits] = useState<PlaceHit[]>([]);
-  const [built, setBuilt] = useState<CityEntry[]>([]);
-  const [job, setJob] = useState<BuildJob | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const timer = useRef<number>();
+  const [cities, setCities] = useState<CityEntry[]>([]);
 
   useEffect(() => {
-    if (open) api.cities().then(setBuilt).catch(() => undefined);
+    if (open) api.cities().then(setCities).catch(() => undefined);
   }, [open]);
-
-  useEffect(() => {
-    window.clearTimeout(timer.current);
-    if (q.trim().length < 2) {
-      setHits([]);
-      return;
-    }
-    timer.current = window.setTimeout(() => api.places(q).then(setHits).catch((e) => setError(String(e))), 250);
-  }, [q]);
-
-  useEffect(() => {
-    if (!job || job.status !== "running") return;
-    const t = window.setInterval(() => {
-      api.buildStatus(job.geoid).then((j) => {
-        setJob(j);
-        if (j.status === "done") window.location.href = cityHref(j.geoid);
-      });
-    }, 2000);
-    return () => window.clearInterval(t);
-  }, [job]);
-
-  const build = (h: PlaceHit) => {
-    setError(null);
-    api.buildCity(h.geoid).then(setJob).catch((e) => setError(String(e)));
-  };
 
   return (
     <>
-      <button className="link city-button" onClick={() => setOpen(true)} title="Choose or build a city">
-        {meta.city} <span className={`badge ${meta.tier === "A" ? "bad" : ""}`}>Tier {meta.tier}</span> ▾
+      <button className="link city-button" onClick={() => setOpen(true)} title="Choose a city">
+        {meta.city} ▾
       </button>
       {open && (
         <div className="modal-back" onClick={() => setOpen(false)}>
           <div className="modal methods" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Choose a city">
             <h2>Choose a city</h2>
             <p className="muted small">
-              <b>Tier B</b> cities use official parcel records (New York City, Philadelphia, Milwaukee, and every
-              Massachusetts and Florida city and town). <b>Tier A</b> works for any US city or town: lots are
-              estimated from Overture buildings within 2020 census blocks; homes come from the Census and jobs from
-              LEHD LODES by block; land use and floor area are estimated; there is no zoning or assessed value.
+              Each city's baseline is the land use its government or regional planning agency publishes for every
+              parcel. The adopted plan and zoning are separate layers. Nothing is estimated: a city whose official
+              data is still being added is listed but cannot be opened yet.
             </p>
-            {built.length > 0 && (
-              <>
-                <h4>Built</h4>
-                <div className="badges">
-                  {built.map((c) => (
-                    <a key={c.id} className="button chip" href={cityHref(c.id)}>
-                      {c.label} · Tier {c.tier}
-                    </a>
-                  ))}
-                </div>
-              </>
-            )}
-            <h4>Any US place</h4>
-            <div className="search" style={{ width: "100%" }}>
-              <span className="muted">⌕</span>
-              <input autoFocus value={q} placeholder="City or town, e.g. Milwaukee or Austin, TX" onChange={(e) => setQ(e.target.value)} />
-            </div>
-            {job && (
-              <p className={job.status === "failed" ? "bad" : "muted"}>
-                {job.status === "running" && <>Building {job.label}… {job.step} ({job.elapsed ?? 0} s)</>}
-                {job.status === "failed" && <>Build failed. {job.log?.split("\n").slice(-3).join(" ")}</>}
-                {job.status === "done" && <>Built. Opening…</>}
-              </p>
-            )}
-            {error && <p className="bad small">{error}</p>}
             <div className="city-hits">
-              {hits.map((h) => (
-                <div key={h.geoid} className="city-hit">
+              {cities.map((c) => (
+                <div key={c.id} className="city-hit">
                   <span>
-                    <b>{h.label}</b> <span className="muted small">{h.land_km2.toLocaleString()} km² · {h.kind === "cousub" ? "town" : "place"} · Tier {h.tier}</span>
+                    <b>{c.label}</b>{" "}
+                    <span className="muted small">
+                      {c.built ? `${(c.parcels ?? 0).toLocaleString()} parcels` : c.status}
+                    </span>
                   </span>
-                  {h.built ? (
-                    <a className="button chip" href={cityHref(h.geoid)}>Open</a>
+                  {c.built ? (
+                    <a className="button chip" href={cityHref(c.id)}>
+                      Open
+                    </a>
                   ) : (
-                    <button className="chip" disabled={job?.status === "running"} onClick={() => build(h)}>
-                      Build twin
-                    </button>
+                    <span className="muted small">soon</span>
                   )}
                 </div>
               ))}
             </div>
-            <p className="muted small">
-              Building downloads only this place's data (Census, LODES, Overture) and takes about one to ten minutes,
-              depending on its size.
-            </p>
             <button onClick={() => setOpen(false)}>Close</button>
           </div>
         </div>

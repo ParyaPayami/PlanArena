@@ -115,37 +115,8 @@ def crosscity():
     return _save(fig, "crosscity")
 
 
-def tiers():
-    names = sorted(p.stem[len("tier_a_vs_b_"):] for p in RES.glob("tier_a_vs_b_*.json"))
-    if not names:
-        return None
-    t = {n: _load(f"tier_a_vs_b_{n}") for n in names}
-    raw = [t[n]["floor_area_by_block"]["total_ratio"] for n in names]
-    from planarena.cities.landuse_model import group
-
-    corr = [raw[i] / np.median([raw[j] for j in range(len(raw)) if group(names[j]) != group(names[i])])
-            for i in range(len(raw))]
-    acc = [t[n]["land_use"]["accuracy"] for n in names]
-    maj = [t[n]["land_use"]["majority_class_accuracy"] for n in names]
-    fig, axes = plt.subplots(1, 2, figsize=(6.6, 2.6))
-    x = np.arange(len(names))
-    axes[0].bar(x - 0.2, raw, 0.4, color=MUTED, label="Footprint x floors")
-    axes[0].bar(x + 0.2, corr, 0.4, color=A, label="Corrected (other cities)")
-    axes[0].axhline(1, color=INK, lw=0.8)
-    axes[0].set_ylabel("Tier A / records, floor area")
-    axes[1].bar(x - 0.2, maj, 0.4, color=MUTED, label="Most common use")
-    axes[1].bar(x + 0.2, acc, 0.4, color=C, label="Tier A rules")
-    axes[1].set_ylabel("Land use accuracy, built lots")
-    axes[1].set_ylim(0, 1)
-    for ax in axes:
-        ax.set_xticks(x, [n.title() for n in names], fontsize=7)
-        ax.legend(frameon=False, fontsize=7)
-    fig.suptitle("Tier A (national open data) scored against parcel records", fontsize=9, x=0.01, ha="left")
-    return _save(fig, "tier_a_vs_b")
-
-
 def main():
-    made = [f() for f in (integration, rolling, crosscity, tiers)]
+    made = [f() for f in (integration, rolling, crosscity)]
     print("written:", ", ".join(m for m in made if m))
 
 

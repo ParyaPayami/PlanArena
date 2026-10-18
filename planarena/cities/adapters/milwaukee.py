@@ -21,9 +21,8 @@ import numpy as np
 import pandas as pd
 import shapely
 
-from planarena.cities.common import finish_twin, plausible_floor_area, reconcile_lot_area
+from planarena.cities.common import finish_twin, local_crs, plausible_floor_area, reconcile_lot_area
 from planarena.cities.registry import city_dir, register
-from planarena.cities.tier_a import local_crs
 from planarena.config import DATA, USE_INDEX as U, USE_KEYS, WEB_CRS
 from planarena.national import census, places
 from planarena.national.common import download
