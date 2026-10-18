@@ -82,3 +82,40 @@ def test_milwaukee_land_use_groups():
     assert group_of(8810) == 1 and group_of(8820) == 2 and group_of(8830) == 3 and group_of(8899) == 4
     assert group_of(5812) == 5 and group_of(4225) == 8 and group_of(6553) == 12 and group_of(8880) == 13
     assert group_of(7523) == 6 and group_of(0) == 0
+
+
+def test_scag_crosswalk_covers_the_code_list():
+    from planarena.sources.crosswalk import SCAG, SCAG_GENERIC_MF, SCAG_UNKNOWN, scag
+    from planarena.taxonomy import KEYS
+
+    # every code of the SCAG 2020 Annual Land Use code list (136 codes) is classed, or unknown on purpose
+    codes = set(SCAG) | set(SCAG_GENERIC_MF) | set(SCAG_UNKNOWN) | {"1100"}
+    assert len(codes) == 136 and all(v in KEYS for v in SCAG.values())
+    assert all(scag(c) != "unknown" for c in codes - set(SCAG_UNKNOWN))
+    assert scag("1110") == "sf" and scag("1110", 48) == "mf" and scag("1122") == "mf_small"
+    assert scag("1120", 3) == "mf_small" and scag("1120", 40) == "mf" and scag("1120") == "mf"
+    assert scag("1233") == "hot" and scag("1244") == "hlt" and scag("1247") == "prk" and scag("1340") == "whs"
+    assert scag("1700") == "vac" and scag("1820") == "opn" and scag("1620") == "mix" and scag("1413") == "tra"
+    assert scag("7777") == "unknown" and scag("7777", specific_plan="1600") == "mix" and scag(None) == "unknown"
+
+
+def test_los_angeles_zone_families():
+    from planarena.cities.adapters.losangeles import ALL, allowed
+    from planarena.config import USE_INDEX as U
+
+    on = lambda z, k: bool((allowed(z) >> U[k]) & 1)
+    assert on("R1", "res") and not on("R1", "com") and on("C2", "res") and on("C2", "com") and not on("C2", "ind")
+    assert on("M2", "ind") and not on("M2", "res") and on("RAS3", "com") and on("P", "prk") and not on("P", "res")
+    assert allowed("PVSP") == ALL and allowed("DOWNTOWN") == ALL  # specific plans are not screened
+
+
+def test_los_angeles_plan_and_zone_classes():
+    from planarena.sources.crosswalk import los_angeles_plan, los_angeles_zone
+
+    # residential designations by the city's density category; everything else by SCAG's translation
+    assert los_angeles_plan("Low Medium II Residential", "1120") == "mf_small"
+    assert los_angeles_plan("Medium Residential", "1120") == "mf" and los_angeles_plan("Low Residential", "1110") == "sf"
+    assert los_angeles_plan("Community Commercial", "1220") == "ret" and los_angeles_plan(None, "1240") == "civ"
+    assert los_angeles_zone("RD1.5", "1123") == "mf_small" and los_angeles_zone("R3", "1123") == "mf"
+    assert los_angeles_zone("RE11", "1111") == "sf" and los_angeles_zone("RAS4", "1600") == "mf"
+    assert los_angeles_zone("C2", "1220") == "ret" and los_angeles_zone("PVSP", "7777", "1600") == "mix"

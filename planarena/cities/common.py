@@ -75,6 +75,12 @@ def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: f
     polygons in crs (US feet); jobs_block[k] is the LODES jobs of census block k, and blk[i] lot i's block index.
     """
     t0 = t0 or time.time()
+    # the three official layers: existing use (lu16), adopted plan (plan16, with the plan's own designation) and the
+    # zoning district's use class (zone16); -1 where the city has no such layer
+    for c in ("lu16", "plan16", "zone16"):
+        df[c] = df[c].astype("int16") if c in df else np.full(len(df), -1, dtype="int16")
+    if "plan_designation" not in df:
+        df["plan_designation"] = ""
     grid = add_grid(df)
     gl = gpd.GeoDataFrame({"i": np.arange(len(df))}, geometry=geoms, crs=crs)
     graph = build_graph(gl, df)
@@ -98,8 +104,7 @@ def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: f
     meta = meta | {
         "crs": crs, "n_parcels": int(len(df)),
         "use_counts": {USE_KEYS[u] if u >= 0 else "unknown": int(n) for u, n in df.use.value_counts().sort_index().items()},
-        "class_counts": ({TAX_KEYS[u] if u >= 0 else "unknown": int(n) for u, n in df.lu16.value_counts().sort_index().items()}
-                         if "lu16" in df else {}),
+        "class_counts": _counts(df.lu16), "plan_counts": _counts(df.plan16), "zone_counts": _counts(df.zone16),
         "bbox_wgs84": [float(x) for x in bounds], "grid": grid,
         "graph_edges": {k: int(v.shape[1]) for k, v in graph.items()}, "floor_height_m": FLOOR_HEIGHT_M,
     }
@@ -111,6 +116,13 @@ def finish_twin(df: pd.DataFrame, geoms, crs: str, out: Path, state: str, pph: f
     (out / "twin_meta.json").write_text(json.dumps(meta, indent=2))
     (out / "web" / "twin_meta.json").write_text(json.dumps(meta, indent=2))
     return meta
+
+
+def _counts(cls: pd.Series) -> dict:
+    """Parcels per 16-class key; empty when the layer is missing."""
+    if (cls < 0).all():
+        return {}
+    return {TAX_KEYS[u] if u >= 0 else "unknown": int(n) for u, n in cls.value_counts().sort_index().items()}
 
 
 def _write_coef(out: Path, coef: dict) -> None:
@@ -149,7 +161,10 @@ def jobs_rates(out: Path, jobs_block: np.ndarray, blk: np.ndarray) -> dict:
 
 
 def write_web(gl: gpd.GeoDataFrame, df: pd.DataFrame, web: Path) -> None:
+    import shutil
+
     web.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(web / "tiles", ignore_errors=True)  # vector tiles are cached on demand; a rebuild invalidates them
     (web / "levels").mkdir(exist_ok=True)
     w = gpd.GeoDataFrame({"i": np.arange(len(df), dtype="int32"), "u": df.use.to_numpy(), "h": df.height_m.round(1).to_numpy(),
                           "cd": df.cd.to_numpy()},

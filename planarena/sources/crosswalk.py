@@ -130,3 +130,86 @@ def philadelphia(dig2, dig3, opa_category=None, opa_description=None) -> str:
         return "whs"
     return {21: "ret", 22: "off", 23: "mix", 31: "ind", 41: "civ", 51: "tra", 52: "opn", 61: "civ", 62: "opn",
             71: "opn", 72: "opn", 81: "opn", 91: "vac"}.get(d2, "unknown")
+
+
+# ----------------------------------------------------------------------------- Southern California (SCAG)
+def _codes(cls: str, *codes) -> dict:
+    return {str(c): cls for c in codes}
+
+
+# SCAG land-use codes (SCAG 2020 Annual Land Use dataset, code list of fields ALU20, GP19_SCAG and ZN19_SCAG)
+SCAG = (_codes("sf", 1110, 1111, 1112, 1113, 1150, 1132)  # 1132 mobile home subdivisions: one home per lot
+        | _codes("mf_small", 1122)  # duplexes, triplexes, 2- or 3-unit condominiums and townhouses
+        | _codes("mf", 1123, 1124, 1125, 1130, 1131)  # apartments; mobile home and trailer parks (many homes per lot)
+        | _codes("ret", 1200, 1220, 1221, 1222, 1223, 1230, 1232)  # 1232 commercial recreation
+        | _codes("off", 1210, 1211, 1212, 1213)
+        | _codes("hot", 1233)
+        | _codes("whs", 1231, 1323, 1340, 1416)  # commercial and open storage, wholesaling, truck terminals
+        | _codes("civ", 1240, 1241, 1242, 1243, 1245, 1246, 1250, 1251, 1253, 1270, 1271, 1274)
+        | _codes("hlt", 1244, 1252)  # major medical; special care facilities
+        | _codes("edu", 1260, 1261, 1262, 1263, 1264, 1265, 1266)
+        | _codes("prk", 1247, 1414)  # public parking; park-and-ride lots
+        | _codes("ind", 1300, 1310, 1311, 1312, 1313, 1314, 1320, 1321, 1322, 1324, 1325, 1330, 1331, 1332, 1500)
+        | _codes("tra", 1273, 1276, 1400, 1410, 1411, 1412, 1413, 1415, 1417, 1418, 1420, 1430, 1431, 1432, 1433,
+                 1434, 1435, 1436, 1437, 1438, 1440, 1441, 1442, 1450, 1460)
+        | _codes("mix", 1600, 1610, 1620)
+        | _codes("opn", 1800, 1810, 1820, 1830, 1840, 1850, 1860, 1870, 1880, 1890, 2000, 2100, 2110, 2120, 2200,
+                 2300, 2400, 2500, 2600, 2700, 3400, 4000, 4100, 4200, 4300, 4400, 4500, 8888)
+        | _codes("vac", 1272, 1275, 1700, 1900, 3000, 3100, 3200, 3300))
+SCAG_UNKNOWN = ("7777", "9999")  # specific plan (its own code is used where given); unknown
+SCAG_GENERIC_MF = ("1120", "1121", "1140")  # multi-family / mixed residential without a size
+
+
+def scag(code, units=None, specific_plan=None) -> str:
+    """SCAG land-use code -> class. The same code list describes existing land use (ALU20), the general plan
+    (GP19_SCAG) and zoning (ZN19_SCAG). Code 7777 'Specific Plan' takes the specific plan's own code (SP19_SCAG) where
+    given. Generic residential codes are split by the assessor's unit count where there is one (1100 residential,
+    1120 multi-family, 1121 mixed multi-family, 1140 mixed residential); 1113 rural and 1150 rural residential are
+    single-family, unless the assessor records five or more homes on the parcel. Under construction (1700) counts as
+    vacant: nothing is in use yet."""
+    c = str(code).strip() if code is not None else ""
+    if c == "7777" and specific_plan is not None:
+        return scag(specific_plan, units)
+    n = _num(units)
+    if c in ("1110", "1111", "1112", "1113") and n and n >= 5:
+        return "mf"  # a condominium or townhouse complex the assessor records as one parcel of five or more homes
+    if c == "1100":
+        return "sf" if not n or n <= 1 else "mf_small" if n <= 4 else "mf"
+    if c in SCAG_GENERIC_MF:
+        return "mf_small" if n and n <= 4 else "mf"
+    return SCAG.get(c, "unknown")
+
+
+# ----------------------------------------------------------------------------- City of Los Angeles (plan and zones)
+# SCAG's translation of the General Plan and zoning uses generic codes for housing (1110 single-family, 1120 or 1123
+# multi-family), so a duplex designation reads as apartments. Residential designations are classed by the city's own
+# density categories instead; their corresponding zones are those listed in the Community Plan land-use legends.
+LA_PLAN_RESIDENTIAL = {
+    **{d: "sf" for d in ("Minimum Residential", "Very Low Residential", "Very Low I Residential",
+                         "Very Low II Residential", "Low Residential", "Low I Residential", "Low II Residential",
+                         "Low III Residential")},  # A1, A2, RE, RS, R1, RU, RZ, RW1
+    **{d: "mf_small" for d in ("Low Medium Residential", "Low Medium I Residential",
+                               "Low Medium II Residential")},  # R2, RD, RW2
+    **{d: "mf" for d in ("Medium Residential", "High Medium Residential", "High Density Residential",
+                         "Very High Residential")},  # R3, R4, R5
+}
+LA_ZONE_RESIDENTIAL = [("RAS", "mf"), ("RMP", "mf"), ("RW2", "mf_small"), ("RW1", "sf"), ("RD", "mf_small"),
+                       ("R2", "mf_small"), ("R3", "mf"), ("R4", "mf"), ("R5", "mf"), ("RZ", "sf"), ("RE", "sf"),
+                       ("RS", "sf"), ("RU", "sf"), ("RA", "sf"), ("R1", "sf"), ("A1", "sf"), ("A2", "sf")]
+
+
+def los_angeles_plan(designation, scag_code, specific_plan=None) -> str:
+    """General Plan designation (GP19_CITY) -> class: residential by the city's density category, else SCAG's code."""
+    d = designation.strip() if isinstance(designation, str) else ""
+    return LA_PLAN_RESIDENTIAL.get(d) or scag(scag_code, specific_plan=specific_plan)
+
+
+def los_angeles_zone(zone, scag_code, specific_plan=None) -> str:
+    """Zone (ZN19_CITY, e.g. RD1.5, R3, C2) -> class: residential zones by family, else SCAG's code."""
+    import re
+
+    z = zone.strip().upper() if isinstance(zone, str) else ""
+    for prefix, cls in LA_ZONE_RESIDENTIAL:
+        if re.match(prefix + r"(?![A-Z])", z):
+            return cls
+    return scag(scag_code, specific_plan=specific_plan)

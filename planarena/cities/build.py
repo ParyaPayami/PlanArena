@@ -15,7 +15,7 @@ import sys
 # GEOID -> (label, adapter module under planarena.cities.adapters, or None while its sources are being ingested)
 CITIES = {
     "3651000": ("New York, NY", "nyc"),
-    "0644000": ("Los Angeles, CA", None),
+    "0644000": ("Los Angeles, CA", "losangeles"),
     "1714000": ("Chicago, IL", None),
     "4835000": ("Houston, TX", None),
     "0455000": ("Phoenix, AZ", None),

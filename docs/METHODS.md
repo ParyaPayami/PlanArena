@@ -172,9 +172,18 @@ The GNN is kept only where the ablation shows that it adds accuracy; the redevel
 Milwaukee regulates bulk with height, setback and density rules rather than one FAR. Its zoning screen is therefore simplified: the district family sets the allowed uses, and the context FAR (the 90th percentile of built FAR in the census block group, or the lot's own if higher) stands in for capacity.
 
 **Philadelphia** uses the Office of Property Assessment records and the Water Department parcels (`adapters/philadelphia.py`). Each assessment point is placed in the parcel that contains it, and the records on one parcel are summed.
-- **Land use:** the OPA category, with institutions picked out from the building description.
-- **Parks:** land zoned parks and open space (SPPOA, SPPOP) is open space.
+- **Land use:** the City Planning Commission's land-use layer: the smallest land-use polygon containing the parcel's representative point (street right-of-way polygons overlap blocks). Where only the two-digit code is given, the OPA category splits single- from multi-family homes and the building description picks out schools, hospitals, hotels and warehouses.
 - **Homes:** OPA has no unit count. Single-family records count as one home each; the rest of each census block's housing units go to its multi-family and mixed parcels by floor area (estimated, flagged).
+
+**Los Angeles** uses SCAG's 2020 Annual Land Use parcels and the LA County Assessor roll (`adapters/losangeles.py`).
+- **Three layers from one source:** existing land use (ALU20), the General Plan designation and the zone, both as compiled by SCAG in 2019. Where a specific plan governs, its own code is used. SCAG translates designations and zones into its code list, which has only generic housing codes, so residential designations and zones are classed by the city's own density categories (Low Medium I/II with R2 and RD zones are 2–4 homes; Medium and above, with R3–R5, are 5+).
+- **Buildings:** each assessor identification number is joined to its parcel by number, else by its point (condominium units), and building area, units, year built and roll values are summed. Exempt property (schools, government) often has no building area on the roll; where a built class has a mapped footprint but no recorded floor area, floor area is the footprint times the class's median floor-area-to-footprint ratio (estimated, flagged). Floors are floor area over footprint (derived).
+- **Homes:** assessor units on residential use codes, plus units on other codes where the parcel is residential or mixed.
+- **Zoning screen:** the zone family (Los Angeles Municipal Code) sets the allowed uses; residential uses are allowed in the C and CM zones. The compiled zone field has no height district, which sets FAR, so capacity uses the context FAR. Specific plans are not screened.
+- **Districts:** the 36 Community Plan Areas of the City Planning layer (including the airport and the port).
+- **Assessed value** is the Proposition 13 roll value, which is below market for long-held property.
+
+**Ingestion report.** `planarena/cities/ingestion.py` writes `docs/ingestion/<city>.md` for review before a city is used: the parcel count, each layer's coverage, the 16-class distributions of existing use, plan and zoning, how often the existing use matches the plan (class and analysis group), the share of existing uses the zoning screen allows, homes against Census 2020 housing units, and the fitted floor area per worker.
 
 **Data checks in every adapter:**
 - recorded lot area is replaced by the polygon's area when the two differ by more than 3×;

@@ -83,12 +83,15 @@ PlanArena opens with the Manhattan demo. The city name in the Studio's header li
 
 Each city's **baseline is the land use its own government or regional planning agency publishes for every parcel**. The **adopted plan** (future land use) and **zoning** are kept as two separate layers. Nothing is estimated: a city whose official sources are still being added is listed but cannot be opened yet.
 
-| City | Status | Existing land use |
-|---|---|---|
-| New York (all boroughs) | built | NYC DCP MapPLUTO |
-| Philadelphia | built | OPA assessments (city land-use layer being added) |
-| Milwaukee | built | City of Milwaukee MPROP |
-| Los Angeles, Chicago, Houston, Phoenix, San Antonio, San Diego, Dallas | sources found, being added | SCAG, CMAP, City of Houston, MAG, Bexar/CoSA, SANDAG, NCTCOG |
+| City | Status | Existing land use | Adopted plan | Zoning |
+|---|---|---|---|---|
+| New York (all boroughs) | built | NYC DCP MapPLUTO | none citywide | MapPLUTO |
+| Los Angeles | built | SCAG 2020 Annual Land Use | General Plan (SCAG, 2019) | SCAG, 2019 |
+| Philadelphia | built | City Planning Commission land-use layer | being added | OPA |
+| Milwaukee | built | City of Milwaukee MPROP | being added | MPROP |
+| Chicago, Houston, Phoenix, San Antonio, San Diego, Dallas | sources found, being added | CMAP, City of Houston, MAG, Bexar/CoSA, SANDAG, NCTCOG | | |
+
+Each built city has an ingestion report in [docs/ingestion/](docs/ingestion/): coverage of each layer, the 16-class distributions, how often the existing use matches the plan, and homes against the Census.
 
 Each city also gets its own coefficients:
 - energy from EIA RECS and CBECS;
@@ -96,7 +99,8 @@ Each city also gets its own coefficients:
 - jobs rates fitted to the city's LODES blocks.
 
 ```bash
-.venv/bin/python -I -m planarena.cities.build "New York"           # or Philadelphia, Milwaukee
+.venv/bin/python -I -m planarena.cities.build "New York"           # or Los Angeles, Philadelphia, Milwaukee
+.venv/bin/python -I -m planarena.cities.ingestion "Los Angeles"    # the ingestion report
 ```
 
 ## Coefficients: every value has a source and a range
