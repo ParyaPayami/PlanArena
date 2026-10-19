@@ -10,7 +10,7 @@ PYTHON ?= python3.13   # the version requirements.txt is pinned for
 PY  := .venv/bin/python -I
 RUN := PYTHONWARNINGS=ignore $(PY) -m
 
-.PHONY: reproduce results venv fetch twin history calibrate train transition rolling ablation vote validate report test web compare cities city
+.PHONY: reproduce results venv fetch twin history calibrate train transition rolling ablation vote validate report test web compare cities city screenshots
 
 reproduce: venv fetch twin history calibrate results web test compare
 
@@ -92,3 +92,7 @@ test:
 
 compare:
 	git diff --stat -- results docs README.md planarena/indicators/calibrated.yaml
+
+# Studio figures for the paper (needs Google Chrome)
+screenshots:
+	$(RUN) planarena.tools.screenshots

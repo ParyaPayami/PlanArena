@@ -346,3 +346,6 @@ async function fetchWithProgress(url: string, onProgress?: (p: number) => void) 
   }
   return JSON.parse(new TextDecoder().decode(buf));
 }
+
+// Scripted screenshots for the paper (planarena/tools/screenshots.py) drive the Studio through its store.
+(window as unknown as { __planarena?: typeof useStore }).__planarena = useStore;
