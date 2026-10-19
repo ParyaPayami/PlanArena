@@ -46,3 +46,9 @@ def test_edited_book_is_checked_by_its_editors():
     resolve = {"doi": lambda d: rec, "arxiv": lambda a: None, "isbn": lambda i: None}
     assert check_entry(book, resolve)["status"] == "ok"
     assert check_entry({**book, "editor": "Someone, Else"}, resolve)["status"] == "mismatch"
+
+
+def test_family_name_particles_are_ignored():
+    from planarena.tools.check_refs import first_family
+    assert first_family("te Brömmelstroet, Marco") == first_family("Brömmelstroet, Marco te") == "brommelstroet"
+    assert first_family("Waddell, Paul and Borning, Alan") == "waddell"

@@ -75,8 +75,13 @@ def similar(a: str, b: str) -> float:
 
 
 def first_family(authors: str) -> str:
+    """Family name of the first author, without lowercase particles ("te Brömmelstroet" -> "brommelstroet")."""
     first = re.split(r"\s+and\s+", authors or "")[0].strip()
-    return norm(first.split(",")[0] if "," in first else (first.split()[-1] if first else ""))
+    family = first.split(",")[0] if "," in first else (first.split()[-1] if first else "")
+    words = family.split()
+    while len(words) > 1 and words[0].islower():
+        words = words[1:]
+    return norm(" ".join(words))
 
 
 # ----------------------------------------------------------------------------- resolvers

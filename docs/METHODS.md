@@ -266,6 +266,8 @@ Recommended parcels are compared with 2025: redeveloped or not, and whether the 
 - **New York:** MapPLUTO 21v1, 23v1 and 25v3.1; zoning from each release; no citywide plan.
 - **Milwaukee:** MPROP 2021, 2023 and 2025 (zoning from each year); development is a new building (MPROP floor area is not consistent over time).
 - **Phoenix and San Diego:** the regional agency's land-use vintages (MAG 2022, 2024, 2026; SANDAG 2023, 2024, 2025). Development is a change to a built use of another analysis group (or more homes); unit counts at t0 are not available, so these two have no homes scenario.
+- **Chicago:** development is a new-construction building permit issued in the window (City of Chicago building permits; issue, not completion). Existing use comes from CMAP's inventory before t0 (2020 for t0 2021, 2023 for t0 2023). Buildings, homes and values come from the Cook County Assessor of year t0. Zoning is the current layer, and districts created on or after t0 are flagged. Permits do not record what a lot becomes, so Chicago has no destination test and no homes scenario.
+- **Context in Phoenix and San Diego:** the regional series start in 2022 and 2023, so no vintage precedes the training window. Recent change is therefore unknown in training and is used only in the test window, where the fitted model ignores it.
 - **Left out:** lots already under construction at t0 (SCAG 1700, MAG "Developing", SANDAG 95xx), whose completion would be trivial to predict.
 
 **Outcome.** A building completed after t0, or floor area up by more than 25% and 2,000 sq ft (as in the Manhattan transition model); homes added = the increase in recorded homes.

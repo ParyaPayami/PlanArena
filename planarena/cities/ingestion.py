@@ -135,10 +135,37 @@ def summary() -> str:
     return "\n".join(rows) + "\n"
 
 
+def layers_summary() -> dict:
+    """Per city: parcels, each official layer's coverage, homes against the Census, and the digitised plan's checks.
+    Written to results/validation/cities_layers.json for the report and the paper (the twins are not committed)."""
+    out = {}
+    for geoid, (label, adapter) in CITIES.items():
+        d = city_dir(geoid)
+        if adapter is None or not (d / "parcels.parquet").exists():
+            continue
+        df = pd.read_parquet(d / "parcels.parquet", columns=None)
+        meta = json.loads((d / "twin_meta.json").read_text())
+        q = meta.get("data_quality", {})
+        share = lambda c: float((df[c] >= 0).mean()) if c in df else 0.0
+        out[geoid] = {"city": label, "parcels": int(len(df)), "existing": share("lu16"), "plan": share("plan16"),
+                      "zoning": share("zone16"), "floor_area": float((df.bldg_area > 0).mean()),
+                      "homes_twin": float(df.units_res.sum()), "homes_census_2020": q.get("homes_census_2020"),
+                      "plan_matches_existing_group": None}
+        has = (df.lu16 >= 0) & (df.plan16 >= 0) if "plan16" in df else None
+        if has is not None and has.any():
+            grp = np.array([c.group for c in CLASSES])
+            out[geoid]["plan_matches_existing_class"] = float((df.lu16[has] == df.plan16[has]).mean())
+            out[geoid]["plan_matches_existing_group"] = float((grp[df.lu16[has].to_numpy()] == grp[df.plan16[has].to_numpy()]).mean())
+        if meta.get("plan_digitised"):
+            out[geoid]["plan_digitised"] = meta["plan_digitised"]
+    return out
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["--summary"]:
         OUT.mkdir(parents=True, exist_ok=True)
         (OUT / "README.md").write_text(summary())
+        (ROOT / "results" / "validation" / "cities_layers.json").write_text(json.dumps(layers_summary(), indent=1))
         print(summary())
         raise SystemExit(0)
     target = " ".join(sys.argv[1:])

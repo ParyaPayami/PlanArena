@@ -9,6 +9,8 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 **Question:** For each parcel and scenario, PlanArena distinguishes what exists (official land use), what is permitted (zoning), what is planned (the adopted future land use), what is likely (redevelopment model) and what is recommended (optimizer). Does combining these layers improve predictions of where change happens and what it becomes, and give scenario assessments closer to what actually gets built than capacity-based build-out (the approach of density-based scenario tools)? The test is historical and across cities, with each layer removed in turn (component ablation, VALIDATION section H, METHODS section 11).
 
+**Draft:** [paper/paper.pdf](../paper/paper.pdf), built from [paper/paper.tex.in](../paper/paper.tex.in) by `python -I -m planarena.paper`. Every number is filled from `results/`, and a test fails if the draft is stale or cites a source outside `refs.bib`.
+
 **Literature:** [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) (74 verified sources in eight themes, and the gap).
 
 **Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports its layers and scenarios to ArcGIS Urban as import files (`planarena/integrations/urban_export.py`). Reading Urban scenarios back needs the Urban API and the author's sign-in, and is not built. PlanArena does not compete with Urban as a design tool. UrbanFootprint and CommunityViz are reviewed with UrbanSim in [RELATED_TOOLS.md](RELATED_TOOLS.md): none publishes a land-use optimizer; the methods PlanArena adopts from them (growth-target allocation, pro forma feasibility, build-out, constraint screens) are listed there.
@@ -83,7 +85,8 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 - [ ] Decide whether the paper's impact claims stay Manhattan-only. Energy, emissions and jobs are validated only against New York City data; the other nine cities use national coefficients.
 
 **Writing**
-- [ ] Draft sections 1–7 above, quoting numbers from VALIDATION.md only.
+- [x] Draft written (`paper/`); numbers generated from the result files.
+- [ ] Author's revision of the draft, and the AI-assistance statement confirmed.
 - [ ] System diagram (by hand).
 - [x] Bibliography: 74 sources in [refs.bib](refs.bib), all passing `check_refs` ([reference_check.md](reference_check.md)); themes and gap in [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md).
 - [ ] Read each source, then fill `read_by`, `date_read` and the page in [citation_log.csv](citation_log.csv). Start with the 11 marked † (no abstract was available).

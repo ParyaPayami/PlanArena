@@ -36,7 +36,7 @@
 | abolhasani2026 | ok | doi 10.1016/j.landusepol.2026.108189 |
 | hashemi2026 | ok | doi 10.1111/tgis.70331 |
 | kruse2026 | ok | doi 10.1007/s43762-026-00299-w |
-| gabbe2017 | ok | doi 10.1177/0739456x17696034 |
+| gabbe2018 | ok | doi 10.1177/0739456x17696034 |
 | freemark2020 | ok | doi 10.1177/1078087418824672 |
 | greenaway2023 | ok | doi 10.1016/j.jue.2023.103555 |
 | dong2024 | ok | doi 10.1177/0739456x21990728 |

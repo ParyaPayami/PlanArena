@@ -65,6 +65,7 @@ cities:
 	$(RUN) planarena.cities.ingestion --summary > /dev/null
 	$(RUN) planarena.models.integration
 	$(RUN) planarena.models.integration transfer
+	$(RUN) planarena.models.integration profile
 	$(RUN) planarena.cities.mke_history
 	$(RUN) planarena.models.crosscity
 	$(RUN) planarena.models.replay
@@ -80,6 +81,7 @@ validate:
 report:
 	$(RUN) planarena.report
 	$(RUN) planarena.figures
+	$(RUN) planarena.paper
 
 web:
 	cd web && npm ci && npx vite build

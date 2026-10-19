@@ -19,3 +19,7 @@ data/cities/
 data/ablation/
 data/integration/
 exports/
+paper/*.log
+paper/*.blg
+paper/*.aux
+paper/*.bbl

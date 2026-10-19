@@ -62,7 +62,7 @@
 | Weber et al. 2006 | Logit of demolition permits in three Chicago community areas: smaller, older, frame buildings are demolished more. | Building age and size features. |
 | Dye & McMillen 2007† | Teardowns and land values in the Chicago area. | Same. |
 | Charles 2013 | Multilevel logit of single-family redevelopment in 128 inner-ring Chicago suburbs, 2000–2010. | Same. |
-| Gabbe 2017 | Upzoning in Los Angeles happens where development opportunity meets weak resistance. | Rezoning is not random, hence the conservative variant. |
+| Gabbe 2018 | Upzoning in Los Angeles happens where development opportunity meets weak resistance. | Rezoning is not random, hence the conservative variant. |
 | Freemark 2020 | Chicago upzonings (difference-in-differences): higher prices, no more permitted homes within five years. | Zoning alone predicts little in the short run. |
 | Dong 2024 | Portland 2000–2017 (matched parcels): upzoned parcels develop more often and more densely. | Zoning carries some signal. |
 | Greenaway-McGrevy & Phillips 2023 | Auckland's 2016 upzoning raised construction (quasi-experimental). | Same. |

@@ -42,6 +42,7 @@ from planarena.sources.arcgis import fetch_layer
 from planarena.taxonomy import CLASSES, INDEX as TAX_INDEX
 
 WORK = DATA / "integration"
+VACANT = TAX_INDEX["vac"]
 OUT = ROOT / "results" / "validation" / "integration_cities.json"
 TILE_M = 2000
 RADIUS_M = 400
@@ -732,14 +733,37 @@ def transfer(cities=BUILDING_OUTCOME) -> dict:
     return out
 
 
+def profile() -> dict:
+    """What distinguishes the lots that developed in each test window from all lots: the share that were vacant,
+    and the share whose zoning or plan class lies in another analysis group than the existing use."""
+    out = {}
+    for g, (_, windows) in PANELS.items():
+        p = panel(g, *windows[1])
+        d = p.developed.to_numpy().astype(bool)
+        grp = lambda c: np.where(c >= 0, GROUP_OF[np.clip(c, 0, None)], -1)
+        lu = p.lu16.to_numpy()
+        row = {"developed": int(d.sum()), "lots": int(len(p)),
+               "vacant": {"developed": float((lu[d] == VACANT).mean()), "all": float((lu == VACANT).mean())}}
+        for k in ("zone16", "plan16"):
+            c = p[k].to_numpy()
+            if (c >= 0).mean() > 0.5:
+                differs = (c >= 0) & (grp(c) != grp(lu))
+                row[k.replace("16", "_differs")] = {"developed": float(differs[d].mean()), "all": float(differs.mean())}
+        out[g] = row
+    return out
+
+
 def main(geoids=None) -> dict:
     """Evaluate the cities (one results file each, so cities can run in parallel), then merge them."""
     geoids = geoids or list(PANELS)
     per_city = OUT.parent / "integration"
     per_city.mkdir(parents=True, exist_ok=True)
-    for g in [x for x in geoids if x != "transfer"]:
+    for g in [x for x in geoids if x not in ("transfer", "profile")]:
         print(f"== {g}", flush=True)
         (per_city / f"{g}.json").write_text(json.dumps(evaluate_city(g), indent=2))
+    if geoids == ["profile"]:
+        (OUT.parent / "integration_profile.json").write_text(json.dumps(profile(), indent=2))
+        return json.loads(OUT.read_text())
     if geoids == ["transfer"]:
         (per_city / "transfer.json").write_text(json.dumps(transfer(), indent=2))
     merged = {f.stem: json.loads(f.read_text()) for f in sorted(per_city.glob("*.json"))}

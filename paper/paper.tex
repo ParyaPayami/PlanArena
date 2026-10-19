@@ -1,0 +1,684 @@
+% PlanArena paper. Numbers and tables are filled from results/validation by planarena/paper.py: edit this template,
+% then run  python -I -m planarena.paper  (writes paper.tex and, with tectonic, paper.pdf). Do not edit paper.tex.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{fontspec}
+\setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{placeins}
+\usepackage[authoryear,round]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{0.3em}
+\setlength{\emergencystretch}{1.5em}
+\graphicspath{{../docs/figures/}}
+
+\title{\Large What do zoning and adopted plans add to predicting where cities build?\\[0.3em]
+\large Evidence from official parcel data in seven US cities}
+\author{Parya Payami\\ \small Department of Architecture, University of Wisconsin--Milwaukee}
+\date{Draft, \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Planning support tools project land-use scenarios by combining what exists, what zoning permits and
+what the plan intends, yet what each layer contributes is rarely tested. We assembled the
+official existing land use, adopted plan and zoning for 4{,}995{,}208 parcels in ten large US cities,
+including a plan published only as PDF maps (digitised with median errors of 1.1--7.2
+ft). In seven cities with parcel histories, models fitted on one period were scored on the next, adding one
+layer at a time. Existing conditions ranked the lots that developed with an AUC of 0.824--0.911 in
+six cities (0.571 in the seventh). Context added most: +0.020 to +0.116 where significant
+(five cities).
+Over context, zoning and the plan added at most +0.021, except in Phoenix (+0.049 and +0.054), and
+two of these gains disappeared when lots rezoned during the study were excluded. Zoning and plan classes predicted
+what developed lots became better than their existing use. Capacity build-out exceeded the homes built
+76- to 193-fold; likelihood weighting gave 0.81--2.64 times the observed total; a five-year
+trend ranked districts better. Regulatory layers inform what development becomes and how much it could hold;
+existing conditions and context predict where.
+\end{abstract}
+
+\noindent\textbf{Keywords:} planning support systems; zoning; land-use plans; urban development prediction;
+digital twins; model validation
+
+\section{Introduction}
+
+Land-use decisions in US cities rest on projections. Rezonings, amendments to comprehensive plans and housing targets
+are assessed by estimating the development they will bring. Planning support systems and scenario tools make these
+estimates by overlaying parcel layers (existing land use, zoning and the adopted plan) and, increasingly, a model of
+what is likely to happen \citep{klosterman1999,waddell2002,geertman2020}. The common default is capacity: each
+eligible site is assumed to build out to what the rules allow. Capacity answers a legal question, what a regulation
+permits, transparently. It is also used to answer a different question: what will be built.
+
+There are reasons to expect the two answers to diverge. Development is rare and selective: in the one- and two-year
+windows studied here, 0.06\% to 1.3\% of lots developed. Causal studies disagree on whether upzoning
+changes construction in the short run. In Chicago, upzoned parcels rose in value without more permitted homes within
+five years \citep{freemark2020}, whereas upzoning raised construction in Portland and Auckland
+\citep{dong2024,greenaway2023}. Evaluations of plan implementation find that adopted plans are followed only in part
+\citep{talen1996,laurian2004,brody2005,berke2006}. In the three Manhattan rezonings replayed below, a capacity screen
+that reproduces the environmental reviews' own projections on their projected sites (0.86 and 1.00
+times the review figures) expected 8{,}423 homes on development sites. By 2025, 561 had been built.
+
+The predictive value of each regulatory layer is nonetheless seldom measured. Land-change models now incorporate
+zoning and planning regulations \citep{domingo2021,abolhasani2026}, but they use them to simulate scenarios, not to
+test what the regulations add on held-out history. Reviews of planning support systems and urban digital twins find
+that claimed capabilities run ahead of demonstrated ones \citep{vonk2005,azadi2025,kruse2026}. The question matters
+for practice because zoning and plans are the layers that planners set. If they add little to predicting where
+development happens, scenario tools built on them will misjudge where change occurs and how much of it a decision
+will bring. If they add much, tools should give them weight.
+
+A practical barrier is data. The three layers are published by different agencies, in different schemas, and some
+plans exist only as documents: Philadelphia's land-use plan exists only as maps in 17 PDF district plans. A
+test across cities therefore first requires the layers on one schema, with every translation reported.
+
+This paper makes four contributions:
+\begin{enumerate}
+\item \textbf{Data.} The official existing land use, adopted plan and zoning for 4{,}995{,}208 parcels in ten of
+the largest US cities, on one 16-class schema, with ingestion checks: homes are within
+0.95--1.06 times the Census 2020 count in every city. It also includes a validated method
+to digitise plans published as vector PDF maps.
+\item \textbf{Test.} A cross-city, out-of-time component ablation of what zoning and the adopted plan add to existing
+conditions and neighbourhood context, in seven cities and 3{,}346{,}335 lots. It covers three planning questions:
+where development happens, what it becomes and how many homes it adds. It controls for layers that postdate the
+outcomes.
+\item \textbf{Scenario evidence.} Capacity build-out, likelihood-weighted build-out and a simple trend, compared with
+what was built in four cities and in three Manhattan rezonings.
+\item \textbf{Open implementation.} PlanArena, a parcel-level planning support system that generates every number
+reported here from public sources and exports layers and scenarios to ArcGIS Urban.
+\end{enumerate}
+The results are predictive. They show how much each layer helps to anticipate development, not what zoning or plans
+cause. Section~\ref{sec:related} reviews related work, Section~\ref{sec:data} the data,
+Section~\ref{sec:methods} the methods and Section~\ref{sec:results} the results; Section~\ref{sec:discussion}
+discusses implications and limits.
+
+\section{Related work}\label{sec:related}
+
+\paragraph{Predicting urban development.} Spatial models of urban growth range from cellular automata calibrated on
+historical urbanisation \citep{clarke1997} to site-level statistical models of land-use change \citep{landis1998} and
+behavioural simulations of households, firms and developers interacting through land markets
+\citep{waddell2002,waddell2003}. Agent-based models represent the decisions behind land change \citep{parker2003}.
+Reviews list neighbourhood effects, temporal dynamics and cross-scale interactions as priorities
+\citep{verburg2004,brown2013,weerasinghe2025}. At the parcel level, autologistic models capture existing and
+historical neighbourhood conditions \citep{tepe2020}, and machine learning and econometric models of redevelopment are
+complements rather than substitutes \citep{carruthers2024}. Urban economics ties redevelopment to the value of land
+relative to that of the existing structure \citep{rosenthal1994,munneke1996,dye2007}. Parcel studies in Chicago find
+that smaller and older buildings with less lot coverage are demolished and replaced more often
+\citep{weber2006,charles2013}. These findings motivate the existing-conditions and context features used here.
+
+\paragraph{Regulations and plans as predictors.} Land-use regulation affects new construction \citep{mayer2000}, but
+rezoning is not random: in Los Angeles, upzoning occurred where development opportunity met weak political resistance
+\citep{gabbe2018}. Current zoning may therefore reflect development that was already coming, which complicates any
+test of zoning against past development. Studies of upzoning estimate causal effects in one city at a time and differ
+in their conclusions \citep{freemark2020,dong2024,greenaway2023}. Plan evaluation distinguishes conformance, whether
+outcomes match the plan, from performance, whether the plan shaped decisions \citep{talen1996,laurian2004,berke2006,
+loh2011,feitelson2017}. Land-change science has called for planning to be represented explicitly in models
+\citep{hersperger2018}. Two recent studies do so:
+\begin{itemize}
+\item \citet{domingo2021} use the floor area each zoning plan allows per parcel in multi-scenario simulations of four
+Spanish urban areas;
+\item \citet{abolhasani2026} standardise local planning regulations for 3D land-use simulation in Zurich and
+Copenhagen.
+\end{itemize}
+Both integrate regulations into simulation; neither measures what the regulations add to prediction on held-out
+history.
+
+\paragraph{Planning support systems and urban digital twins.} Planning support systems combine land suitability,
+demand projection and allocation in scenario planning \citep{klosterman1999,geertman2020}. Their limited use and
+uncertain usefulness are long-standing concerns \citep{vonk2005,tebrommelstroet2013,pelzer2017}. Urban digital twins
+extend the idea to integrated city models \citep{batty2018,batty2024,white2021,lehtola2022,ferrebigorra2022}.
+Reviews report technical and organisational barriers \citep{lei2023,wu2025} and a gap between the ambitions of urban
+twins and their demonstrated contributions to planning \citep{azadi2025,luo2025,kruse2026}. Optimisation and
+allocation methods generate and rank land-use alternatives \citep{malczewski2006,rahman2021,zheng2023,feng2024,
+lin2025}. This paper asks a prior question: what the regulatory layers on which such methods operate add as evidence.
+
+\paragraph{Validation.} Land-change models should be compared with a null model of persistence, at several
+resolutions \citep{pontius2008}, with disagreement split into quantity and allocation \citep{pontius2011}. Their
+transition probabilities should be validated directly, not only through simulated maps \citep{black2023}. Under
+spatial and temporal dependence, random cross-validation overstates skill \citep{roberts2017,ploton2020}, and a model
+applies only where new data resemble its training data \citep{meyer2021}. We therefore test out of time and across
+cities \citep{wei2016}, and resample spatial tiles to estimate uncertainty \citep{kunsch1989}.
+
+\paragraph{Map digitisation.} Digital map processing and automatic georeferencing have been developed mainly for
+scanned raster maps \citep{chiang2014,luft2021,milleville2022}. Plans exported from GIS as vector PDFs keep each lot as
+a filled shape, so the shapes can be read directly and registered to parcels with standard image and point
+registration \citep{reddy1996,besl1992,umeyama1991}.
+
+\section{Data}\label{sec:data}
+
+\subsection{Ten cities, three official layers}
+
+The study covers the nine largest US cities other than San Jose, and Milwaukee (Table~\ref{tab:cities}). For each
+city, the existing land use is the parcel land use published by the city or its regional planning agency. Where that
+layer groups uses, it is refined with assessor records: unit counts split single-family from multi-family housing,
+and building classes identify offices, hotels, schools and warehouses. The adopted plan (future land use) and zoning
+are separate layers from the same or another official source. Every source code is translated by an explicit
+crosswalk into 16 classes, which nest in nine analysis groups:
+\begin{itemize}
+\item housing: single-family, two to four homes, five or more;
+\item mixed use, retail, office, hotel;
+\item industry and warehousing;
+\item education, health and civic uses;
+\item open space, transportation, parking and vacant land.
+\end{itemize}
+Floor area, homes, year built and assessed value come from assessor or city records. Where records lack floor area,
+it is estimated from building footprints and heights and flagged. Jobs are fitted to the Census Bureau's LEHD block
+counts. Every input is downloaded by script, with its URL and SHA-256 hash recorded.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{The ten cities: official parcel layers on one schema. Shares are of the city's parcels.}
+\label{tab:cities}
+\begin{tabular}{lrllllll}
+\toprule
+City & Parcels & Existing use (source) & Share & Adopted plan & Share & Zoning & Homes / Census \\
+\midrule
+New York & 856{,}634 & MapPLUTO (City Planning) & 100\% & none citywide & -- & 100\% & 1.03 \\
+Los Angeles & 672{,}444 & SCAG 2020; county assessor & 100\% & General Plan (SCAG 2019) & 100\% & 100\% & 0.99 \\
+Chicago & 606{,}894 & CMAP 2023; county assessor & 100\% & none citywide & -- & 96\% & 1.05 \\
+Houston & 630{,}525 & City (appraisal codes) & 97\% & none & -- & -- & 0.95 \\
+Phoenix & 510{,}871 & County assessor; MAG & 100\% & General Plan & 100\% & 99\% & 0.99 \\
+Philadelphia & 547{,}410 & City Planning Commission; OPA & 100\% & district plans (digitised PDF) & 83\% & 100\% & 0.99 \\
+San Antonio & 438{,}009 & Bexar Appraisal District & 100\% & adopted area plans & 61\% & 82\% & 0.99 \\
+San Diego & 272{,}948 & SANDAG 2025; county assessor & 100\% & General and community plans & 100\% & 94\% & 1.02 \\
+Dallas & 311{,}431 & City 2026; DCAD & 100\% & forwardDallas! 2.0 & 99\% & 79\% & 0.98 \\
+Milwaukee & 148{,}042 & MPROP & 100\% & PDF only (not included) & -- & 99\% & 1.06 \\
+\textit{All} & 4{,}995{,}208 &  &  &  &  &  &  \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Existing use is the city's or regional agency's parcel land use, refined by assessor records where the layer groups uses. Homes / Census: homes in the twin over Census 2020 housing units. Houston has no zoning. Milwaukee's area plans are published as PDFs that could not be downloaded by script.\end{minipage}
+\end{table}
+
+Existing use covers at least 97\% of parcels in every city. Zoning is available in nine cities
+(Houston has none) and an adopted plan in six. New York, Chicago and Houston publish no citywide land-use
+map, and Milwaukee's area plans are PDF documents that could not be retrieved by script. Where both layers exist, the
+existing use already lies in the plan's analysis group on 83\%--92\% of parcels. Plans
+mostly confirm what exists; their information lies in the minority of parcels where they differ.
+
+\subsection{Digitising a plan published as PDF maps}
+
+Philadelphia2035's land-use recommendations exist only as ``Proposed Land Use'' maps in its district plans:
+17 documents covering 18 districts. The maps are vector drawings in which each lot is a
+filled shape in one of the City Planning Commission's categories. We convert them in six steps
+(Figure~\ref{fig:pipeline}):
+\begin{enumerate}
+\item \textbf{Legend.} The legend is read: each swatch's fill colour, with the label to its right.
+\item \textbf{Colours.} Map colours are matched one to one to legend colours by perceptual distance (CIELAB $\Delta
+E$, Hungarian assignment), because a legend may be CMYK while the map is RGB. Pairs further apart than $\Delta E =
+45$ are not matched.
+\item \textbf{Visibility.} Maps often draw a wider area and clip it to the district, and the vector shapes carry no
+clipping. Each shape is kept only if the rendered page shows its colour at a point inside it, and only the largest
+map frame on the page spread is kept, which removes insets.
+\item \textbf{Registration.} A similarity transform (scale, rotation, translation) is fitted. The rendered map is
+first matched as an image to the footprint of the district's parcels and to the district outline, searching rotation
+and scale, finding translation by FFT and scoring by Dice overlap. The fit is then refined by iterative closest point
+from each parcel centroid to the nearest shape centroid.
+\item \textbf{Classification.} Each parcel takes the category of the smallest shape containing its interior point.
+\item \textbf{Checks.} A map is used only if (a) the median parcel-to-shape distance is at most 10 ft and (b) its plan
+agrees with the existing use clearly more often than the same map shifted 300 ft. Because most land keeps its use in
+a plan, a misregistered map fails this falsification test.
+\end{enumerate}
+
+Maps from 15 of the 17 plans passed, covering 16 of 18
+districts and 83\% of the city's parcels. Median registration errors were 1.1--7.2 ft
+(median 3.2 ft), less than the width of a typical rowhouse lot. The maps covered
+88\%--100\% of each district's parcels. The digitised plans agree with the existing use on
+60\%--90\% of parcels, against 42\%--66\% for the shifted maps, a
+margin of at least 17 points in every district. The maps of South and West Park also draw neighbouring
+districts, which defeated the registration; those districts have no plan class. Philadelphia has no parcel history in
+this study, so its plan layer serves the system but not the test below.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=4mm and 6mm, every node/.style={font=\footnotesize, align=center},
+  box/.style={draw, rounded corners=2pt, minimum height=9mm, text width=24mm, fill=gray!6},
+  arr/.style={-{Stealth[length=2mm]}}]
+\node[box] (src) {Official sources\\(parcels, land use,\\plan, zoning, assessor)};
+\node[box, right=of src] (pdf) {Plans published\\as PDF maps};
+\node[box, below=of src] (cw) {Crosswalks to\\16 classes};
+\node[box, below=of pdf] (dig) {Digitise: legend,\\visibility, register,\\classify, check};
+\node[box, below=9mm of $(cw)!0.5!(dig)$, text width=34mm] (twin) {Parcel twin: existing,\\plan and zoning layers};
+\node[box, right=10mm of twin, text width=30mm] (test) {Out-of-time ablation\\E, E+C, E+C+Z, E+C+P};
+\node[box, left=10mm of twin, text width=26mm] (app) {Studio, and\\scenario export\\to ArcGIS Urban};
+\node[box, below=of test, text width=30mm] (q) {Where, what,\\how many homes};
+\draw[arr] (src) -- (cw); \draw[arr] (pdf) -- (dig); \draw[arr] (cw) -- (twin); \draw[arr] (dig) -- (twin);
+\draw[arr] (twin) -- (test); \draw[arr] (twin) -- (app); \draw[arr] (test) -- (q);
+\end{tikzpicture}
+\caption{Data and test pipeline. Every source and translation is recorded; nothing in the three official layers is
+predicted.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Parcel histories}
+
+Seven cities have parcel histories that allow an out-of-time test (Table~\ref{tab:panels}). The definition of
+development follows what each source records:
+\begin{itemize}
+\item a new building, or floor area up by more than 25\% and 2,000 sq ft, in Los Angeles (county assessor rolls,
+2021--2025), Dallas (appraisal district files, 2022--2026) and New York (MapPLUTO, 2021--2025);
+\item a new building in Milwaukee, where recorded floor area is not consistent across years;
+\item a change to a built use of another group, or more homes, between the regional agencies' land-use inventories
+in Phoenix and San Diego;
+\item a new-construction permit issued in Chicago.
+\end{itemize}
+Lots already under construction at the start of a window are excluded, and every feature is measured at the start of
+its window. The test windows contain 3{,}346{,}335 lots, of which 13{,}872 developed.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{Test panels. Models are fitted on the training window and scored on the test window.}
+\label{tab:panels}
+\begin{tabular}{lllllrrr}
+\toprule
+City & Development & Source & Train & Test & Lots & Developed & Rate \\
+\midrule
+Los Angeles & new building or floor area +25\% & county assessor rolls & 2021--2023 & 2023--2025 & 667{,}844 & 2{,}222 & 0.33\% \\
+Dallas & new building or floor area +25\% & appraisal district files & 2022--2024 & 2024--2026 & 291{,}841 & 3{,}916 & 1.34\% \\
+New York & new building or floor area +25\% & MapPLUTO & 2021--2023 & 2023--2025 & 856{,}901 & 4{,}064 & 0.47\% \\
+Milwaukee & new building & MPROP & 2021--2023 & 2023--2025 & 147{,}539 & 85 & 0.06\% \\
+Phoenix & change of use group & MAG land-use inventory & 2022--2024 & 2024--2026 & 503{,}635 & 1{,}835 & 0.36\% \\
+San Diego & change of use group & SANDAG land-use inventory & 2023--2024 & 2024--2025 & 272{,}281 & 202 & 0.07\% \\
+Chicago & new-construction permit & building permits & 2021--2023 & 2023--2025 & 606{,}294 & 1{,}548 & 0.26\% \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Lots already under construction at the start of a window are left out. Floor area +25\% also requires +2,000 sq ft. Change of use group: the lot changes to a built use of another of the nine groups, or gains homes.\end{minipage}
+\end{table}
+
+\section{Methods}\label{sec:methods}
+
+\paragraph{Feature blocks.} Four blocks are defined identically in every city, from portable classes and ratios
+without city-specific codes:
+\begin{itemize}
+\item \textbf{E, existing conditions:} the analysis group of the existing use, lot area, floor area, built floor-area
+ratio, building age, homes and the land share of assessed value;
+\item \textbf{C, context:} the share of lots within 400 m that were built or changed use in the five years before the
+window, the number of lots within 400 m and their land-use mix;
+\item \textbf{Z, zoning:} the zoning class, whether the existing use departs from it, and the step in housing
+intensity from the existing use to the zoning class;
+\item \textbf{P, adopted plan:} the same three features for the plan class.
+\end{itemize}
+
+\paragraph{Out-of-time ablation.} For each city and block set, a gradient-boosted classifier (LightGBM; 400 trees,
+learning rate 0.04, 31 leaves) is fitted on the training window and scores the lots of the test window. The block
+sets are E, E+C, E+C+Z, E+C+P and E+C+Z+P, together with the sets without context. We report the area under the ROC
+curve (AUC), with average precision and precision among the top 1\% of lots in Appendix Table~\ref{tab:ap}. The gain
+from adding a block is the difference in AUC; its 95\% interval comes from 200 bootstrap resamples of 2 km tiles,
+which preserves spatial dependence. As a second view, all sets are also cross-fitted over five folds of 2 km tiles
+within the full period.
+
+\paragraph{Leakage control.} In Los Angeles both layers were compiled in 2019, before every window. New York and
+Milwaukee have zoning from each year's records. In Phoenix, San Diego and Chicago the zoning or plan layer is current,
+but zoning cases and plan polygons are dated. A conservative variant therefore excludes, in each window, lots whose
+zoning or plan dates from the window's start or later. Dallas's current layers carry no dates, so its zoning and plan
+gains are upper bounds.
+
+\paragraph{Destination.} Among lots that developed in the test window, the class they became is predicted by the
+existing use (no change), the zoning class, the plan class and models cross-fitted over tiles. Each is scored as one
+of 16 classes and as one of nine groups.
+
+\paragraph{Homes.} In the four cities with unit counts at both ends of the window, homes added by district are
+compared with four projections:
+\begin{itemize}
+\item \textbf{zoning build-out}, in which every lot reaches the homes per acre that the 90th percentile of lots of
+its zoning class already reaches in the city;
+\item \textbf{plan build-out}, the same for the plan class;
+\item \textbf{likelihood-weighted build-out}, the same increments multiplied by each lot's out-of-time probability
+of development;
+\item \textbf{the trend}, homes completed in the five years before the window, scaled to its length.
+\end{itemize}
+We report the ratio of projected to observed total and the Spearman correlation across districts.
+
+\paragraph{Transfer.} For the five cities whose outcome is a building or a permit, a model fitted on the other
+cities' training windows scores the city's test window and is compared with the city's own model. A missing plan
+layer is coded as unknown.
+
+\paragraph{Manhattan rezonings.} To test the approach at the scale of a single decision, we replay three Manhattan
+rezonings: East Harlem (2017), Inwood (2018) and SoHo/NoHo (2021).
+\begin{itemize}
+\item \textbf{Sites} are lots that can add floor area under the adopted zoning.
+\item \textbf{Capacity} assumes full build-out.
+\item \textbf{The likelihood-weighted projection} multiplies each site's homes by its probability of redevelopment by
+2025. The probability comes from a redevelopment model trained only on outcomes known by the adoption year, scored
+with the adopted zoning in place.
+\end{itemize}
+That model was tested separately on Manhattan's annual records. Across 15 rolling origins (2016--2025, with
+horizons of one, three and five years), its out-of-time AUC was 0.847--0.952, above the best simple
+baseline at every origin.
+
+\section{Results}\label{sec:results}
+
+\subsection{Where development happens}
+
+Existing conditions alone rank the lots that developed well (Table~\ref{tab:auc}). Out-of-time AUC with block E is
+0.824--0.911 in six cities and 0.571 in San Diego, whose one-year window recorded few
+changes.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Where development happens: out-of-time AUC by block set. E existing conditions, C neighbourhood context, Z zoning, P adopted plan; -- where the city has no such layer.}
+\label{tab:auc}
+\begin{tabular}{lrrrrrl}
+\toprule
+City & E & E+C & E+C+Z & E+C+P & E+C+Z+P & Best set (any) \\
+\midrule
+Los Angeles & 0.864 & 0.892 & 0.894 & 0.892 & 0.894 & E+C+Z+P \\
+Dallas & 0.898 & 0.918 & 0.922 & 0.920 & 0.923 & E+C+Z+P \\
+New York & 0.892 & 0.914 & 0.919 & -- & -- & E+C+Z \\
+Milwaukee & 0.911 & 0.896 & 0.924 & -- & -- & E+Z \\
+Phoenix & 0.859 & 0.793 & 0.842 & 0.847 & 0.853 & E+Z+P \\
+San Diego & 0.571 & 0.687 & 0.684 & 0.707 & 0.703 & E+C+P \\
+Chicago & 0.824 & 0.888 & 0.891 & -- & -- & E+C+Z \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Best set: the highest AUC among all fitted combinations, including those without context.\end{minipage}
+\end{table}
+
+Context adds the most (Table~\ref{tab:gains}, Figure~\ref{fig:gains}). Its gain is significant in five
+cities (Los Angeles, Dallas, New York, San Diego and Chicago), from +0.020 to +0.116. It is not significant in Milwaukee, and it is
+negative in Phoenix ($-$0.066; interval $-$0.139 to +0.001). Phoenix's regional series starts in
+2022, so recent change is unknown in its training window. Its context block therefore reduces to the number and
+land-use mix of nearby lots, which did not generalise from the training to the test window.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\caption{Gain in out-of-time AUC from adding a block, with 95\% bootstrap intervals over 2 km tiles. Bold: the interval excludes zero.}
+\label{tab:gains}
+\begin{tabular}{llllll}
+\toprule
+City & C over E & Z over E+C & P over E+C & Z, conservative & P, conservative \\
+\midrule
+Los Angeles & \textbf{+0.028 [0.020, 0.036]} & +0.002 [$-$0.001, 0.005] & 0.000 [$-$0.004, 0.003] &  &  \\
+Dallas & \textbf{+0.020 [0.015, 0.025]} & \textbf{+0.004 [0.002, 0.005]} & \textbf{+0.002 [0.001, 0.003]} &  &  \\
+New York & \textbf{+0.023 [0.018, 0.029]} & \textbf{+0.004 [0.003, 0.007]} & -- &  &  \\
+Milwaukee & $-$0.015 [$-$0.079, 0.048] & +0.029 [$-$0.031, 0.075] & -- &  &  \\
+Phoenix & $-$0.066 [$-$0.139, 0.001] & \textbf{+0.049 [0.009, 0.091]} & \textbf{+0.054 [0.005, 0.100]} & \textbf{+0.055 [0.017, 0.088]} & \textbf{+0.041 [0.004, 0.073]} \\
+San Diego & \textbf{+0.116 [0.053, 0.170]} & $-$0.003 [$-$0.022, 0.018] & \textbf{+0.021 [0.003, 0.039]} & $-$0.009 [$-$0.029, 0.015] & $-$0.011 [$-$0.033, 0.007] \\
+Chicago & \textbf{+0.063 [0.049, 0.078]} & \textbf{+0.004 [0.001, 0.007]} & -- & $-$0.001 [$-$0.005, 0.003] & -- \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Conservative: in each window, lots whose zoning or plan dates from the window's start or later are left out; possible where a current layer records those dates (Phoenix, San Diego, Chicago). Dallas's current layers carry no dates, so its zoning and plan gains are upper bounds.\end{minipage}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{integration_layers.png}
+\caption{Gain in out-of-time AUC from adding each block, with 95\% tile-bootstrap intervals.}
+\label{fig:gains}
+\end{figure}
+
+Zoning carries information of its own. Added to existing conditions alone, it raises AUC significantly in
+five of seven cities (+0.008 to +0.060). Lots that developed were 2.1 to
+9.5 times as likely as other lots to have a zoning class outside their existing use group. Most of
+this information is shared with existing conditions and context, however. Developed lots were also
+3.5 to 19 times as likely to be vacant, and once context is included the regulatory layers
+add little:
+\begin{itemize}
+\item \textbf{zoning} adds a significant gain over context in four of seven cities (Dallas, New York, Phoenix and Chicago);
+\item \textbf{the plan} adds one in three of four (Dallas, Phoenix and San Diego);
+\item outside Phoenix these gains are at most +0.021;
+\item in Los Angeles, where both layers predate the test, zoning and plan together add +0.002, which is not
+significant.
+\end{itemize}
+No layer significantly reduced performance once context was included.
+
+Phoenix is the exception: zoning adds +0.049 and the plan +0.054 over context, and its best block set,
+E{+}Z{+}P (AUC 0.927), omits context. Development there, measured as a change of land-use class in
+the regional inventory, is concentrated on vacant lots (45\% of developed lots against 2\% of
+all lots). It is also concentrated on lots whose zoning or plan class differs from their existing use
+(66\% and 73\%, against 7\% and 9\%).
+
+The conservative variant tests whether such gains come from layers updated during the study. The zoning and plan gains in Phoenix
+survive it. The plan gain in San Diego and the zoning gain in Chicago do not, so in those cases the apparent value of the layer came from lots whose zoning or
+plan changed during the study. Spatial cross-fitting gives the same picture: context raises AUC in six of seven
+cities, and zoning on top of context raises it in six of seven, by small amounts.
+
+\subsection{What developed lots become}
+
+The regulatory layers matter more for what a developing lot becomes (Table~\ref{tab:dest}). In all six cities
+with a destination, the zoning class names the new class correctly more often than the existing use does, by
+12 to 64 percentage points. (In Phoenix and San Diego, development is a change of class by
+definition, so there the existing use is never right at class level.) In Dallas, whose plan was adopted in 2024, the plan class is right
+for 80\% of developed lots, against 61\% for zoning and 37\% for no change. A
+model combining the layers matches or beats the best single layer in all six cities.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{What developed lots became: share named correctly, as one of 16 classes / one of nine groups.}
+\label{tab:dest}
+\begin{tabular}{lrllll}
+\toprule
+City & Developed & No change & Zoning class & Plan class & Model (blocks) \\
+\midrule
+Los Angeles & 1{,}883 & 57\% / 79\% & 70\% / 87\% & 70\% / 87\% & 74\% / 89\% (E+C+Z+P) \\
+Dallas & 3{,}910 & 37\% / 40\% & 61\% / 65\% & 80\% / 89\% & 86\% / 95\% (E+C+Z+P) \\
+New York & 4{,}002 & 24\% / 37\% & 49\% / 65\% & -- & 54\% / 70\% (E+Z) \\
+Milwaukee & 78 & 18\% / 18\% & 37\% / 77\% & -- & 63\% / 76\% (E+Z) \\
+Phoenix & 1{,}835 & 0\% / 35\% & 64\% / 74\% & 47\% / 62\% & 75\% / 81\% (E+C+Z+P) \\
+San Diego & 202 & 0\% / 52\% & 14\% / 74\% & 27\% / 70\% & 64\% / 75\% (E+C+Z+P) \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize In Phoenix and San Diego development is a change of class (to another group, or to more homes), so ``no change'' is never right at class level there. Models are cross-fitted over 2 km tiles among the developed lots. Chicago's permits do not record the new use.\end{minipage}
+\end{table}
+
+\subsection{How many homes}
+
+Capacity build-out overstates near-term housing by two orders of magnitude (Table~\ref{tab:homes}). Zoning and plan
+build-out exceed the homes added in the test window 76- to 193-fold. Part of this gap is definitional,
+since build-out is an end state rather than a two-year flow, but it shows how far capacity is from what a short
+horizon delivers. Weighting build-out by the out-of-time likelihood brings the totals to 0.81--2.64 times
+the observed.
+
+The likelihood-weighted projections rank districts less well than the five-year trend, however. Their Spearman
+correlations are $-$0.37 to 0.55, against 0.51 to 0.81 for the trend, which
+ranks better in all four cities even though its totals are
+0.32--1.25 times the observed. Recent local construction is the better guide to which
+districts will add homes; likelihood-weighted capacity is the better guide to how many.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{Homes added in the test window: projection over observed total (Spearman correlation across districts).}
+\label{tab:homes}
+\begin{tabular}{lrlllll}
+\toprule
+City & Observed & Zoning build-out & Plan build-out & Likely $\times$ zoning & Likely $\times$ plan & Five-year trend \\
+\midrule
+Los Angeles & 22{,}853 & 193$\times$ (0.10) & 189$\times$ (0.24) & 0.81$\times$ (0.46) & 0.81$\times$ (0.52) & 0.59$\times$ (0.70) \\
+Dallas & 10{,}926 & 141$\times$ (0.00) & 127$\times$ (0.34) & 2.64$\times$ (0.00) & 1.69$\times$ (0.30) & 1.25$\times$ (0.72) \\
+New York & 116{,}776 & 76$\times$ (0.34) & -- & 0.96$\times$ (0.55) & -- & 0.47$\times$ (0.81) \\
+Milwaukee & 3{,}798 & 115$\times$ ($-$0.23) & -- & 0.97$\times$ ($-$0.37) & -- & 0.32$\times$ (0.51) \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Build-out: every lot at the homes per acre that the 90th percentile of lots of its zoning (or plan) class reaches in the city today. Likely: the build-out increment times the out-of-time probability of development (blocks E+C+Z+P where available). Trend: homes completed in the five years before the window, scaled to its length.\end{minipage}
+\end{table}
+
+\subsection{Transfer between cities}
+
+A model fitted on other cities predicts less well than the city's own model in four of five cities
+(Table~\ref{tab:transfer}). With all blocks, the AUC is lower by 0.046 to
+0.070. The exception is Milwaukee, which had only 85 developed lots in its test
+window and gains from the larger pooled sample. Context improves the transferred model in all five cities. Portable features carry much of the signal, but local history still matters.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Transfer: AUC of a model fitted on the other cities' training windows / the city's own model, on the city's test window.}
+\label{tab:transfer}
+\begin{tabular}{lllll}
+\toprule
+City & E & E+C & E+C+Z & E+C+Z+P \\
+\midrule
+Los Angeles & 0.719 / 0.864 & 0.817 / 0.892 & 0.828 / 0.894 & 0.837 / 0.894 \\
+Dallas & 0.844 / 0.898 & 0.877 / 0.918 & 0.878 / 0.922 & 0.877 / 0.923 \\
+New York & 0.825 / 0.892 & 0.874 / 0.914 & 0.868 / 0.919 & 0.866 / 0.919 \\
+Milwaukee & 0.959 / 0.911 & 0.965 / 0.896 & 0.966 / 0.924 & 0.967 / 0.924 \\
+Chicago & 0.742 / 0.824 & 0.808 / 0.888 & 0.804 / 0.891 & 0.822 / 0.891 \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Cities whose outcome is a building or a permit. A missing plan layer is coded as unknown.\end{minipage}
+\end{table}
+
+\subsection{Manhattan rezonings}
+
+The three rezonings show the same contrast at the scale of a single decision (Table~\ref{tab:replay},
+Figure~\ref{fig:replay}). Capacity projected 8{,}423 homes on development sites, and 5{,}207 when
+pro-rated to 2025. The likelihood-weighted projection gave 585; 561 had been built. The observed
+count lies within the model's 95\% range in two of three rezonings. SoHo/NoHo is below it, with
+3 homes built by 2025. Capacity describes full build-out by each review's build year, so the comparison
+concerns the near term, the horizon for which the likelihood model is trained.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Three Manhattan rezonings: homes on development sites by 2025, observed and projected.}
+\label{tab:replay}
+\begin{tabular}{lrrrrl}
+\toprule
+Rezoning (adopted) & Sites & Built by 2025 & Capacity & Pro-rated to 2025 & Likelihood-weighted (95\%) \\
+\midrule
+East Harlem (2017) & 127 & 288 & 4{,}117 & 3{,}294 & 234 (79--489) \\
+Inwood (2018) & 47 & 270 & 2{,}859 & 1{,}334 & 213 (0--652) \\
+SoHo/NoHo (2021) & 77 & 3 & 1{,}447 & 579 & 138 (8--304) \\
+\textit{All three} &  & 561 & 8{,}423 & 5{,}207 & 585 \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize Capacity is full build-out by the review's build year; pro-rated scales it linearly to 2025. The likelihood comes from a redevelopment model trained only on outcomes known by the adoption year.\end{minipage}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{integration_replay.png}
+\caption{Homes on development sites after three Manhattan rezonings: capacity, capacity pro-rated to 2025,
+likelihood-weighted (with the model's 95\% range) and built by 2025 (log scale).}
+\label{fig:replay}
+\end{figure}
+
+\section{Discussion}\label{sec:discussion}
+
+\paragraph{What the layers are for.} Across seven cities, zoning and the adopted plan add much less than existing
+conditions and neighbourhood context to predicting \emph{where} development happens. They add more to predicting
+\emph{what} it becomes, and they are needed to bound \emph{how much} it could hold. The pattern is consistent with the
+causal literature. Zoning sets a ceiling and a direction, but whether a lot develops within a few years depends on its
+current use, value and surroundings \citep{rosenthal1994,weber2006,charles2013}. Where upzoning did not change
+construction in the short run \citep{freemark2020}, little predictive value is to be expected. Where it did, the
+effect was strongest on vacant and underused parcels \citep{dong2024}, which existing conditions already identify.
+Rezoning itself follows development opportunity \citep{gabbe2018}, which helps explain why two of the regulatory gains
+vanished in the conservative variant. The plan results echo plan evaluation: plans mostly confirm existing use, so
+their predictive information lies where they depart from it. Their conformance with outcomes should not be read as
+influence \citep{berke2006,feitelson2017}.
+
+\paragraph{Implications for planning support tools.} Tools that combine existing, permitted and planned layers
+\citep{klosterman1999,geertman2020} should not assume that each layer improves a projection. The results suggest three
+practices:
+\begin{enumerate}
+\item test each layer on the city's own history before relying on it, since its value varies by city and by question;
+\item report likelihood-weighted projections beside capacity, which overstates near-term housing by orders of
+magnitude;
+\item report a trend baseline, which here ranked districts better than any model-based projection.
+\end{enumerate}
+These practices narrow the gap between claimed and demonstrated contributions that reviews of urban digital twins
+describe \citep{lei2023,azadi2025}.
+
+\paragraph{Reusable data and methods.} The crosswalks put ten cities' official codes on one schema as explicit
+tables, and tests check that every source code is mapped. The digitisation shows that plans published as documents
+need not stay outside quantitative analysis. Where the PDF is a vector export, a parcel layer can be recovered with
+errors of a few feet, and the shifted-map control provides a falsification test that does not require the true plan.
+The method relies only on a legend, filled shapes and a parcel layer, so it is not specific to Philadelphia. It
+failed where a map also draws neighbouring districts.
+
+\paragraph{Limitations.} The test covers 3{,}346{,}335 lots and 13{,}872 developments in seven large cities
+with different regulatory systems. That is enough to show that the value of zoning and plans varies and is often
+small, but not to estimate a general effect size. The main limitations are:
+\begin{itemize}
+\item the windows are short (one or two years) and, like the outcome definitions, differ by city;
+\item plan and zoning are current layers in Dallas and in parts of Phoenix, San Diego and Chicago; the conservative
+variant controls for this where dates exist, and in Dallas the gains are upper bounds;
+\item Chicago's outcome is a permit, not a completed building;
+\item context in Phoenix and San Diego lacks recent-change information in training;
+\item the crosswalks were written by hand, and some existing-use layers are a few years older than the windows;
+\item one model family is used, and AUC on rare events is complemented by average precision in the Appendix;
+\item the homes comparison rests on four cities and the rezoning replay on three cases;
+\item nothing here estimates what zoning or plans cause.
+\end{itemize}
+
+\section{Conclusion}
+
+Zoning and adopted plans are the core of land-use regulation, and planning tools combine them with existing
+conditions to project development. Tested on observed history in seven US cities, the two layers add little to
+predicting where development happens once existing conditions and neighbourhood context are known. They help predict
+what development becomes, and they bound how much a site could hold. Projecting at capacity overstated near-term
+housing 76- to 193-fold. Weighting capacity by an out-of-time likelihood gave 0.81--2.64 times
+what was built, while a simple trend ranked districts better. The parcel layers for ten cities, the method for
+digitising plans published as maps and the test protocol are open, so any city's layers can be tested the same way
+before a tool relies on them.
+
+\section*{Data and code availability}
+
+The code, the result files behind every number, the figures and a manifest of every input (URL, retrieval date and
+SHA-256) are in the PlanArena repository; \texttt{make reproduce} rebuilds the data and results from public sources.
+Each city's ingestion report documents coverage, crosswalks and estimated fields. Owner and mailing fields in
+assessor records were never requested or read.
+
+\section*{Declaration of AI assistance}
+
+[To be confirmed by the author.] The author used Claude (Anthropic) to write and test code, run analyses and draft
+text. The author designed the study, reviewed the code and results, read the cited sources and takes responsibility
+for the content. Every reference was checked against the record its DOI or ISBN resolves to.
+
+\bibliographystyle{plainnat}
+\bibliography{../docs/refs}
+
+\clearpage
+\appendix
+\section{Additional results}
+\FloatBarrier
+
+\begin{table}[h!]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Out-of-time average precision and precision among the top 1\% of lots.}
+\label{tab:ap}
+\begin{tabular}{lrrrlrr}
+\toprule
+City & Base rate & AP, E & AP, all & All blocks & Top 1\%, E & Top 1\%, all \\
+\midrule
+Los Angeles & 0.33\% & 0.139 & 0.147 & E+C+Z+P & 11.2\% & 12.8\% \\
+Dallas & 1.34\% & 0.115 & 0.237 & E+C+Z+P & 12.6\% & 29.6\% \\
+New York & 0.47\% & 0.073 & 0.122 & E+C+Z & 11.1\% & 15.1\% \\
+Milwaukee & 0.06\% & 0.024 & 0.031 & E+C+Z & 2.3\% & 2.8\% \\
+Phoenix & 0.36\% & 0.091 & 0.054 & E+C+Z+P & 9.7\% & 8.4\% \\
+San Diego & 0.07\% & 0.002 & 0.002 & E+C+Z+P & 0.7\% & 0.6\% \\
+Chicago & 0.26\% & 0.013 & 0.043 & E+C+Z & 2.4\% & 6.1\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
