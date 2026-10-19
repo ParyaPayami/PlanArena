@@ -1,6 +1,6 @@
 # Reference check
 
-74 entries: 74 ok, 0 failing.
+80 entries: 80 ok, 0 failing.
 
 | Key | Status | Details |
 |---|---|---|
@@ -78,3 +78,9 @@
 | schulze2011 | ok | doi 10.1007/s00355-010-0475-4 |
 | steinitz2012 | ok | isbn 9781589483330 |
 | brandt2016 | ok | doi 10.1017/CBO9781107446984 |
+| innes2004 | ok | doi 10.1080/1464935042000293170 |
+| einstein2019 | ok | doi 10.1017/s153759271800213x |
+| fung2006 | ok | doi 10.1111/j.1540-6210.2006.00667.x |
+| revelle2005 | ok | doi 10.1016/j.ejor.2003.11.032 |
+| abolhasani2022 | ok | doi 10.1016/j.compenvurbsys.2022.101795 |
+| church1974 | ok | doi 10.1007/bf01942293 |

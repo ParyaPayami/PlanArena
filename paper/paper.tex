@@ -32,8 +32,9 @@
 \renewcommand{\bibfont}{\footnotesize}
 \graphicspath{{../docs/figures/}}
 
-\title{\vspace{-2em}\large\textbf{PlanArena: validated decision support and optimization for land-use change}\\[0.2em]
-\normalsize Parcel-level impacts, likelihood and recommendations on official data for ten US cities}
+\title{\vspace{-2em}\large\textbf{PlanArena: a validated land-use optimizer}\\[0.2em]
+\normalsize Measuring the multidimensional impact of land-use decisions, with stakeholder interests as votes,\\
+on official data for ten US cities}
 \author{\normalsize Parya Payami\\ \footnotesize Department of Architecture, University of Wisconsin--Milwaukee}
 \date{\footnotesize Draft, \today}
 
@@ -42,59 +43,89 @@
 \vspace{-1.5em}
 
 \begin{abstract}
-\noindent Planners decide land-use changes parcel by parcel, yet planning support tools rarely show together what a
-change would do, whether zoning and the adopted plan allow it, how likely it is and what would do better, and rarely
-test these outputs against outcomes. PlanArena is an open decision support system that does so for 4{,}995{,}208
-parcels in ten large US cities, built from official land-use, plan and zoning data. Edits are scored on
-11 social, economic and environmental indicators in 45 ms (Manhattan) to 0.57 s
-(New York City); a redevelopment model gives their likelihood, an optimizer recommends plans and voting rules compare
-stakeholder decisions. Every component was tested on observed outcomes. In Manhattan, predicted effects of 2015--2025
-changes correlated with recorded homes ($r = 0.840$) and emissions ($r = 0.857$), and redevelopment was
-ranked out of time with AUC 0.847--0.952. In seven cities, zoning and plans added little to predicting
-where development happens but helped predict what it becomes. Likelihood weighting brought housing projections from
-76--193 to 0.81--2.64 times what was built. The optimizer found the exact optimum in
-93\% of small test areas.
+\noindent Deciding which land uses go where is a location-allocation problem with multidimensional effects: a change
+alters homes, jobs, access to services, the tax base, emissions and runoff, interacts with neighbouring parcels, and
+may never be built. US cities decide such changes at public hearings, where staff reports cover a few indicators and
+residents testify but do not vote. PlanArena is an open land-use optimizer that measures these effects and turns
+stakeholder interests into votes. It scores any parcel-level change on 11 social, economic and
+environmental indicators, with sensitivity ranges, in 45 ms (Manhattan) to 0.57 s (New York
+City); learns from parcel histories how likely a change is; recommends plans within zoning and precedent; and
+lets resident, environmental, business, developer and fiscal interests vote under nine rules. It covers
+4{,}995{,}208 parcels in ten US cities from official land-use, plan and zoning data. Tested on observed
+outcomes, predicted effects of Manhattan changes correlated with recorded homes ($r = 0.840$) and
+emissions ($r = 0.857$), and redevelopment was ranked out of time with AUC 0.847--0.952.
+Likelihood weighting brought housing projections from 76--193 to 0.81--2.64 times what was
+built, and the optimizer found the exact optimum in 93\% of small test areas.
 
-\smallskip\noindent\textbf{Keywords:} planning support systems; decision support; land-use optimization; urban
-digital twins; impact assessment; model validation
+\smallskip\noindent\textbf{Keywords:} land-use optimization; location allocation; impact assessment; planning support
+systems; computational social choice; model validation
 \end{abstract}
 
 \section{Introduction}
 
-Land-use change in US cities is decided parcel by parcel: rezonings, plan amendments and approvals of conversions are
-justified by their expected effects on housing, jobs, services, the tax base and the environment. To weigh a change, a
-planner needs to know, for each parcel:
+Deciding which land uses go where (housing, jobs, services, open space) is a location-allocation problem
+\citep{church1974,revelle2005}. Its effects are hard to measure for four reasons.
 \begin{itemize}
-\item what exists, what zoning permits and what the adopted plan intends;
-\item what is likely to happen and what would do better;
-\item what each option would do.
-\end{itemize}
-Planning support systems (PSS) and urban digital twins aim to provide this \citep{klosterman1999,geertman2020,
-batty2018,lehtola2022}. Three gaps limit them.
-\begin{itemize}
-\item \textbf{Testing.} Outputs are seldom tested against outcomes; reviews find claims ahead of demonstrated
-contributions \citep{vonk2005,lei2023,azadi2025,kruse2026}. Scenario tools default to capacity, assuming each site
-builds out to what the rules allow. In three Manhattan rezonings replayed here, capacity projected 8{,}423
-homes on development sites; 561 were built by 2025.
-\item \textbf{Plausibility.} Land-use optimization finds plans that score well \citep{malczewski2006,rahman2021,
-zheng2023}. It rarely asks whether their changes are plausible, or how the choice depends on the decision rule
-\citep{brandt2016,feng2024,lin2025}.
-\item \textbf{Data.} Existing use, zoning and plans come from different agencies in different schemas, some only as
-documents: Philadelphia's land-use plan exists only as maps in 17 PDF district plans.
+\item \textbf{Many dimensions.} One change alters homes, jobs, access to shops, parks and facilities, the tax base,
+energy use and runoff, and these trade off against each other \citep{malczewski2006,rahman2021}.
+\item \textbf{Spatial interaction.} Effects spread to neighbouring parcels through walking distance, land-use mix and
+competition for development \citep{verburg2004}.
+\item \textbf{Uncertainty.} A permitted change may never be built. In three Manhattan rezonings replayed here,
+capacity projected 8{,}423 homes on development sites; 561 were built by 2025.
+\item \textbf{Competing interests.} Residents, developers, businesses, environmental advocates and city finances weigh
+these effects differently, and no single answer is correct \citep{rittel1973}.
 \end{itemize}
 
-This paper presents PlanArena and tests each of its components on observed outcomes. It makes four contributions.
+\paragraph{How decisions are made today.} In US cities, rezonings and plan amendments are decided at public hearings.
+\begin{itemize}
+\item \textbf{The process.} Planning staff prepare a report, and large rezonings, such as those replayed here, add an
+environmental review that projects development on identified sites. Residents and advocates testify; the planning
+commission and the council vote.
+\item \textbf{Testimony is advisory.} Residents are heard but do not vote. Speakers at planning and zoning meetings are
+disproportionately older, male, long-time homeowners \citep{einstein2019}, and legally required hearings meet few
+goals of participation \citep{arnstein1969,innes2004,fung2006}.
+\item \textbf{Fragmented evidence.} Environmental, fiscal and access effects arrive as separate studies, if at all, and
+are rarely weighed together.
+\end{itemize}
+
+\paragraph{What computation can measure.} Each part of the problem now has a technical tool:
+\begin{itemize}
+\item \textbf{parcel-level impact models} calibrated on observed records, which measure many indicators at once;
+\item \textbf{supervised learning on parcel histories}, tested out of time, which estimates how likely a change is
+\citep{tepe2020,carruthers2024};
+\item \textbf{graph neural networks} over parcel adjacency, which represent spatial dependence;
+\item \textbf{many-objective evolutionary search} \citep{deb2014}, which explores the combinatorial space of plans;
+\item \textbf{computational social choice and bargaining} \citep{nash1950,brandt2016}, which turn stakeholder
+preferences into a decision. Game-theoretic simulation has been applied to collective land-use decisions
+\citep{abolhasani2022}.
+\end{itemize}
+Planning support systems (PSS) and urban digital twins aim to combine such tools
+\citep{klosterman1999,geertman2020,batty2018,lehtola2022}. Three gaps remain:
+\begin{itemize}
+\item \textbf{Untested outputs.} Their outputs are seldom tested against outcomes \citep{vonk2005,lei2023,azadi2025,
+kruse2026}.
+\item \textbf{Optimization.} It rarely asks whether recommended changes are plausible, or how the choice depends on the
+decision rule \citep{zheng2023,feng2024,lin2025}.
+\item \textbf{Fragmented data.} The data are spread across agencies and schemas, some only as documents:
+Philadelphia's land-use plan exists only as maps in 17 PDF district plans.
+\end{itemize}
+
+\paragraph{This paper.} PlanArena is an open land-use optimizer that measures the impact of any parcel-level change
+and makes stakeholder interests part of the decision. It contributes:
 \begin{enumerate}
-\item \textbf{An integrated system.} For every parcel it combines what exists, what is permitted, planned, likely and
-recommended. It scores any edit on 11 indicators in three pillars, with sensitivity ranges, at
-interactive speed. It recommends plans within zoning and precedent, and compares decision rules.
+\item \textbf{Measurement.} Any edit is scored on 11 indicators in three pillars, with sensitivity
+ranges, at interactive speed. Each edit also shows what exists, what zoning permits, what the plan intends and how
+likely the change is.
+\item \textbf{Optimization and decision.} The optimizer recommends plans within zoning and precedent. Resident,
+environmental, business, developer and fiscal interests vote on candidate plans under nine rules, and residents also
+vote block by block.
 \item \textbf{Official data for ten cities.} Existing use, plan and zoning for 4{,}995{,}208 parcels are on one
 schema, with a validated method to digitise plans published as vector PDF maps.
-\item \textbf{Validation of every component} on observed data (Table~\ref{tab:design}).
-\item \textbf{Design guidance} drawn from that evidence.
+\item \textbf{Validation of every component} on observed data (Table~\ref{tab:design}), with design guidance drawn from
+it.
 \end{enumerate}
-Impacts are validated in Manhattan only; elsewhere coefficients are national or regional. Votes are simulated, and
-usability with planners is not evaluated.
+\textbf{Scope.} Impacts are validated in Manhattan only; elsewhere coefficients are national or regional. Votes rest on
+assumed utilities, not elicited preferences, and usability with planners is not evaluated.
 
 \section{Related work}\label{sec:related}
 
@@ -106,8 +137,9 @@ and decision \citep{steinitz2012}. Their limited use and uncertain usefulness ar
 barriers \citep{lei2023,wu2025}, and ambitions ahead of demonstrated contributions \citep{azadi2025,luo2025,kruse2026}.
 PlanArena attaches a test against observed data to each output.
 
-\paragraph{Optimization and collective decisions.} Multicriteria analysis and multi-objective optimization generate
-and rank land-use alternatives \citep{malczewski2006,rahman2021}. Recent work uses deep reinforcement learning
+\paragraph{Optimization and collective decisions.} Location-allocation models site facilities and uses
+\citep{church1974,revelle2005}; multicriteria analysis and multi-objective optimization generate and rank land-use
+alternatives \citep{malczewski2006,rahman2021}. Recent work uses deep reinforcement learning
 \citep{zheng2023} and explicit stakeholder interests \citep{feng2024,lin2025}. Planning problems have no single correct
 solution \citep{rittel1973}, so the rule that turns preferences into a choice matters. Bargaining \citep{nash1950} and
 voting rules \citep{schulze2011,brandt2016} have different properties, and bargaining has been combined with land
@@ -319,8 +351,9 @@ residents' referendum by block. Schulze's method \citep{schulze2011} decides.
 \item \textbf{Reports.} Whether a Condorcet winner exists, whether one insincere ballot could change the outcome, and
 the winner's robustness to coefficients and seats.
 \end{itemize}
-Utilities are editable assumptions, and the output is a simulated scenario, not public support \citep{arnstein1969}
-(Figure~\ref{fig:optvote}).
+Unlike hearing testimony, these interests are votes: each stakeholder holds seats on a simulated council, and
+residents also vote block by block. Utilities are editable assumptions, and the output is a simulated scenario, not
+public support \citep{arnstein1969} (Figure~\ref{fig:optvote}).
 
 \begin{figure}[t]
 \centering
@@ -649,8 +682,9 @@ is never the Nash bargaining solution;
 \item the winner survives a median 76\% of joint perturbations of coefficients and seats, and 54\%
 of redrawn stakeholder weights.
 \end{itemize}
-These describe the simulated scenario, not public opinion. A recommendation should be reported with its rule and with
-how it changes under others.
+These describe the simulated scenario, not public opinion. They make explicit what a hearing leaves implicit:
+resident and environmental interests are inputs to the decision, and a recommendation should be reported with its
+rule and with how it changes under others.
 
 \section{Discussion}\label{sec:discussion}
 
@@ -694,8 +728,10 @@ estimated.
 
 \section{Conclusion}
 
-PlanArena shows planners the effects of any parcel-level land-use change on social, economic and environmental
-indicators, with what is permitted, planned, likely and recommended. It runs on official data for ten large US cities
+Land-use and location decisions have multidimensional, spatially interacting and uncertain effects, yet they are
+decided at hearings where those effects are summarised in a few indicators and residents do not vote. PlanArena, a
+land-use optimizer, measures the effects of any parcel-level change on social, economic and environmental
+indicators, with what is permitted, planned, likely and recommended, and turns stakeholder interests into votes. It runs on official data for ten large US cities
 at interactive speed, and every component is tested against what happened. The tests also shape the design:
 \begin{itemize}
 \item regulatory layers inform what development becomes and how much it could hold, not where it happens;

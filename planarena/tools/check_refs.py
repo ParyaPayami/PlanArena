@@ -14,6 +14,7 @@ import json
 import re
 import sys
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from difflib import SequenceMatcher
@@ -85,10 +86,22 @@ def first_family(authors: str) -> str:
 
 
 # ----------------------------------------------------------------------------- resolvers
-def _get(url: str, timeout: float = 30.0) -> bytes:
+def _get(url: str, timeout: float = 30.0, tries: int = 4) -> bytes:
+    """GET with retries: registries rate-limit, so a transient failure must not read as an unresolvable identifier."""
+    import time
+
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
+    for k in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404 or k == tries - 1:
+                raise
+        except Exception:
+            if k == tries - 1:
+                raise
+        time.sleep(2 * (k + 1))
 
 
 def crossref(doi: str) -> dict | None:

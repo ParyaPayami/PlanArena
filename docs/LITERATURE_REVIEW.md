@@ -1,7 +1,7 @@
 # Literature review
 
 **Sources and checks**
-- 74 sources.
+- 80 sources.
 - Each is in [refs.bib](refs.bib) with its DOI or ISBN and passes `check_refs` against the record that identifier resolves to ([reference_check.md](reference_check.md)).
 - Summaries are written from each source's abstract. † marks a source whose abstract was not available; its summary comes from the title and record and must be checked on reading.
 - A source is cited in the paper only after the author has read it and logged the supporting passage in [citation_log.csv](citation_log.csv).
@@ -13,6 +13,9 @@
 | Arnstein 1969 | Typology of eight levels of citizen participation, from manipulation to citizen control. | The simulated votes are not participation; PlanArena claims no level on this ladder. |
 | Rittel & Webber 1973† | Planning problems are "wicked": no definitive formulation and no single correct solution. | Why decision rules are compared instead of returning one optimum. |
 | Steinitz 2012 (book) | Geodesign as six linked models: representation, process, evaluation, change, impact, decision. | Order of the Studio: existing → change → impact → decision. |
+| Innes & Booher 2004 | Legally required US participation methods, such as hearings, fail basic goals of participation and breed anger and mistrust; collaborative engagement is proposed instead. | The status quo: hearings collect testimony but give no share of the decision. |
+| Einstein, Glick & Palmer 2019 | Codes citizens' comments at planning and zoning meetings on housing: speakers are disproportionately older, male, long-time homeowners. | Who is heard at hearings is unrepresentative. |
+| Fung 2006 | Places participation mechanisms in a space of who participates, how they decide, and how discussion links to action. | Simulated votes occupy one point of that space; no real participation is claimed. |
 
 ## 2. Planning support systems and urban digital twins
 
@@ -84,6 +87,9 @@
 
 | Study | What it does | Use in PlanArena |
 |---|---|---|
+| Church & ReVelle 1974† | Formulates the maximal covering location problem. | Land use as location-allocation. |
+| ReVelle & Eiselt 2005 | Survey of location analysis and facility siting. | Same. |
+| Abolhasani, Taleai & Lakes 2022† | Game-theoretic framework with event-driven actors for simulating collective land-use decisions. | Stakeholder decisions simulated with game theory. |
 | Nash 1950 | Axiomatic solution to two-party bargaining. | Bargaining rule. |
 | Malczewski 2006 | Survey of GIS multicriteria decision analysis, 1990–2004. | Indicator weighting. |
 | Schulze 2011 | A Condorcet-consistent, clone-independent, monotonic voting method with a polynomial-time winner. | Deciding voting rule. |
