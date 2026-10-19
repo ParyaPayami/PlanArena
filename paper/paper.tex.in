@@ -552,9 +552,6 @@ write and test code, run analyses and draft text. The author designed the study,
 cited sources and takes responsibility for the content. Every reference was checked against the record its DOI or
 ISBN resolves to.
 
-\bibliographystyle{unsrtnat}
-\bibliography{../docs/refs}
-
 \appendix
 \section{Digitising plans published as PDF maps}\label{app:digitise}
 
@@ -595,5 +592,8 @@ be read directly.
 @@table_transfer@@
 
 @@table_ap@@
+
+\bibliographystyle{unsrtnat}
+\bibliography{../docs/refs}
 
 \end{document}
