@@ -87,6 +87,7 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 **Writing**
 - [x] Draft written (`paper/`); numbers generated from the result files.
 - [ ] Author's revision of the draft, and the AI-assistance statement confirmed.
+- [ ] Citation style for the chosen journal. The draft uses numbered citations (`unsrtnat`); *Environment and Planning B* needs author–date. To switch, change `[numbers,sort&compress]` to `[authoryear,round]` and `unsrtnat` to `plainnat` in `paper/paper.tex.in`.
 - [ ] System diagram (by hand).
 - [x] Bibliography: 74 sources in [refs.bib](refs.bib), all passing `check_refs` ([reference_check.md](reference_check.md)); themes and gap in [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md).
 - [ ] Read each source, then fill `read_by`, `date_read` and the page in [citation_log.csv](citation_log.csv). Start with the 11 marked † (no abstract was available).

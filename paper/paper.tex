@@ -1,7 +1,8 @@
 % PlanArena paper. Numbers and tables are filled from results/ by planarena/paper.py: edit this template, then run
 %   python -I -m planarena.paper      (writes paper.tex and, with tectonic, paper.pdf). Do not edit paper.tex.
-\documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
+% Citations are numbered; for an author-year journal use [authoryear,round] and plainnat below.
+\documentclass[10pt]{article}
+\usepackage[margin=0.8in]{geometry}
 \usepackage{fontspec}
 \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
   ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
@@ -10,158 +11,146 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{placeins}
-\usepackage[authoryear,round]{natbib}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usetikzlibrary{arrows.meta,positioning,calc}
 \usepackage{caption}
-\captionsetup{font=small,labelfont=bf}
-\setlength{\parskip}{0.3em}
+\captionsetup{font=footnotesize,labelfont=bf,skip=3pt}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\usepackage[compact]{titlesec}
+\titlespacing*{\section}{0pt}{8pt}{3pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+\titlespacing*{\paragraph}{0pt}{3pt}{0.6em}
+\setlength{\parskip}{0.15em}
 \setlength{\emergencystretch}{1.5em}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\setlength{\bibsep}{1pt}
+\renewcommand{\bibfont}{\footnotesize}
 \graphicspath{{../docs/figures/}}
 
-\title{\Large PlanArena: validated decision support and optimization for land-use change\\[0.3em]
-\large Parcel-level impacts, likelihood and recommendations on official data for ten US cities}
-\author{Parya Payami\\ \small Department of Architecture, University of Wisconsin--Milwaukee}
-\date{Draft, \today}
+\title{\vspace{-2em}\large\textbf{PlanArena: validated decision support and optimization for land-use change}\\[0.2em]
+\normalsize Parcel-level impacts, likelihood and recommendations on official data for ten US cities}
+\author{\normalsize Parya Payami\\ \footnotesize Department of Architecture, University of Wisconsin--Milwaukee}
+\date{\footnotesize Draft, \today}
 
 \begin{document}
 \maketitle
+\vspace{-1.5em}
 
 \begin{abstract}
-\noindent Planners decide land-use changes parcel by parcel. Planning support tools rarely show together what a
-change would do, whether zoning and the adopted plan allow it, how likely it is and which alternatives would do
-better, and they rarely test these outputs against what happened. PlanArena is an open decision support system that
-provides all of these for 4{,}995{,}208 parcels in ten large US cities, built from official land-use, plan and
-zoning data. Any edit is scored on 11 social, economic and environmental indicators in
-45 ms (Manhattan) to 0.57 s (New York City). A redevelopment model estimates how likely the change
-is, an optimizer recommends plans, and voting rules compare how stakeholders would decide. Each component was tested
-on observed outcomes. In Manhattan, predicted effects of 2015--2025 changes correlated with recorded homes ($r =
-0.840$) and emissions ($r = 0.857$), and redevelopment was ranked out of time with an AUC of
-0.847--0.952. In seven cities, zoning and plans added little to predicting where development happens
-but helped predict what it becomes. Likelihood weighting brought projections of new homes from 76--193
-to 0.81--2.64 times what was built. The optimizer found the exact optimum in 93\% of small test
-areas.
-\end{abstract}
+\noindent Planners decide land-use changes parcel by parcel, yet planning support tools rarely show together what a
+change would do, whether zoning and the adopted plan allow it, how likely it is and what would do better, and rarely
+test these outputs against outcomes. PlanArena is an open decision support system that does so for 4{,}995{,}208
+parcels in ten large US cities, built from official land-use, plan and zoning data. Edits are scored on
+11 social, economic and environmental indicators in 45 ms (Manhattan) to 0.57 s
+(New York City); a redevelopment model gives their likelihood, an optimizer recommends plans and voting rules compare
+stakeholder decisions. Every component was tested on observed outcomes. In Manhattan, predicted effects of 2015--2025
+changes correlated with recorded homes ($r = 0.840$) and emissions ($r = 0.857$), and redevelopment was
+ranked out of time with AUC 0.847--0.952. In seven cities, zoning and plans added little to predicting
+where development happens but helped predict what it becomes. Likelihood weighting brought housing projections from
+76--193 to 0.81--2.64 times what was built. The optimizer found the exact optimum in
+93\% of small test areas.
 
-\noindent\textbf{Keywords:} planning support systems; decision support; land-use optimization; urban digital twins;
-impact assessment; model validation
+\smallskip\noindent\textbf{Keywords:} planning support systems; decision support; land-use optimization; urban
+digital twins; impact assessment; model validation
+\end{abstract}
 
 \section{Introduction}
 
-Land-use change in US cities is decided parcel by parcel. Rezonings, amendments to comprehensive plans and approvals
-of conversions are justified by their expected effects on housing, jobs, services, the tax base and the environment.
-To weigh a proposed change, a planner needs to know five things about each affected parcel:
-\begin{enumerate}
-\item what exists;
-\item what zoning permits;
-\item what the adopted plan intends;
-\item what is likely to happen;
-\item what alternative would do better, and what each option would do across these aspects.
-\end{enumerate}
-Planning support systems and urban digital twins aim to provide this information
-\citep{klosterman1999,geertman2020,batty2018,lehtola2022}.
-
-Three gaps limit how far planners can rely on such tools.
+Land-use change in US cities is decided parcel by parcel: rezonings, plan amendments and approvals of conversions are
+justified by their expected effects on housing, jobs, services, the tax base and the environment. To weigh a change, a
+planner needs to know, for each parcel:
 \begin{itemize}
-\item \textbf{Testing.} Their outputs are seldom tested against what happened. Reviews of planning support systems
-and urban digital twins find that claimed capabilities run ahead of demonstrated ones
-\citep{vonk2005,lei2023,azadi2025,kruse2026}. Scenario tools commonly project development at capacity, assuming that
-each site builds out to what the rules allow. In three Manhattan rezonings replayed in this paper, capacity projected
-8{,}423 homes on development sites; 561 had been built by 2025.
-\item \textbf{Plausibility.} Land-use optimization generates plans that score well on chosen objectives
-\citep{malczewski2006,rahman2021,zheng2023}. It rarely asks whether the recommended changes are plausible, or how the
-choice among plans depends on the decision rule used to make it \citep{brandt2016,feng2024,lin2025}.
-\item \textbf{Data.} Existing land use, zoning and the adopted plan are published by different agencies in different
-schemas. Some plans exist only as documents: Philadelphia's land-use plan exists only as maps in 17 PDF
-district plans.
+\item what exists, what zoning permits and what the adopted plan intends;
+\item what is likely to happen and what would do better;
+\item what each option would do.
+\end{itemize}
+Planning support systems (PSS) and urban digital twins aim to provide this \citep{klosterman1999,geertman2020,
+batty2018,lehtola2022}. Three gaps limit them.
+\begin{itemize}
+\item \textbf{Testing.} Outputs are seldom tested against outcomes; reviews find claims ahead of demonstrated
+contributions \citep{vonk2005,lei2023,azadi2025,kruse2026}. Scenario tools default to capacity, assuming each site
+builds out to what the rules allow. In three Manhattan rezonings replayed here, capacity projected 8{,}423
+homes on development sites; 561 were built by 2025.
+\item \textbf{Plausibility.} Land-use optimization finds plans that score well \citep{malczewski2006,rahman2021,
+zheng2023}. It rarely asks whether their changes are plausible, or how the choice depends on the decision rule
+\citep{brandt2016,feng2024,lin2025}.
+\item \textbf{Data.} Existing use, zoning and plans come from different agencies in different schemas, some only as
+documents: Philadelphia's land-use plan exists only as maps in 17 PDF district plans.
 \end{itemize}
 
-This paper presents PlanArena, an open parcel-level decision support system, and tests each of its components on
-observed outcomes. The contributions are as follows.
+This paper presents PlanArena and tests each of its components on observed outcomes. It makes four contributions.
 \begin{enumerate}
-\item \textbf{An integrated system.} For every parcel, PlanArena combines what exists, what is permitted, what is
-planned, what is likely and what is recommended. Any edit is scored on 11 indicators across three
-pillars (social, economic and environmental), with sensitivity ranges, at interactive speed. A multi-objective
-optimizer recommends plans within zoning and precedent, and the system compares how alternative decision rules would
-choose among them.
-\item \textbf{Official data for ten cities.} The official existing land use, adopted plan and zoning for
-4{,}995{,}208 parcels are put on one schema. A validated method turns a plan published only as vector PDF maps
-into a parcel layer.
-\item \textbf{Validation of every component on observed data} (Table~\ref{tab:design}). This covers existing
-conditions, reproduction of environmental reviews, effects of observed change, forward prediction of redevelopment,
-a cross-city test of what zoning and plans add, scenario projections, and optimizer quality and plausibility.
-\item \textbf{Design guidance from the evidence.} The results show which layers a tool should rely on for which
-question, and how it should present projections and decisions.
+\item \textbf{An integrated system.} For every parcel it combines what exists, what is permitted, planned, likely and
+recommended. It scores any edit on 11 indicators in three pillars, with sensitivity ranges, at
+interactive speed. It recommends plans within zoning and precedent, and compares decision rules.
+\item \textbf{Official data for ten cities.} Existing use, plan and zoning for 4{,}995{,}208 parcels are on one
+schema, with a validated method to digitise plans published as vector PDF maps.
+\item \textbf{Validation of every component} on observed data (Table~\ref{tab:design}).
+\item \textbf{Design guidance} drawn from that evidence.
 \end{enumerate}
-
-The scope is stated throughout. Impacts are validated against observed data in Manhattan; elsewhere the coefficients
-are national or regional. The stakeholder votes are simulated, not elicited. Usability with planners is not
-evaluated here.
+Impacts are validated in Manhattan only; elsewhere coefficients are national or regional. Votes are simulated, and
+usability with planners is not evaluated.
 
 \section{Related work}\label{sec:related}
 
-\paragraph{Planning support systems and urban digital twins.} Planning support systems combine land suitability,
-demand projection and allocation in scenario planning \citep{klosterman1999,geertman2020}, often within a geodesign
-workflow that links representation, change, impact and decision \citep{steinitz2012}. Their limited use and uncertain
-usefulness are long-standing concerns \citep{vonk2005,tebrommelstroet2013,pelzer2017}. Urban digital twins extend the
-idea to integrated, updatable city models \citep{batty2018,batty2024,white2021,lehtola2022,ferrebigorra2022}. Reviews
-report technical and organisational barriers \citep{lei2023,wu2025} and a gap between ambitions and demonstrated
-contributions to planning \citep{azadi2025,luo2025,kruse2026}. PlanArena responds by attaching a test against observed
-data to each output it reports.
+\paragraph{PSS and urban digital twins.} PSS combine suitability, demand projection and allocation for scenario
+planning \citep{klosterman1999,geertman2020}, often in a geodesign workflow linking representation, change, impact
+and decision \citep{steinitz2012}. Their limited use and uncertain usefulness are long-standing concerns
+\citep{vonk2005,tebrommelstroet2013,pelzer2017}. Digital twins extend them to integrated, updatable city models
+\citep{batty2018,batty2024,white2021,lehtola2022,ferrebigorra2022}. Reviews report technical and organisational
+barriers \citep{lei2023,wu2025}, and ambitions ahead of demonstrated contributions \citep{azadi2025,luo2025,kruse2026}.
+PlanArena attaches a test against observed data to each output.
 
-\paragraph{Land-use optimization and collective decisions.} GIS multicriteria analysis and multi-objective
-optimization generate and rank land-use alternatives \citep{malczewski2006,rahman2021}, recently with deep
-reinforcement learning \citep{zheng2023} and with explicit stakeholder interests \citep{feng2024,lin2025}. Planning
-problems have no single correct solution \citep{rittel1973}, so the rule that turns stakeholder preferences into a
-choice matters. Bargaining \citep{nash1950} and voting rules have different properties
-\citep{schulze2011,brandt2016}. Bargaining has been combined with allocation in land reallocation \citep{hashemi2026}.
-Simulated votes are not participation \citep{arnstein1969}; PlanArena uses them only to show how sensitive a choice is
-to its rule.
+\paragraph{Optimization and collective decisions.} Multicriteria analysis and multi-objective optimization generate
+and rank land-use alternatives \citep{malczewski2006,rahman2021}. Recent work uses deep reinforcement learning
+\citep{zheng2023} and explicit stakeholder interests \citep{feng2024,lin2025}. Planning problems have no single correct
+solution \citep{rittel1973}, so the rule that turns preferences into a choice matters. Bargaining \citep{nash1950} and
+voting rules \citep{schulze2011,brandt2016} have different properties, and bargaining has been combined with land
+reallocation \citep{hashemi2026}. Simulated votes are not participation \citep{arnstein1969}; PlanArena uses them
+only to show how a choice depends on its rule.
 
-\paragraph{Predicting development, and the role of regulations.} Urban change models range from cellular automata
-\citep{clarke1997} and statistical site models \citep{landis1998} to behavioural simulation \citep{waddell2002,
-waddell2003} and agent-based models \citep{parker2003}, with neighbourhood and temporal effects as priorities
-\citep{verburg2004,weerasinghe2025}. At the parcel level, models capture existing and historical neighbourhood
-conditions \citep{tepe2020}, and machine learning complements econometric analysis of redevelopment
-\citep{carruthers2024}. Redevelopment depends on land value relative to the existing structure \citep{rosenthal1994,
-dye2007}; in Chicago, smaller and older buildings with less lot coverage are replaced more often
-\citep{weber2006,charles2013}.
-
-Regulation matters too, but it is not exogenous:
+\paragraph{Predicting development, and regulation.} Urban change models range from cellular automata
+\citep{clarke1997} and statistical site models \citep{landis1998} to behavioural \citep{waddell2002,waddell2003} and
+agent-based simulation \citep{parker2003}, with neighbourhood and temporal effects as priorities
+\citep{verburg2004,weerasinghe2025}.
 \begin{itemize}
-\item rezoning follows development opportunity \citep{gabbe2018};
-\item causal studies of upzoning differ on its short-run effect on construction \citep{freemark2020,dong2024,
-greenaway2023};
-\item plans are only partly implemented \citep{talen1996,laurian2004,brody2005,berke2006,loh2011};
-\item recent land-change models integrate zoning and planning regulations \citep{hersperger2018,domingo2021,
-abolhasani2026}, but do not test what those layers add to prediction on held-out history.
+\item \textbf{Parcel models} capture existing and historical neighbourhood conditions \citep{tepe2020}, and machine
+learning complements econometrics \citep{carruthers2024}.
+\item \textbf{Redevelopment} depends on land value relative to the structure \citep{rosenthal1994,dye2007}. In
+Chicago, smaller and older buildings with less lot coverage are replaced more often \citep{weber2006,charles2013}.
+\item \textbf{Regulation is not exogenous.} Rezoning follows development opportunity \citep{gabbe2018}, studies differ
+on upzoning's short-run effect on construction \citep{freemark2020,dong2024,greenaway2023}, and plans are only partly
+implemented \citep{talen1996,laurian2004,brody2005,berke2006,loh2011}.
+\item \textbf{Regulation in models.} Recent land-change models integrate zoning and planning rules
+\citep{hersperger2018,domingo2021,abolhasani2026} but do not test what they add to prediction on held-out history.
 \end{itemize}
 
 \paragraph{Validation.} Land-change predictions should be compared with persistence at several resolutions
-\citep{pontius2008,pontius2011}, with transition probabilities validated directly \citep{black2023}. Under spatial and
-temporal dependence, random cross-validation overstates skill \citep{roberts2017,ploton2020}, and models apply only
-where new data resemble their training data \citep{meyer2021}. Uncertainty from many coefficients is better
-represented by varying them jointly \citep{saltelli2019}.
+\citep{pontius2008,pontius2011}, and their transition probabilities validated directly \citep{black2023}. Under
+spatial and temporal dependence, random cross-validation overstates skill \citep{roberts2017,ploton2020}, and models
+apply only where new data resemble the training data \citep{meyer2021}. Uncertainty from many coefficients is better
+assessed by varying them jointly \citep{saltelli2019}.
 
 \section{The system}\label{sec:system}
 
-Figure~\ref{fig:arch} shows the architecture. A parcel twin holds each city's official layers. Four engines then
-answer the planner's questions:
+A parcel twin holds each city's official layers (Figure~\ref{fig:arch}). Four engines answer the planner's questions:
 \begin{itemize}
-\item the impact engine: what would this change do?
-\item the likelihood models: is it likely?
-\item the optimizer: what would do better?
-\item the decision module: who would choose it, under which rule?
+\item the \textbf{impact engine}: what would a change do?
+\item the \textbf{likelihood models}: is it likely?
+\item the \textbf{optimizer}: what would do better?
+\item the \textbf{decision module}: who would choose it, and under which rule?
 \end{itemize}
-The Studio, a browser application, lets a planner paint uses and floor-area ratios on parcels and see every
+In the Studio, a browser application, a planner paints uses and floor-area ratios on parcels and sees every
 indicator, flag and recommendation update (Figure~\ref{fig:studio}).
-
-
 
 \begin{figure}[t]
 \centering
-\resizebox{0.92\linewidth}{!}{%
+\resizebox{0.78\linewidth}{!}{%
 \begin{tikzpicture}[every node/.style={font=\footnotesize, align=center},
   box/.style={draw, rounded corners=2pt, minimum height=9mm, text width=30mm, fill=gray!6},
   q/.style={font=\footnotesize\itshape, text width=30mm, align=left},
@@ -183,39 +172,38 @@ indicator, flag and recommendation update (Figure~\ref{fig:studio}).
 \draw[arr] (imp) -- (opt); \draw[arr] (lik) -- (opt);
 \draw[arr] (opt) -- (dec); \draw[arr] (dec) -- (ui);
 \end{tikzpicture}}
-\caption{PlanArena's architecture. Every number the system shows comes from one of these components, and each
-component is tested on observed data (Table~\ref{tab:design}).}
+\caption{Architecture. Every number the system shows comes from one of these components, each tested on observed
+data (Table~\ref{tab:design}).}
 \label{fig:arch}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{ui_impact.png}
-\caption{The Studio in Manhattan. Thirty parking lots and vacant parcels in East Harlem have been painted as housing
-(outlined on the map). The panel on the right shows the plan score, the social, economic and environmental pillars,
-and each indicator's change within a ten-minute walk with its sensitivity range. The palette on the left sets the
-use; the bar at the top switches between the plan being edited and the city's existing, planned and zoned use.}
+\caption{The Studio in Manhattan: thirty parking lots and vacant parcels in East Harlem painted as housing
+(outlined). Right: plan score, social, economic and environmental pillars, and each indicator's change within a
+ten-minute walk with its sensitivity range. Left: the use palette. Top: switches between the plan being edited and the
+city's existing, planned and zoned use.}
 \label{fig:studio}
 \end{figure}
 
-\subsection{Parcel twin and official layers}
-
-The twin covers the nine largest US cities other than San Jose, and Milwaukee (Table~\ref{tab:cities}).
+\paragraph{Parcel twin and official layers.} The twin covers the nine largest US cities except San Jose, plus
+Milwaukee (Table~\ref{tab:cities}).
 \begin{itemize}
-\item \textbf{Existing land use} is the parcel land use published by the city or its regional planning agency,
-refined with assessor records where the layer groups uses.
+\item \textbf{Existing land use} is the parcel land use the city or its regional planning agency publishes, refined
+with assessor records where the layer groups uses.
 \item \textbf{The adopted plan} (future land use) and \textbf{zoning} are separate layers.
-\item \textbf{Classes.} Every source code is translated by an explicit crosswalk into 16 classes. These are three
-housing types, mixed use, retail, office, hotel, industry, warehousing, education, health, civic, open space,
-transportation, parking and vacant land, and they nest in nine analysis groups.
-\item \textbf{Buildings.} Floor area, homes, year built and assessed value come from assessor or city records, with
-estimated fields flagged. Jobs are fitted to Census LEHD block counts.
+\item \textbf{Classes.} Explicit crosswalks map every source code to 16 classes: three housing types, mixed use,
+retail, office, hotel, industry, warehousing, education, health, civic, open space, transportation, parking and
+vacant land. The classes nest in nine analysis groups.
+\item \textbf{Records.} Floor area, homes, year built and assessed value come from assessor or city records, with
+estimated fields flagged. Jobs are fitted to LEHD block counts.
+\item \textbf{Provenance.} Inputs are downloaded by script, with URL and SHA-256 hash recorded.
+\item \textbf{Philadelphia's plan}, published only as PDF maps, is digitised (Appendix~\ref{app:digitise}):
+15 of 17 plans, covering 83\% of parcels, with median registration errors of
+1.1--7.2 ft, each checked against a shifted-map control.
+\item \textbf{Missing plans.} Where a city publishes no plan as data, the layer is absent, not estimated.
 \end{itemize}
-Every input is downloaded by script, with its URL and SHA-256 hash recorded. Philadelphia publishes its plan only as
-PDF maps. Appendix~\ref{app:digitise} describes how the maps are digitised: 15 of 17 plans
-were converted, covering 83\% of parcels, with median registration errors of 1.1--7.2
-ft, and each was checked against a shifted-map control. Where a city publishes no plan as data, the plan layer is
-absent rather than estimated.
 
 \begin{table}[t]
 \centering
@@ -244,29 +232,24 @@ Milwaukee & 148{,}042 & MPROP & 100\% & PDF only (not included) & -- & 99\% & 1.
 \begin{minipage}{0.95\linewidth}\footnotesize Existing use is the city's or regional agency's parcel land use, refined by assessor records where the layer groups uses. Homes / Census: homes in the twin over Census 2020 housing units. Houston has no zoning. Milwaukee's area plans are published as PDFs that could not be downloaded by script.\end{minipage}
 \end{table}
 
-\subsection{Impact engine}
-
-An edit sets a parcel's use, and optionally its floor-area ratio (FAR). The engine computes the
-11 indicators of Table~\ref{tab:indicators} for the parcels within a ten-minute walk and for the city.
+\paragraph{Impact engine.} An edit sets a parcel's use and, optionally, its floor-area ratio (FAR). The engine
+computes the 11 indicators of Table~\ref{tab:indicators} within a ten-minute walk and citywide.
 \begin{itemize}
 \item \textbf{Unchanged parcels} keep their observed values, so the baseline reproduces the records exactly.
-\item \textbf{Changed parcels} follow a hybrid delta rule. If only density changes and the record is consistent, the
-parcel's observed composition is scaled. If the use changes, the observed old use is removed and the modelled new use
-added. The rule was chosen on observed change (Section~\ref{sec:r-change}).
-\item \textbf{Derived quantities.} Homes follow from residential floor area and each parcel's floor area per home.
-Jobs follow from floor-area components and rates fitted to LEHD block counts. Emissions follow from energy use
-intensities and emission factors derived from New York's energy benchmarking data (Local Law 84) and its emission
-limits (Local Law 97). Runoff follows from surface coefficients. Assessed value changes by the difference between
-modelled values.
-\item \textbf{Access indicators} (parks, services and facilities within a walk, land-use mix, green cover) are
-recomputed on a 50 m raster.
-\item \textbf{Ranges.} Every coefficient has a source and a status, and low and high variants give a sensitivity
-range for each indicator.
+\item \textbf{Changed parcels} follow a hybrid delta rule, chosen on observed change (Section~\ref{sec:r-change}).
+A density-only change on a consistent record scales the observed composition; a use change removes the observed old
+use and adds the modelled new one.
+\item \textbf{Derived quantities.} Homes follow from residential floor area and the parcel's floor area per home.
+Jobs follow from floor-area components and rates fitted to LEHD counts. Emissions follow from energy intensities and
+emission factors derived from New York's benchmarking data (Local Law 84) and emission limits (Local Law 97).
+Runoff follows from surface coefficients, and value from the difference between modelled values.
+\item \textbf{Access indicators} are recomputed on a 50 m raster.
+\item \textbf{Ranges.} Every coefficient has a source and a status, and low and high variants give each indicator a
+sensitivity range.
 \end{itemize}
-Indicators are combined into pillar scores with weights the planner can change. Scoring a 50-parcel edit takes
-45 ms on Manhattan's 42{,}075 parcels and 0.57 s on New York City's 856{,}634,
-including the ranges. Impacts are computed for the nine analysis groups, for which the coefficients are calibrated and
-validated.
+Indicators combine into pillar scores with weights the planner sets. Scoring a 50-parcel edit, ranges included, takes
+45 ms on Manhattan's 42{,}075 parcels and 0.57 s on New York City's 856{,}634.
+Impacts are computed for the nine analysis groups, for which the coefficients are calibrated and validated.
 
 \begin{table}[t]
 \centering
@@ -295,85 +278,79 @@ Green cover near homes & environmental & \% of land within 400 m & higher & not 
 \begin{minipage}{0.95\linewidth}\footnotesize Unchanged parcels keep their observed values; changed parcels follow the delta equations. Each indicator carries a sensitivity range from low and high coefficient variants. Access, mix, green cover and runoff are recomputed from the resulting state but have no observed after-change data to test against.\end{minipage}
 \end{table}
 
-\subsection{Likelihood, precedent and pattern}
-
-Three models tell the planner whether a change is plausible.
+\paragraph{Likelihood, precedent and pattern.} Three models judge plausibility.
 \begin{itemize}
-\item \textbf{Redevelopment.} A gradient-boosted model (LightGBM) gives each lot's probability of redevelopment
-within one, three or five years, and its likely new use. It is trained only on outcomes known at the decision year.
-Its features describe the lot (use, size, built and permitted floor area, age, land share of value), its
-neighbourhood and its zoning.
-\item \textbf{Precedent.} A conversion is flagged when buildings of that use and size have not been converted to the
-proposed use in the past decade.
-\item \textbf{Pattern consistency.} A graph neural network over parcel adjacency, combined with LightGBM, describes
-how well a use fits its surroundings. It describes existing patterns, not what is desirable.
+\item \textbf{Redevelopment.} A gradient-boosted model (LightGBM), trained only on outcomes known at the decision
+year, gives each lot's probability of redevelopment within one, three or five years and its likely new use. Its
+inputs are the lot's use, size, built and permitted floor area, age and land share of value, its neighbourhood and its
+zoning.
+\item \textbf{Precedent.} A conversion is flagged if buildings of that use and size were not converted to the proposed
+use in the past decade.
+\item \textbf{Pattern.} A graph neural network over parcel adjacency, combined with LightGBM, describes how well a use
+fits its surroundings: an existing pattern, not a norm.
 \end{itemize}
-Each edit is also flagged when it departs from the adopted plan or from what zoning allows
-(Figure~\ref{fig:inspector}).
+Edits that depart from the plan or from what zoning allows are flagged (Figure~\ref{fig:inspector}).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.78\linewidth]{ui_inspector.png}
-\caption{The parcel inspector on the adopted-plan layer (Dallas). For a vacant lot the plan designates as
-Community Mixed-Use, it lists the existing use, the plan designation (flagged as differing from the existing use),
-the zoning, the uses zoning allows and what each new use would yield in homes, jobs and assessed value.}
+\includegraphics[width=0.62\linewidth]{ui_inspector.png}
+\caption{Parcel inspector on the adopted-plan layer (Dallas). For a vacant lot the plan designates Community
+Mixed-Use, it lists existing use, plan designation (flagged as differing), zoning, the uses zoning allows, and what each
+new use would yield in homes, jobs and assessed value.}
 \label{fig:inspector}
 \end{figure}
 
-\subsection{Optimizer}
-
-The optimizer recommends plans that raise the weighted pillar score, minus a penalty per conversion, under a budget
-of changes.
+\paragraph{Optimizer.} The optimizer maximizes the weighted pillar score, minus a penalty per conversion, under a
+budget of changes. Zoning is a hard constraint, conversions without precedent are skipped, and moves can be weighted by
+likelihood. Two searches are offered:
 \begin{itemize}
-\item \textbf{Constraints.} Zoning is a hard constraint, and conversions without precedent are skipped. Optionally,
-moves are weighted by their likelihood.
-\item \textbf{Search.} Two methods are provided:
-  \begin{itemize}
-  \item iterated best response over first-order estimates of each move, with exact re-scoring of the best moves;
-  \item a reference-point evolutionary algorithm (NSGA-III; \citealp{deb2014}) that returns a Pareto set across the
-  pillars.
-  \end{itemize}
+\item iterated best response over first-order move estimates, with exact re-scoring of the best moves;
+\item NSGA-III \citep{deb2014}, which returns a Pareto set across the pillars.
 \end{itemize}
 Both report the best plan found, not a proven optimum.
 
-\subsection{Decision module}
-
-Planning choices are contested \citep{rittel1973}. The decision module shows how the choice among candidate plans
-depends on the decision rule.
+\paragraph{Decision module.} Choices are contested \citep{rittel1973}, so the module shows how the chosen plan depends
+on the decision rule.
 \begin{itemize}
-\item \textbf{Stakeholder agents.} Five agents (residents, business, developers, environmental and city-finance
-interests) score each candidate from assumed utilities over the indicators.
-\item \textbf{Rules.} Nine voting rules, including Schulze's method \citep{schulze2011}, which decides, are compared
-with the Nash bargaining solution \citep{nash1950} and with a residents' referendum by block.
-\item \textbf{Checks.} The module reports whether a Condorcet winner exists, whether one insincere ballot could change
-the outcome, and how robust the winner is to the assumed coefficients and seats.
+\item \textbf{Agents.} Five stakeholder agents (residents, business, developers, environmental and city-finance
+interests) score candidates from assumed utilities over the indicators.
+\item \textbf{Rules.} Nine voting rules are compared with the Nash bargaining solution \citep{nash1950} and a
+residents' referendum by block. Schulze's method \citep{schulze2011} decides.
+\item \textbf{Reports.} Whether a Condorcet winner exists, whether one insincere ballot could change the outcome, and
+the winner's robustness to coefficients and seats.
 \end{itemize}
-The utilities are assumptions the planner can edit. The output is a simulated scenario, not public support
-\citep{arnstein1969}. The optimizer's recommendation and the vote appear side by side in the Studio
+Utilities are editable assumptions, and the output is a simulated scenario, not public support \citep{arnstein1969}
 (Figure~\ref{fig:optvote}).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.88\linewidth]{ui_optimizer_vote.png}
-\caption{Optimizer and decision module for one Manhattan district. Left: the recommended plan, with its change in each
-pillar and the conversions it makes. Right: the simulated stakeholder council, the decision under Schulze's rule,
-whether the winner is a Condorcet winner and holds a double majority, and how many of the nine rules it wins.}
+\includegraphics[width=0.7\linewidth]{ui_optimizer_vote.png}
+\caption{Optimizer and decision module for one Manhattan district. Left: the recommended plan, its change in each
+pillar and its conversions. Right: the simulated council's decision under Schulze's rule, whether the winner is a
+Condorcet winner with a double majority, and how many of the nine rules it wins.}
 \label{fig:optvote}
 \end{figure}
 
-\subsection{Interface and interoperability}
-
-Planners can work in the Studio in two ways: edit parcels by click, box, lasso or search; or upload plans as tables
-or GIS files, which are reviewed before they are applied. Studies are stored with a hash-chained audit log. Exports
-include a staff-report draft, CSV and GeoJSON files, and a provenance record of every coefficient. A phone version
-presents the same engine as a game. Any city or district can be exported to ArcGIS Urban: its space-use, zoning and
-land-use types, boundaries, and parcels with a PlanArena scenario.
+\paragraph{Interface.} Planners can edit parcels by click, box, lasso or search, or upload plans as tables or GIS
+files, which are reviewed before they are applied. Studies are stored with a hash-chained audit log. Exports include a
+staff-report draft, CSV and GeoJSON files, and the provenance of every coefficient. A phone version presents the engine
+as a game. Any city or district exports to ArcGIS Urban: space-use, zoning and land-use types, boundaries, and parcels
+with a PlanArena scenario.
 
 \section{Validation design}\label{sec:validation}
 
-Each component is tested against observed data (Table~\ref{tab:design}). Wherever outcomes are predicted, models are
-trained on one period and tested on a later one. Uncertainty is estimated by resampling spatial tiles
-\citep{kunsch1989}, and random splits are avoided \citep{roberts2017}.
+Each component is tested on observed data (Table~\ref{tab:design}). Predictions are trained on one period and tested
+on a later one; uncertainty comes from resampling spatial tiles \citep{kunsch1989}, never from random splits
+\citep{roberts2017}. The cross-city test uses seven cities with parcel histories (Appendix Table~\ref{tab:panels}).
+\begin{itemize}
+\item \textbf{Development} is defined as each source records it: a new building or large floor-area increase (Los
+Angeles, Dallas, New York), a new building (Milwaukee), a change of use class between land-use inventories (Phoenix,
+San Diego), or a new-construction permit (Chicago).
+\item \textbf{Blocks.} Four feature blocks are added in turn: existing conditions (E), context within 400 m (C),
+zoning (Z) and plan (P).
+\item \textbf{Leakage control.} Where a current zoning or plan layer has dated changes, a conservative variant drops
+lots whose zoning or plan dates from the window's start or later.
+\end{itemize}
 
 \begin{table}[t]
 \centering
@@ -397,50 +374,35 @@ Realism & Are recommended changes plausible? & 2020 plans vs 2025 outcomes & \re
 \end{tabular}
 \end{table}
 
-The cross-city test (Section~\ref{sec:r-layers}) uses seven cities with parcel histories (Appendix
-Table~\ref{tab:panels}).
-\begin{itemize}
-\item \textbf{Outcomes.} Development is defined as each source records it: a new building or a large increase in
-floor area (Los Angeles, Dallas, New York), a new building (Milwaukee), a change of use class between land-use
-inventories (Phoenix, San Diego), or a new-construction permit (Chicago).
-\item \textbf{Blocks.} Four feature blocks are added in turn: existing conditions (E), neighbourhood context within
-400 m (C), zoning (Z) and the adopted plan (P).
-\item \textbf{Leakage controls.} Where a zoning or plan layer is current rather than historical but its changes are
-dated, a conservative variant drops lots whose zoning or plan dates from the window's start or later.
-\end{itemize}
-
 \section{Results}\label{sec:results}
 
 \subsection{Existing conditions and planning calculations}\label{sec:r-existing}
 
-The twin reproduces Manhattan's existing conditions:
+The twin reproduces Manhattan's existing conditions.
 \begin{itemize}
-\item \textbf{Emissions.} Modelled building emissions match 6{,}234 benchmarked buildings in a year not used for
-fitting (log--log $r = 0.807$, median error 31\%, total 1.04 times metered).
-\item \textbf{Jobs.} Modelled jobs correlate with LEHD counts at tract level ($r = 0.843$) and less well at
-block level ($r = 0.727$).
-\item \textbf{Homes.} Given the observed use and floor area of 295 lots developed in 2015--2025, the estimated
-homes total is 1.04 times the recorded count ($r = 0.903$).
-\item \textbf{Environmental reviews.} Given the reviews' own sites, floor area and uses, PlanArena reproduces the
-projected homes of two rezoning reviews at 0.86 and 1.00 times the review figures.
+\item \textbf{Emissions.} Modelled emissions match 6{,}234 benchmarked buildings in a year not used for fitting
+(log--log $r = 0.807$, median error 31\%, total 1.04 times metered).
+\item \textbf{Jobs} correlate with LEHD counts at tract level ($r = 0.843$) and block level ($r =
+0.727$).
+\item \textbf{Homes.} Given observed use and floor area, homes on 295 lots developed in 2015--2025 total
+1.04 times the recorded count ($r = 0.903$).
+\item \textbf{Environmental reviews.} Given two rezoning reviews' own sites, floor area and uses, PlanArena reproduces
+their projected homes at 0.86 and 1.00 times the review figures.
 \end{itemize}
 
 \subsection{Effects of observed change}\label{sec:r-change}
 
-The engine predicts the effects of real changes better than a simple baseline (Table~\ref{tab:change}). For
-3{,}350 lots that changed in Manhattan between 2015 and 2025, each was given its 2015 state and its observed new
-use and floor area.
+For 3{,}350 Manhattan lots that changed in 2015--2025, each was given its 2015 state and observed new use and
+floor area (Table~\ref{tab:change}). Against the mean change of the same transition type:
 \begin{itemize}
-\item \textbf{Correlation.} The predicted change in homes correlates with the recorded change at $r = 0.840$,
-against $r = 0.427$ for the mean change of the same transition type. Assessed value is at $r =
-0.870$ against 0.148, and emissions of the 194 benchmarked changed buildings at $r =
-0.857$ against 0.090.
-\item \textbf{Totals.} The engine overestimates the total change in homes (1.31 times observed). The
-baseline matches the total by construction.
-\item \textbf{Not predicted.} No method predicts job change at block level (engine $r = 0.068$).
-\item \textbf{Not validated.} Access, mix, green cover and runoff have no observed after-change data, and are marked
-as not validated in the Studio.
+\item \textbf{homes}: predicted change correlates with recorded change at $r = 0.840$, against
+0.427;
+\item \textbf{assessed value}: $r = 0.870$, against 0.148;
+\item \textbf{emissions} of 194 benchmarked buildings: $r = 0.857$, against 0.090.
 \end{itemize}
+The engine overestimates total homes added (1.31 times observed), which the baseline matches by
+construction. Neither predicts job change by block (engine $r = 0.068$). Access, mix, green cover and runoff
+have no after-change data, and the Studio marks them as not validated.
 
 \begin{table}[t]
 \centering
@@ -464,43 +426,46 @@ Mean change of the same transition & all & 0.427 & 0.99$\times$ & 0.148 & 0.090 
 
 \subsection{Likelihood of redevelopment}\label{sec:r-likely}
 
-The redevelopment model ranks lots forward in time.
+Trained on 2015--2020 outcomes and tested on 2020--2025, the redevelopment model reaches:
 \begin{itemize}
-\item \textbf{Five years.} Trained on 2015--2020 outcomes and tested on 2020--2025, it reaches an AUC of
-0.847, against 0.754 for the best simple baseline and 0.809 for a graph neural network.
-\item \textbf{Top of the ranking.} Of the top 1\% of lots it ranks, 26\% were redeveloped, against a base
-rate of 1.35\%.
-\item \textbf{Calibration.} Its probabilities are well calibrated (expected calibration error 0.011).
-\item \textbf{Rolling origins.} Across 15 origins from 2016 to 2025, with horizons of one, three and five years,
-its out-of-time AUC is 0.847--0.952, above the best simple baseline at every origin.
+\item AUC 0.847, against 0.754 for the best simple baseline and 0.809 for a graph neural
+network;
+\item 26\% redeveloped among its top 1\% of lots, against a base rate of 1.35\%;
+\item expected calibration error 0.011.
 \end{itemize}
+Across 15 rolling origins (2016--2025; horizons of one, three and five years), its out-of-time AUC is
+0.847--0.952, above the best baseline at every origin.
 
 \subsection{What zoning and plans add, across seven cities}\label{sec:r-layers}
 
-Existing conditions alone rank the lots that developed with an out-of-time AUC of 0.824--0.911 in
-six cities, and 0.571 in San Diego, where the one-year window recorded few changes (Appendix
-Table~\ref{tab:auc}).
+Existing conditions alone rank developed lots with out-of-time AUC 0.824--0.911 in six cities, and
+0.571 in San Diego, whose one-year window recorded few changes (Appendix Table~\ref{tab:auc}). Adding blocks:
 \begin{itemize}
-\item \textbf{Context} adds the most (Table~\ref{tab:gains}, Figure~\ref{fig:gains}): from +0.020 to
-+0.116, significantly in five cities. Phoenix is the exception: its regional land-use series
-starts in 2022, so recent change is unknown in its training window.
-\item \textbf{Zoning} carries information of its own. Without context, it raises AUC significantly in five of seven
-cities. Developed lots were 2.1 to 9.5 times as likely as other lots to have a zoning
-class outside their existing use group.
-\item \textbf{Overlap.} Most of that information is shared with existing conditions and context: developed lots were
-also 3.5 to 19 times as likely to be vacant. Over context, zoning adds a significant gain
-in four of seven cities and the plan in three of four, at most +0.021 outside Phoenix. There, zoning adds
-+0.049 and the plan +0.054, and 45\% of developed lots were vacant.
-\item \textbf{Conservative variant.} The plan gain in San Diego and the zoning gain in Chicago do not survive the conservative variant, so those gains came from
-lots rezoned or re-planned during the study.
+\item \textbf{Context} adds the most: +0.020 to +0.116, significant in five cities
+(Table~\ref{tab:gains}, Figure~\ref{fig:gains}). Phoenix is the exception: its land-use series starts in 2022, so
+recent change is unknown in its training window.
+\item \textbf{Zoning} carries its own signal. Without context, it raises AUC significantly in five of seven cities, and
+developed lots were 2.1--9.5 times as likely as others to have a zoning class outside
+their existing use group.
+\item \textbf{Overlap.} Most of that signal is shared with existing conditions and context: developed lots were also
+3.5--19 times as likely to be vacant. Over context, zoning adds a significant gain in
+four of seven cities and the plan in three of four, at most +0.021 outside Phoenix.
+\item \textbf{Phoenix.} Zoning adds +0.049 and the plan +0.054, and 45\% of developed lots were
+vacant.
+\item \textbf{Conservative variant.} The plan gain in San Diego and the zoning gain in Chicago do not survive it: those gains came from lots rezoned or
+re-planned during the study.
 \end{itemize}
 
-The layers matter more for what a developing lot becomes (Table~\ref{tab:dest}). In all six cities with a
-destination, the zoning class names the new class correctly more often than the existing use, by 12 to
-64 percentage points. In Phoenix and San Diego development is a change of class by definition, so there
-the existing use is never right at class level. In Dallas the plan class is right for 80\% of developed
-lots, against 61\% for zoning. A model fitted on other cities predicts less well than the city's own
-model in four of five cities (Appendix Table~\ref{tab:transfer}).
+The layers matter more for what developing lots become (Table~\ref{tab:dest}).
+\begin{itemize}
+\item \textbf{Zoning class.} In all six cities with a destination, it names the new class correctly more often
+than the existing use does, by 12--64 percentage points. In Phoenix and San Diego, development
+is a change of class by definition, so the existing use is never right at class level.
+\item \textbf{Plan class.} In Dallas it is right for 80\% of developed lots, against 61\%
+for zoning.
+\item \textbf{Transfer.} Models fitted on other cities predict worse than the city's own in four of five cities
+(Appendix Table~\ref{tab:transfer}).
+\end{itemize}
 
 \begin{table}[t]
 \centering
@@ -527,8 +492,8 @@ Chicago & \textbf{+0.063 [0.049, 0.078]} & \textbf{+0.004 [0.001, 0.007]} & -- &
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\linewidth]{integration_layers.png}
-\caption{Gain in out-of-time AUC from adding each block, with 95\% tile-bootstrap intervals.}
+\includegraphics[width=0.66\linewidth]{integration_layers.png}
+\caption{Gain in out-of-time AUC from each block, with 95\% tile-bootstrap intervals.}
 \label{fig:gains}
 \end{figure}
 
@@ -556,20 +521,18 @@ San Diego & 202 & 0\% / 52\% & 14\% / 74\% & 27\% / 70\% & 64\% / 75\% (E+C+Z+P)
 
 \subsection{Scenario projections}\label{sec:r-homes}
 
-Capacity projections overstate near-term housing by two orders of magnitude (Table~\ref{tab:homes}).
+Capacity overstates near-term housing by two orders of magnitude (Table~\ref{tab:homes}).
 \begin{itemize}
 \item \textbf{Build-out.} In four cities, zoning and plan build-out exceed the homes added in the test window
-76- to 193-fold. Part of the gap is definitional, since build-out is an end state rather than a two-year
-flow.
-\item \textbf{Likelihood weighting} brings the totals to 0.81--2.64 times the observed.
-\item \textbf{Trend.} A five-year trend ranks districts better: Spearman 0.51 to 0.81, against
-$-$0.37 to 0.55 for the likelihood-weighted projections, better in all four cities.
+76- to 193-fold. Part of the gap is definitional: build-out is an end state, not a two-year flow.
+\item \textbf{Likelihood weighting} brings totals to 0.81--2.64 times the observed.
+\item \textbf{Trend.} A five-year trend ranks districts better in all four cities: Spearman
+0.51--0.81, against $-$0.37--0.55.
+\item \textbf{Manhattan rezonings.} Capacity projected 8{,}423 homes on development sites, or 5{,}207
+pro-rated to 2025; the likelihood-weighted projection gave 585, against 561 built
+(Table~\ref{tab:replay}, Figure~\ref{fig:replay}). The observed count lies in the model's 95\% range in two of three
+rezonings.
 \end{itemize}
-
-The Manhattan rezonings show the same contrast for single decisions (Table~\ref{tab:replay},
-Figure~\ref{fig:replay}). Capacity projected 8{,}423 homes on development sites, or 5{,}207 pro-rated to
-2025. The likelihood-weighted projection gave 585, against 561 built, and the observed count lies
-within its 95\% range in two of three rezonings.
 
 \begin{table}[t]
 \centering
@@ -613,27 +576,27 @@ SoHo/NoHo (2021) & 77 & 3 & 1{,}447 & 579 & 138 (8--304) \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\linewidth]{integration_replay.png}
-\caption{Homes on development sites after three Manhattan rezonings: capacity, capacity pro-rated to 2025,
-likelihood-weighted (with the model's 95\% range) and built by 2025 (log scale).}
+\includegraphics[width=0.66\linewidth]{integration_replay.png}
+\caption{Homes on development sites after three Manhattan rezonings: capacity, pro-rated capacity,
+likelihood-weighted (with 95\% range) and built by 2025 (log scale).}
 \label{fig:replay}
 \end{figure}
 
 \subsection{Optimizer and plausibility}\label{sec:r-opt}
 
-\paragraph{Optimality.} On 20 small study areas where every plan with up to two changes can be enumerated,
-first-order search alone found the exact optimum in 73\% of areas, and with exact re-scoring in
-93\% (median 0.28 s). At district scale (Table~\ref{tab:opt}), exact greedy search found the best
-plan in all 12 districts but took a median 25.87 s. First-order search with exact
-re-scoring reached a median 97.4\% of that score in 1.14 s, the speed used in the Studio.
+\paragraph{Optimality.} On 20 small areas where every plan with up to two changes can be enumerated,
+first-order search found the exact optimum in 73\%, and with exact re-scoring in 93\% (median
+0.28 s). At district scale (Table~\ref{tab:opt}), exact greedy search found the best plan in all 12
+districts but took a median 25.87 s. First-order search with re-scoring reached a median
+97.4\% of that score in 1.14 s, the speed used in the Studio.
 
-\paragraph{Plausibility.} Recommended plans test plausibility against what happened next (Table~\ref{tab:realism}).
+\paragraph{Plausibility} (Table~\ref{tab:realism}).
 \begin{itemize}
-\item \textbf{Without realism layers}, 17\% of recommended changes had no precedent in the city.
-\item \textbf{With the likelihood layer}, 21\% of recommended parcels were redeveloped by 2025, against
+\item \textbf{Without realism layers,} 17\% of recommended changes had no precedent.
+\item \textbf{With the likelihood layer,} 21\% of recommended parcels were redeveloped by 2025, against
 12\% without it, 1.4\% of all lots and 5.2\% of the likeliest fifth.
-\item \textbf{The cost} is a lower plan score: 2.73 against 8.27. What is plausible and what
-the objective prefers differ, and the Studio shows both.
+\item \textbf{The cost} is a lower plan score: 2.73 against 8.27. The Studio shows both
+plausibility and score.
 \end{itemize}
 
 \begin{table}[t]
@@ -646,12 +609,12 @@ the objective prefers differ, and the Studio shows both.
 \toprule
 Search & Median share of best & Districts best & Median seconds \\
 \midrule
-surrogate top moves & 92.6\% & zero & 0.02 \\
-first order & 96.4\% & one & 0.13 \\
-first order plus exact polish & 97.4\% & one & 1.14 \\
+surrogate top moves & 92.6\% & 0 & 0.02 \\
+first order & 96.4\% & 1 & 0.13 \\
+first order plus exact polish & 97.4\% & 1 & 1.14 \\
 greedy exact & 100.0\% & 12 & 25.87 \\
-simulated annealing & 94.8\% & zero & 7.54 \\
-random restarts 50 & 65.9\% & zero & 0.94 \\
+simulated annealing & 94.8\% & 0 & 7.54 \\
+random restarts 50 & 65.9\% & 0 & 0.94 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -677,123 +640,119 @@ precedent filter + likelihood layer & 118 & 0.0\% & 21.2\% & 2.73 \\
 
 \subsection{Decision rules}\label{sec:r-dec}
 
-In the simulated stakeholder scenario for 12 Manhattan districts, the decision rule changes the outcome.
+In the simulated scenario for 12 Manhattan districts:
 \begin{itemize}
-\item \textbf{Agreement.} Across the 12 districts, the nine rules never all agree; a Condorcet winner exists in
-seven.
-\item \textbf{Other choices.} The residents' referendum picks the council's plan in one district, and the
-council's winner is never the Nash bargaining solution.
-\item \textbf{Manipulability.} One insincere ballot could change the Schulze result in six
-districts.
-\item \textbf{Robustness.} The winner survives a median 76\% of joint perturbations of coefficients and
-seats, and 54\% of redrawn stakeholder weights.
+\item the nine rules never all agree, and a Condorcet winner exists in seven;
+\item the residents' referendum picks the council's plan in one district, and the council's winner
+is never the Nash bargaining solution;
+\item one insincere ballot could change the Schulze result in six districts;
+\item the winner survives a median 76\% of joint perturbations of coefficients and seats, and 54\%
+of redrawn stakeholder weights.
 \end{itemize}
-These numbers describe the simulated scenario, not public opinion. They show that a recommendation should be
-reported with the rule that produced it, and with how it changes under others.
+These describe the simulated scenario, not public opinion. A recommendation should be reported with its rule and with
+how it changes under others.
 
 \section{Discussion}\label{sec:discussion}
 
-\paragraph{What a planner gets.} For any proposed change, PlanArena shows its effects across 11
-indicators with ranges, and whether zoning and the plan allow it. It also shows how likely the change is, what the
-optimizer would recommend instead, and how the choice depends on the decision rule. Each of these outputs has a
-stated test against observed data (Table~\ref{tab:design}), and indicators without one are labelled. This answers, for
-one system, the gap between the claimed and demonstrated contributions of planning support systems and urban twins
+\paragraph{What a planner gets.} For any proposed change, PlanArena shows:
+\begin{itemize}
+\item its effects on 11 indicators, with ranges;
+\item whether zoning and the plan allow it, and how likely it is;
+\item what the optimizer would recommend instead;
+\item how the choice depends on the decision rule.
+\end{itemize}
+Each output has a stated test on observed data (Table~\ref{tab:design}), and untested indicators are labelled. For one
+system, this closes the gap between claimed and demonstrated contributions of PSS and urban twins
 \citep{vonk2005,azadi2025,kruse2026}.
 
-\paragraph{Design guidance.} The results support four practices for decision support tools.
+\paragraph{Design guidance.}
 \begin{enumerate}
-\item \textbf{Use each layer for the question it answers.} Zoning and the adopted plan add little to predicting
-\emph{where} development happens once existing conditions and context are known, but they help predict \emph{what}
-it becomes, and they bound \emph{how much} a site can hold. This is consistent with evidence that rezoning follows
-opportunity \citep{gabbe2018}, that upzoning's short-run effect on construction varies \citep{freemark2020,dong2024,
-greenaway2023}, and that plans are partly implemented \citep{laurian2004,berke2006}.
-\item \textbf{Report likelihood-weighted projections beside capacity,} and a trend baseline beside both. Capacity
-overstates near-term housing by orders of magnitude, and the trend ranked districts better than any projection.
-\item \textbf{Constrain optimization by plausibility, and show the cost.} Realism layers change what is recommended
-and lower the objective; both views belong in front of the planner.
+\item \textbf{Use each layer for the question it answers.} Zoning and plans add little to predicting \emph{where}
+development happens once existing conditions and context are known. They help predict \emph{what} it becomes and
+bound \emph{how much} a site can hold. This is consistent with rezoning following opportunity \citep{gabbe2018},
+upzoning's varying short-run effects \citep{freemark2020,dong2024,greenaway2023} and partial plan implementation
+\citep{laurian2004,berke2006}.
+\item \textbf{Report likelihood-weighted projections beside capacity,} and a trend beside both. Capacity overstates
+near-term housing by orders of magnitude, and the trend ranked districts better than any projection.
+\item \textbf{Constrain optimization by plausibility and show the cost.} Realism layers change recommendations and
+lower the objective.
 \item \textbf{Report decisions with their rule.} No rule agreed with all the others in any district of the simulated scenario.
 \end{enumerate}
 
 \paragraph{Limitations.}
 \begin{itemize}
-\item \textbf{Impacts} are validated only in Manhattan. In the other nine cities the engine uses national or regional
-coefficients, and its outputs there are unvalidated estimates.
-\item \textbf{Indicators.} Job change at block level, access, mix, green cover and runoff after a change have no
-observed test.
-\item \textbf{Cross-city test.} The windows are short (one or two years), outcome definitions differ by city, and in
-Dallas the plan and zoning are current layers without dates, so its gains are upper bounds.
-\item \textbf{Optimizer and votes.} The optimizer is heuristic, and the votes rest on assumed utilities.
-\item \textbf{Use.} Usability and use with planners are not evaluated here.
-\item \textbf{Causation.} Nothing here estimates what zoning or plans cause.
+\item \textbf{Impacts} are validated only in Manhattan; in the other nine cities they are unvalidated estimates from
+national or regional coefficients.
+\item \textbf{Untested indicators.} Job change by block, and access, mix, green cover and runoff after a change, have
+no observed test.
+\item \textbf{The cross-city test} uses short windows (one or two years) and city-specific outcome definitions. In
+Dallas, plan and zoning are undated current layers, so its gains are upper bounds.
+\item \textbf{Assumptions.} The optimizer is heuristic, and the votes rest on assumed utilities.
+\item \textbf{Not studied.} Usability with planners is not evaluated, and causal effects of zoning or plans are not
+estimated.
 \end{itemize}
 
 \section{Conclusion}
 
-PlanArena gives planners the effects of any parcel-level land-use change across social, economic and environmental
-indicators, together with what is permitted, planned, likely and recommended. It runs on official data for ten large
-US cities at interactive speed, and each component is tested against what happened. The tests also refine how such
-systems should work:
+PlanArena shows planners the effects of any parcel-level land-use change on social, economic and environmental
+indicators, with what is permitted, planned, likely and recommended. It runs on official data for ten large US cities
+at interactive speed, and every component is tested against what happened. The tests also shape the design:
 \begin{itemize}
-\item regulatory layers are best used for what development becomes and how much it could hold, not where it happens;
+\item regulatory layers inform what development becomes and how much it could hold, not where it happens;
 \item likelihood-weighted projections are far closer to what was built than capacity, while trends rank districts
 better;
-\item recommendations change when they must be plausible, and with the rule used to choose among them.
+\item recommendations change when they must be plausible, and with the rule used to choose.
 \end{itemize}
-The code, data manifest and results are open, so the system and its tests can be extended to other cities.
+Code, data manifest and results are open, so the system and its tests extend to other cities.
 
-\section*{Data and code availability}
+\paragraph{Data and code availability.} The code, the result files behind every number, the figures and a manifest
+of every input (URL, retrieval date, SHA-256) are in the PlanArena repository. \texttt{make reproduce} rebuilds data
+and results from public sources, and \texttt{planarena/tools/screenshots.py} regenerates the Studio figures. Each
+city's ingestion report documents coverage, crosswalks and estimated fields. Owner and mailing fields in assessor
+records were never requested or read. No human participants were involved.
 
-The code, the result files behind every number, the figures and a manifest of every input (URL, retrieval date and
-SHA-256) are in the PlanArena repository; \texttt{make reproduce} rebuilds the data and results from public sources.
-Each city's ingestion report documents coverage, crosswalks and estimated fields. The Studio figures are
-regenerated by \texttt{planarena/tools/screenshots.py}. Owner and mailing fields in assessor records were never
-requested or read. No human participants were involved.
+\paragraph{Declaration of AI assistance.} [To be confirmed by the author.] The author used Claude (Anthropic) to
+write and test code, run analyses and draft text. The author designed the study, reviewed code and results, read the
+cited sources and takes responsibility for the content. Every reference was checked against the record its DOI or
+ISBN resolves to.
 
-\section*{Declaration of AI assistance}
-
-[To be confirmed by the author.] The author used Claude (Anthropic) to write and test code, run analyses and draft
-text. The author designed the study, reviewed the code and results, read the cited sources and takes responsibility
-for the content. Every reference was checked against the record its DOI or ISBN resolves to.
-
-\bibliographystyle{plainnat}
+\bibliographystyle{unsrtnat}
 \bibliography{../docs/refs}
 
-\clearpage
 \appendix
 \section{Digitising plans published as PDF maps}\label{app:digitise}
 
 Philadelphia2035's land-use recommendations exist only as ``Proposed Land Use'' maps in 17 district plans
-covering 18 districts. The maps are vector drawings in which each lot is a filled shape. They are
-converted in six steps:
+covering 18 districts. Each lot is a filled vector shape. The maps are converted in six steps:
 \begin{enumerate}
-\item \textbf{Legend.} The legend's swatch colours and labels are read.
-\item \textbf{Colours.} Map colours are matched one to one to legend colours by perceptual distance (CIELAB $\Delta
-E$, Hungarian assignment), refusing pairs further apart than $\Delta E = 45$.
-\item \textbf{Visibility.} Only shapes that the rendered page actually shows are kept (maps are often clipped to the
-district), and only the largest map frame on the page spread.
-\item \textbf{Registration.} A similarity transform is fitted: the rendered footprint is first matched as an image
-to the district's parcels and outline (FFT translation, Dice score), then refined by iterative closest point
+\item \textbf{Legend.} Swatch colours and labels are read.
+\item \textbf{Colour matching.} Map colours are matched one to one to legend colours by CIELAB $\Delta E$ with a
+Hungarian assignment, refusing pairs with $\Delta E > 45$.
+\item \textbf{Visibility.} Only shapes the rendered page shows are kept, since maps are often clipped to the
+district, and only the largest map frame on the spread.
+\item \textbf{Registration.} A similarity transform is fitted. The rendered footprint is matched as an image to the
+district's parcels and outline (FFT translation, Dice score), then refined by iterative closest point
 \citep{reddy1996,besl1992,umeyama1991}.
 \item \textbf{Classification.} Each parcel takes the category of the smallest shape containing its interior point.
-\item \textbf{Checks.} A map is used only if the median parcel-to-shape distance is at most 10 ft and its plan agrees
+\item \textbf{Checks.} A map is used only if the median parcel-to-shape distance is at most 10 ft, and its plan agrees
 with existing use clearly more often than the same map shifted 300 ft.
 \end{enumerate}
-
-Maps from 15 of 17 plans passed, covering 16 districts and
-83\% of parcels.
+Results:
 \begin{itemize}
+\item \textbf{Coverage.} Maps from 15 of 17 plans passed, covering 16
+districts and 83\% of parcels.
 \item \textbf{Registration.} Median errors were 1.1--7.2 ft (median 3.2 ft).
-\item \textbf{Falsification test.} The digitised plans agree with the existing use on 60\%--90\%
+\item \textbf{Shifted-map control.} The digitised plans agree with existing use on 60\%--90\%
 of parcels, against 42\%--66\% for shifted maps.
 \item \textbf{Failures.} The maps of South and West Park also draw neighbouring districts and failed registration.
 \end{itemize}
-Earlier map-processing work addresses scanned raster maps \citep{chiang2014,luft2021,milleville2022}; vector exports
-allow the shapes to be read directly.
+Earlier work addresses scanned raster maps \citep{chiang2014,luft2021,milleville2022}; vector exports allow shapes to
+be read directly.
 
 \section{Additional results}
 \FloatBarrier
 
-\begin{table}[t]
+\begin{table}[h!]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
@@ -816,7 +775,7 @@ Chicago & new-construction permit & building permits & 2021--2023 & 2023--2025 &
 \begin{minipage}{0.95\linewidth}\footnotesize Lots already under construction at the start of a window are left out. Floor area +25\% also requires +2,000 sq ft. Change of use group: the lot changes to a built use of another of the nine groups, or gains homes.\end{minipage}
 \end{table}
 
-\begin{table}[t]
+\begin{table}[h!]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
@@ -839,7 +798,7 @@ Chicago & 0.824 & 0.888 & 0.891 & -- & -- & E+C+Z \\
 \begin{minipage}{0.95\linewidth}\footnotesize Best set: the highest AUC among all fitted combinations, including those without context.\end{minipage}
 \end{table}
 
-\begin{table}[t]
+\begin{table}[h!]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}

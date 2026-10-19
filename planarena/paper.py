@@ -445,7 +445,7 @@ def tables() -> dict[str, str]:
         "lllllrrr", ["City", "Development", "Source", "Train", "Test", "Lots", "Developed", "Rate"], rows,
         "Lots already under construction at the start of a window are left out. Floor area +25\\% also requires "
         "+2,000 sq ft. Change of use group: the lot changes to a built use of another of the nine groups, or gains "
-        "homes.", size="\\scriptsize")
+        "homes.", size="\\scriptsize", pos="h!")
 
     rows = []
     for g in cities:
@@ -458,7 +458,7 @@ def tables() -> dict[str, str]:
         "Where development happens: out-of-time AUC by block set. E existing conditions, C neighbourhood context, "
         "Z zoning, P adopted plan; -- where the city has no such layer.", "tab:auc", "lrrrrrl",
         ["City", "E", "E+C", "E+C+Z", "E+C+P", "E+C+Z+P", "Best set (any)"], rows,
-        "Best set: the highest AUC among all fitted combinations, including those without context.")
+        "Best set: the highest AUC among all fitted combinations, including those without context.", pos="h!")
 
     rows = []
     for g in cities:
@@ -517,7 +517,7 @@ def tables() -> dict[str, str]:
     out["table_transfer"] = _tab(
         "Transfer: AUC of a model fitted on the other cities' training windows / the city's own model, on the city's "
         "test window.", "tab:transfer", "lllll", ["City", "E", "E+C", "E+C+Z", "E+C+Z+P"], rows,
-        "Cities whose outcome is a building or a permit. A missing plan layer is coded as unknown.")
+        "Cities whose outcome is a building or a permit. A missing plan layer is coded as unknown.", pos="h!")
 
     G = _load("integration_replay")["rezonings"]
     rows = []
@@ -585,7 +585,7 @@ def tables() -> dict[str, str]:
         "predicts job change at block level.", size="\\scriptsize")
 
     ob = _load("optimizer_benchmark")["summary"]
-    rows = [[k.replace("_", " "), _pct(x["median_share_of_best_found"], 1), _w(x["districts_where_best"]), str(x["median_seconds"])]
+    rows = [[k.replace("_", " "), _pct(x["median_share_of_best_found"], 1), str(x["districts_where_best"]), str(x["median_seconds"])]
             for k, x in ob.items()]
     out["table_opt"] = _tab(
         "Optimizer at district scale (12 Manhattan districts, up to ten changes): share of the best plan any method found.",
