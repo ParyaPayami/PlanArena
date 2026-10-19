@@ -1,0 +1,32 @@
+{
+  "machine": "arm64 Darwin 25.6.0, Python 3.13.3",
+  "test": "ImpactEngine.evaluate with sensitivity ranges, after one warm-up; 20 repetitions",
+  "twins": {
+    "Manhattan": {
+      "parcels": 42075,
+      "one_change": {
+        "changes": 1,
+        "median_ms": 43.9,
+        "max_ms": 45.2
+      },
+      "fifty_changes": {
+        "changes": 50,
+        "median_ms": 44.8,
+        "max_ms": 45.1
+      }
+    },
+    "New York City": {
+      "parcels": 856634,
+      "one_change": {
+        "changes": 1,
+        "median_ms": 560.6,
+        "max_ms": 580.5
+      },
+      "fifty_changes": {
+        "changes": 50,
+        "median_ms": 565.5,
+        "max_ms": 581.7
+      }
+    }
+  }
+}

@@ -9,7 +9,7 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 **Question:** For each parcel and scenario, PlanArena distinguishes what exists (official land use), what is permitted (zoning), what is planned (the adopted future land use), what is likely (redevelopment model) and what is recommended (optimizer). Does combining these layers improve predictions of where change happens and what it becomes, and give scenario assessments closer to what actually gets built than capacity-based build-out (the approach of density-based scenario tools)? The test is historical and across cities, with each layer removed in turn (component ablation, VALIDATION section H, METHODS section 11).
 
-**Draft:** [paper/paper.pdf](../paper/paper.pdf), built from [paper/paper.tex.in](../paper/paper.tex.in) by `python -I -m planarena.paper`. Every number is filled from `results/`, and a test fails if the draft is stale or cites a source outside `refs.bib`.
+**Draft:** *PlanArena: validated decision support and optimization for land-use change* — a systems paper in which each component is validated on observed data, and the cross-city layer test is one evidence section. [paper/paper.pdf](../paper/paper.pdf), built from [paper/paper.tex.in](../paper/paper.tex.in) by `python -I -m planarena.paper`. Every number is filled from `results/`, and a test fails if the draft is stale or cites a source outside `refs.bib`.
 
 **Literature:** [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) (74 verified sources in eight themes, and the gap).
 

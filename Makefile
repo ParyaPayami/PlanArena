@@ -76,6 +76,7 @@ city:
 	$(RUN) planarena.cities.build "$(CITY)"
 
 validate:
+	$(RUN) planarena.tools.latency
 	$(RUN) planarena.validate all
 
 report:

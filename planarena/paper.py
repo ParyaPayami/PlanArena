@@ -45,7 +45,10 @@ TEN = {"3651000": ("New York", "MapPLUTO (City Planning)", "none citywide"),
 
 
 def _load(name: str):
-    return json.loads((RES / f"{name}.json").read_text())
+    for f in (RES / f"{name}.json", RES.parent / f"{name}.json"):
+        if f.exists():
+            return json.loads(f.read_text())
+    raise FileNotFoundError(name)
 
 
 def _f(x: float, d: int = 3) -> str:
@@ -315,6 +318,69 @@ def values() -> dict[str, str]:
     V["ro_beats"] = str(sum(a > b for a, b in zip(auc, base)))
     tm = _load("transition_2020_2025")["development"]
     V["tm_auc"] = _f(tm["LightGBM"]["auc"])
+    # the system's components (Manhattan validation, optimizer, decisions, speed)
+    lat = _load("latency")["twins"]
+    V["lat_manh_ms"] = f"{lat['Manhattan']['fifty_changes']['median_ms']:.0f}"
+    V["lat_nyc_s"] = f"{lat['New York City']['fifty_changes']['median_ms'] / 1000:.2f}"
+    V["manh_parcels"], V["nyc_parcels"] = _n(lat["Manhattan"]["parcels"]), _n(lat["New York City"]["parcels"])
+    from planarena.indicators.engine import INDICATORS
+    V["n_indicators"] = _w(len(INDICATORS))
+    em = _load("emissions_ll84_2023")
+    V["em_n"], V["em_r"] = _n(em["n_buildings"]), _f(em["log_log_r"])
+    V["em_mae"], V["em_ratio"] = _pct(em["median_abs_pct_error"]), _f(em["aggregate_ratio_modelled_to_observed"], 2)
+    jb = _load("jobs_lodes_2023")
+    V["jobs_tract_r"], V["jobs_block_r"] = _f(jb["tract"]["log_log_r"]), _f(jb["block"]["log_log_r"])
+    un = _load("units_replay_2015_2025")
+    V["units_n"], V["units_ratio"], V["units_r"] = _n(un["parcels"]), _f(un["aggregate_ratio"], 2), _f(un["log_log_r"])
+    cp = _load("change_prediction")
+    hy, base = cp["methods"]["hybrid"]["all"], cp["methods"]["transition-type mean (cross-fitted)"]["all"]
+    V["cp_events"] = _n(cp["events"])
+    V["cp_homes_r"], V["cp_homes_ratio"] = _f(hy["homes"]["pearson_r"]), _f(hy["homes"]["total_ratio"], 2)
+    V["cp_value_r"], V["cp_em_r"], V["cp_em_n"] = _f(hy["assessed_value"]["pearson_r"]), _f(hy["emissions"]["pearson_r"]), _n(hy["emissions"]["n"])
+    V["cp_base_homes_r"], V["cp_base_value_r"] = _f(base["homes"]["pearson_r"]), _f(base["assessed_value"]["pearson_r"])
+    V["cp_base_em_r"] = _f(base["emissions"]["pearson_r"])
+    V["cp_jobs_r"] = _f(hy["jobs_by_block"]["pearson_r"])
+    tm = _load("transition_2020_2025")
+    dev = tm["development"]
+    V["tm_auc"], V["tm_gnn_auc"] = _f(dev["LightGBM"]["auc"]), _f(dev["GNN"]["auc"])
+    V["tm_base_auc"] = _f(max(v["auc"] for k, v in dev.items() if k not in ("LightGBM", "GNN", "GNN + LightGBM (mean)")))
+    V["tm_top1"], V["tm_base_rate"] = _pct(dev["LightGBM"]["precision_top1pct"], 0), _pct(tm["test_base_rate"], 2)
+    V["tm_ece"] = _f(dev["LightGBM"]["ece"])
+    og = _load("optimizer_gap")
+    V["og_areas"], V["og_first"] = str(og["areas"]), _pct(og["share_exact_optimum_found"])
+    V["og_polished"], V["og_sec"] = _pct(og["polished"]["share_exact_optimum_found"]), str(og["polished"]["median_seconds"])
+    ob = _load("optimizer_benchmark")["summary"]
+    V["ob_polish_share"], V["ob_polish_sec"] = _pct(ob["first_order_plus_exact_polish"]["median_share_of_best_found"], 1), str(ob["first_order_plus_exact_polish"]["median_seconds"])
+    V["ob_greedy_sec"] = str(ob["greedy_exact"]["median_seconds"])
+    V["ob_greedy_best"] = _w(ob["greedy_exact"]["districts_where_best"])
+    ra = _load("realism_ablation")
+    st = ra["settings"]
+    V["ra_noprec"] = _pct(st["no realism layer"]["share_without_precedent"])
+    V["ra_red_none"] = _pct(st["no realism layer"]["share_redeveloped_by_2025"])
+    V["ra_red_lik"] = _pct(st["precedent filter + likelihood layer"]["share_redeveloped_by_2025"])
+    V["ra_all"], V["ra_fifth"] = _pct(ra["reference"]["share_of_all_lots_redeveloped"], 1), _pct(ra["reference"]["share_of_likely_fifth_redeveloped"], 1)
+    V["ra_score_prec"] = _f(st["precedent filter (default)"]["median_district_plan_score"], 2)
+    V["ra_score_lik"] = _f(st["precedent filter + likelihood layer"]["median_district_plan_score"], 2)
+    vs = _load("vote_summary")
+    V["vs_d"] = _w(vs["districts"])
+    for k in ("condorcet_winner_exists", "all_rules_agree", "residents_agree_with_council", "winner_is_nash_bargaining",
+              "schulze_manipulable", "double_majority"):
+        V["vs_" + k] = _w(vs[k])
+    V["vs_robust"] = _pct(vs["median_robust_both"])
+    d = vs["districts"]
+    V["vs_rules_phrase"] = ("the nine rules never all agree" if not vs["all_rules_agree"]
+                            else f"all nine rules agree in {_w(vs['all_rules_agree'])} districts")
+    V["vs_nash_phrase"] = ("is never the Nash bargaining solution" if not vs["winner_is_nash_bargaining"]
+                           else f"is the Nash bargaining solution in {_w(vs['winner_is_nash_bargaining'])} districts")
+    V["vs_resid_phrase"] = (f"in {_w(vs['residents_agree_with_council'])} district"
+                            + ("" if vs["residents_agree_with_council"] == 1 else "s"))
+    V["dec_guidance"] = ("No rule agreed with all the others in any district of the simulated scenario."
+                         if not vs["all_rules_agree"] else
+                         f"The nine rules agreed in only {_w(vs['all_rules_agree'])} of {_w(d)} districts.")
+    V["of_greedy"] = _of(ob["greedy_exact"]["districts_where_best"], d)
+    sv = _load("vote_sensitivity")["summary"]
+    V["vs_weights"] = _pct(sv["median_winner_unchanged_under_weight_draws"])
+
     # counts in the prose are words ("seven cities", "all five", "four of seven")
     pairs = {"zE": ("n_zE_sig", "n_zE"), "z": ("n_z_sig", "n_z"), "p": ("n_p_sig", "n_p"),
              "ctx_spatial": ("n_ctx_spatial_pos", "n_test"), "z_spatial": ("n_z_spatial_pos", "n_z_spatial"),
@@ -323,6 +389,9 @@ def values() -> dict[str, str]:
              "transfer_ctx": ("n_transfer_ctx_pos", "n_transfer"), "g": ("g_inside", "g_n")}
     for name, (k, n) in pairs.items():
         V[f"of_{name}"] = _of(int(V[k]), int(V[n]))
+    V["trend_guidance"] = ("the trend ranked districts better than any projection"
+                           if V["n_trend_better"] == V["n_homes"] else
+                           f"the trend ranked districts better in {V['of_trend']} cities")
     for k in list(V):
         if (k.startswith("n_") or k in ("g_n", "g_inside")) and V[k].isdigit() and int(V[k]) <= 10:
             V[k] = _w(int(V[k]))
@@ -466,6 +535,71 @@ def tables() -> dict[str, str]:
                    "Likelihood-weighted (95\\%)"], rows,
         "Capacity is full build-out by the review's build year; pro-rated scales it linearly to 2025. The "
         "likelihood comes from a redevelopment model trained only on outcomes known by the adoption year.")
+
+    from planarena.indicators.engine import INDICATORS
+    status = {"homes": "observed change", "value": "observed change", "ghg": "existing and observed change",
+              "jobs": "existing (tract, block)", "green_space": "direct accounting"}
+    rows = [[i.label.replace("&", "\\&"), i.pillar, i.unit.replace("%", "\\%"), "higher" if i.direction > 0 else "lower",
+             status.get(i.key, "not validated")] for i in INDICATORS]
+    out["table_indicators"] = _tab(
+        "Indicators computed for every edit, and how each is validated (Manhattan).", "tab:indicators", "lllll",
+        ["Indicator", "Pillar", "Unit", "Better", "Validation"], rows,
+        "Unchanged parcels keep their observed values; changed parcels follow the delta equations. Each indicator "
+        "carries a sensitivity range from low and high coefficient variants. Access, mix, green cover and runoff are "
+        "recomputed from the resulting state but have no observed after-change data to test against.",
+        size="\\scriptsize")
+
+    rows = [["Existing conditions", "Does the twin reproduce what is there?", "LL84 energy, LODES jobs, recorded homes",
+             "\\ref{sec:r-existing}"],
+            ["Planning calculations", "Does it reproduce a review's projection from the review's own inputs?",
+             "FEIS site tables (two rezonings)", "\\ref{sec:r-existing}"],
+            ["Effects of change", "Given an observed change, does it predict the effect?", "MapPLUTO 2015 vs 2025",
+             "\\ref{sec:r-change}"],
+            ["Likelihood", "Does it rank lots that redevelop, forward in time?", "Rolling origins 2016--2025",
+             "\\ref{sec:r-likely}"],
+            ["Official layers", "What do zoning and plans add, in other cities?", "Seven city panels", "\\ref{sec:r-layers}"],
+            ["Scenario projections", "Are projected homes close to what was built?", "Four cities; three rezonings",
+             "\\ref{sec:r-homes}"],
+            ["Optimizer", "How close is the best plan found to the optimum?", "Exhaustive search; 12 districts",
+             "\\ref{sec:r-opt}"],
+            ["Realism", "Are recommended changes plausible?", "2020 plans vs 2025 outcomes", "\\ref{sec:r-opt}"]]
+    out["table_design"] = _tab("Validation design: each component of the system and its test against observed data.",
+                               "tab:design", "lp{5.6cm}p{4.2cm}l", ["Component", "Question", "Data", "Section"], rows,
+                               size="\\scriptsize")
+
+    cp = _load("change_prediction")["methods"]
+    rows = []
+    for m, label in (("hybrid", "PlanArena"), ("transition-type mean (cross-fitted)", "Mean change of the same transition")):
+        for kind, kl in (("all", "all"), ("use change", "use change")):
+            r = cp[m][kind]
+            hr = _f(r["homes"]["pearson_r"]) if r["homes"].get("pearson_r") is not None else "--"
+            vr = _f(r["assessed_value"]["pearson_r"]) if r["assessed_value"].get("pearson_r") is not None else "--"
+            er = _f(r["emissions"]["pearson_r"]) if r["emissions"].get("pearson_r") is not None else "--"
+            rows.append([label if kind == "all" else "", kl, hr, _times(r["homes"]["total_ratio"]), vr, er])
+    out["table_change"] = _tab(
+        "Effects of observed change, Manhattan 2015--2025: given the 2015 state and the observed new use and floor "
+        "area, the predicted change against the recorded change (Pearson $r$; homes: predicted over observed total).",
+        "tab:change", "llrrrr", ["Method", "Changes", "Homes $r$", "Homes total", "Value $r$", "Emissions $r$"], rows,
+        "The baseline is cross-fitted: each change takes the mean observed change of other changes of the same type and "
+        "size class. Emissions are tested on the changed buildings in the energy benchmarking data. Neither method "
+        "predicts job change at block level.", size="\\scriptsize")
+
+    ob = _load("optimizer_benchmark")["summary"]
+    rows = [[k.replace("_", " "), _pct(x["median_share_of_best_found"], 1), _w(x["districts_where_best"]), str(x["median_seconds"])]
+            for k, x in ob.items()]
+    out["table_opt"] = _tab(
+        "Optimizer at district scale (12 Manhattan districts, up to ten changes): share of the best plan any method found.",
+        "tab:opt", "lrrr", ["Search", "Median share of best", "Districts best", "Median seconds"], rows, size="\\small")
+
+    ra = _load("realism_ablation")
+    rows = [[k, _n(v["recommended_parcels"]), _pct(v["share_without_precedent"], 1), _pct(v["share_redeveloped_by_2025"], 1),
+             _f(v["median_district_plan_score"], 2)] for k, v in ra["settings"].items()]
+    out["table_realism"] = _tab(
+        "Realism layers: plans recommended on the 2020 snapshot of every Manhattan district, and what happened by 2025.",
+        "tab:realism", "lrrrr", ["Optimizer setting", "Parcels", "No precedent", "Redeveloped by 2025", "Plan score"], rows,
+        f"For reference, {_pct(ra['reference']['share_of_all_lots_redeveloped'], 1)} of all lots and "
+        f"{_pct(ra['reference']['share_of_likely_fifth_redeveloped'], 1)} of the likeliest fifth were redeveloped. The plan "
+        "score is the optimizer's own objective.", size="\\small")
 
     rows = []
     for g in cities:
