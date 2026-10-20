@@ -218,14 +218,16 @@ def test_full_vote_is_consistent(suggester):
 
 
 def test_exact_polish_never_worse_and_fixes_large_parcel_case(engine):
-    """Block 1006 (CD 105): first-order gains underrate a saturating access effect on a 1.4M sq ft lot."""
+    """Block 1006 (CD 105), on a 1.4M sq ft lot: first-order gains without the land-use mix term missed the best plan,
+    which only exact polishing found. With the mix term, first-order search reaches it, and polishing never lowers
+    the score."""
     s = Suggester(engine, None)
     cand = np.nonzero((engine.p.block.to_numpy() == 1006) & (engine.cd == 105))[0]
     base = dict(scope="cd:105", candidate_parcels=cand, w_fit=0.0, max_change_share=0.4, rounds=2,
                 require_precedent=False)  # the move that exposed the gap is itself unprecedented (see next test)
     plain = s.suggest(SuggestConfig(**base))["evaluation"]["overall"]
     polished = s.suggest(SuggestConfig(polish=30, **base))["evaluation"]["overall"]
-    assert polished >= plain - 1e-9 and polished > plain + 0.1
+    assert polished >= plain - 1e-9 and plain >= polished - 1e-6 and plain > 0.5
 
 
 def test_conversions_without_precedent_are_flagged_and_skipped(engine, suggester):
@@ -331,3 +333,59 @@ def test_deployed_precedent_table_is_current():
     years = sorted(RELEASES)
     assert t.get("as_of") == years[-1]
     assert set(t.get("pairs", [])) == {f"{a}->{b}" for a, b in zip(years, years[1:])}
+
+
+def test_first_order_gains_track_exact_changes_in_shares(engine, suggester):
+    """The optimizer's first-order gains for the resident-weighted shares (access, mix, green cover) rank single
+    moves as the full engine does."""
+    from scipy.stats import spearmanr
+
+    rng = np.random.default_rng(1)
+    cfg = SuggestConfig(scope="cd:111")
+    use = engine.base_use.astype("int16").copy()
+    mask, eligible, allowed = suggester.feasible(cfg, use)
+    ctx = suggester._state(mask, use)
+    ag = suggester._access_gain(use, ctx["state"], ctx["acc"], mask, suggester.per_use_values())
+    el = np.nonzero(eligible)[0]
+    moves = [(p, u) for p in rng.choice(el, 80, replace=False) for u in np.nonzero(allowed[p])[0] if u != use[p]]
+    moves = [moves[i] for i in rng.choice(len(moves), min(40, len(moves)), replace=False)]
+    keys = ("mix", "green_cover", "facility_access")
+    pred, obs = {k: [] for k in keys}, {k: [] for k in keys}
+    for p, u in moves:
+        t = use.copy()
+        t[p] = u
+        st = engine.parcel_state(t)
+        a = engine.aggregate(st, engine.access(st), mask)
+        for k in keys:
+            pred[k].append(ag[k][p, u])
+            obs[k].append(a[k] - ctx["base"][k])
+    for k in keys:
+        assert spearmanr(pred[k], obs[k])[0] > 0.9, k
+
+
+def test_building_already_on_the_start_record_is_not_new(tmp_path):
+    """A building with a year built of t0 that is already on the t0 record is not development in (t0, t1]."""
+    import geopandas as gpd
+    import pandas as pd
+    from shapely.geometry import box
+
+    from planarena.models.transition import labels
+
+    geom = [box(0, 0, 10, 10), box(20, 0, 30, 10)]
+    for name, fa, yb in (("t0", [5000.0, 0.0], [2020, 0]), ("t1", [5000.0, 8000.0], [2020, 2022])):
+        d = tmp_path / name
+        d.mkdir()
+        pd.DataFrame({"bldg_area": fa, "year_built": yb, "use": [U["res"], U["vac"]]}).to_parquet(d / "parcels.parquet")
+        gpd.GeoDataFrame(geometry=geom).to_parquet(d / "parcels.geoparquet")
+    lab = labels(tmp_path / "t0", tmp_path / "t1", 2020)
+    assert lab.developed.tolist() == [False, True]
+
+
+def test_pareto_front_has_no_plan_beaten_on_every_pillar(engine, suggester):
+    from planarena.optimize.pareto import pareto
+
+    idx = np.nonzero((engine.p.block.to_numpy() == 1599) & (engine.cd == 110))[0]
+    r = pareto(suggester, idx.tolist(), generations=30)
+    v = np.array([[f["pillars"][p] for p in r["objectives"]] for f in r["front"]])
+    beaten = ((v[None] >= v[:, None]).all(-1) & (v[None] > v[:, None]).any(-1)).any(1)
+    assert len(v) and not beaten.any()

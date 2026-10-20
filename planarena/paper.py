@@ -162,6 +162,10 @@ def values() -> dict[str, str]:
     V["phl_agree_lo"], V["phl_agree_hi"] = _pct(min(ag)), _pct(max(ag))
     V["phl_shift_lo"], V["phl_shift_hi"] = _pct(min(sh)), _pct(max(sh))
     V["phl_margin_min"] = _f(100 * min(a - b for a, b in zip(ag, sh)), 0)
+    chk = _load("philadelphia_plan_check")["overall"]
+    V["phl_pix_n"], V["phl_pix_agree"] = _n(chk["parcels_read_both_ways"]), _pct(chk["agreement"], 1)
+    V["phl_pix_lo"], V["phl_pix_hi"] = _pct(chk["agreement_range"][0], 1), _pct(chk["agreement_range"][1], 1)
+    V["phl_manual_n"] = _n(chk["manual_sample"])
 
     # test panels
     V["n_test"] = str(len(cities))
@@ -285,6 +289,10 @@ def values() -> dict[str, str]:
     V["trend_rho_lo"], V["trend_rho_hi"] = _num(min(tr_rho)), _num(max(tr_rho))
     V["lk_rho_lo"], V["lk_rho_hi"] = _num(min(lk_rho)), _num(max(lk_rho))
     V["n_trend_better"] = str(sum(t > l for t, l in zip(tr_rho, lk_rho)))
+    ly_rho = [S[g]["likely_yield"]["district_spearman"] for g in S if "likely_yield" in S[g]]
+    V["ly_rho_lo"], V["ly_rho_hi"] = _num(min(ly_rho)), _num(max(ly_rho))
+    V["n_yield_vs_trend"] = str(sum(S[g]["likely_yield"]["district_spearman"] >= S[g]["trend"]["district_spearman"]
+                                    for g in S if "likely_yield" in S[g]))
     tr_tot = [S[g]["trend"]["ratio_total"] for g in S]
     V["trend_tot_lo"], V["trend_tot_hi"] = _f(min(tr_tot), 2), _f(max(tr_tot), 2)
 
@@ -359,8 +367,8 @@ def values() -> dict[str, str]:
     V["ra_red_none"] = _pct(st["no realism layer"]["share_redeveloped_by_2025"])
     V["ra_red_lik"] = _pct(st["precedent filter + likelihood layer"]["share_redeveloped_by_2025"])
     V["ra_all"], V["ra_fifth"] = _pct(ra["reference"]["share_of_all_lots_redeveloped"], 1), _pct(ra["reference"]["share_of_likely_fifth_redeveloped"], 1)
-    V["ra_score_prec"] = _f(st["precedent filter (default)"]["median_district_plan_score"], 2)
-    V["ra_score_lik"] = _f(st["precedent filter + likelihood layer"]["median_district_plan_score"], 2)
+    V["ra_score_prec"] = _f(st["precedent filter (default)"]["median_district_objective"], 2)
+    V["ra_score_lik"] = _f(st["precedent filter + likelihood layer"]["median_district_objective"], 2)
     vs = _load("vote_summary")
     V["vs_d"] = _w(vs["districts"])
     for k in ("condorcet_winner_exists", "all_rules_agree", "residents_agree_with_council", "winner_is_nash_bargaining",
@@ -381,17 +389,110 @@ def values() -> dict[str, str]:
     sv = _load("vote_sensitivity")["summary"]
     V["vs_weights"] = _pct(sv["median_winner_unchanged_under_weight_draws"])
 
+    # held-out impact test
+    ih = _load("impact_heldout")
+    M = ih["methods"]
+    dep = M["engine as deployed (hybrid, stock unit size; pre-period coefficients)"]["all"]
+    gb = M["gradient-boosted regression (selection set)"]["all"]
+    tmn = M["mean change of the same transition (selection set)"]["all"]
+    scl = next(v for k, v in M.items() if "selection-set scale" in k)["all"]
+    V["ih_events"], V["ih_sel"], V["ih_eval"] = _n(ih["events"]), _n(ih["selection_events"]), _n(ih["evaluation_events"])
+    V["ih_homes_r"], V["ih_homes_mae"] = _f(dep["homes"]["pearson_r"], 2), _f(dep["homes"]["mae"], 1)
+    V["ih_none_mae"] = _f(M["no change"]["all"]["homes"]["mae"], 1)
+    V["ih_homes_total"], V["ih_gb_homes_total"] = _f(dep["homes"]["total_ratio"], 2), _f(gb["homes"]["total_ratio"], 2)
+    V["ih_homes_total_scaled"] = _f(scl["homes"]["total_ratio"], 2)
+    V["ih_gb_homes_r"], V["ih_tm_homes_r"] = _f(gb["homes"]["pearson_r"], 2), _f(tmn["homes"]["pearson_r"], 2)
+    V["ih_value_r"], V["ih_gb_value_r"] = _f(dep["value"]["pearson_r"], 2), _f(gb["value"]["pearson_r"], 2)
+    V["ih_em_r"], V["ih_gb_em_r"], V["ih_em_n"] = _f(dep["ghg"]["pearson_r"], 2), _f(gb["ghg"]["pearson_r"], 2), _n(dep["ghg"]["n"])
+    chosen = next(k for k in M if k.startswith("engine (") and "scale" not in k)
+    excess = M[chosen]["all"]["homes"]["bias"] * M[chosen]["all"]["homes"]["n"]  # predicted minus observed, total
+    into_mix = sum(v["homes"]["bias"] * v["homes"]["n"] for t, v in ih["by_transition"].items() if t.endswith("> mix"))
+    V["ih_mix_share"] = _pct(into_mix / excess)
+    V["ih_bias_com_mix"] = _f(ih["by_transition"]["com > mix"]["homes"]["bias"], 0)
+    V["ih_jobs_r"] = _f(ih["jobs_by_block"]["pearson_r"], 2)
+    for k in ("homes", "value", "ghg"):  # direction right, among lots where both changes are non-zero
+        pr, ob = np.array(ih[f"points_{k}"]["predicted"]), np.array(ih[f"points_{k}"]["observed"])
+        m = (pr != 0) & (ob != 0)
+        V[f"ih_sign_{k}"] = _pct(float((np.sign(pr[m]) == np.sign(ob[m])).mean()))
+
+    # calibration
+    cm = _load("calibration_manhattan")["origins"]
+    oe = [o["raw"]["observed_over_predicted"] for o in cm]
+    sl = [o["raw"]["calibration_slope"] for o in cm]
+    bs = [o["raw"]["brier_skill"] for o in cm]
+    V["cal_oe_lo"], V["cal_oe_hi"] = _f(min(oe), 2), _f(max(oe), 2)
+    V["cal_slope_lo"], V["cal_slope_hi"] = _f(min(sl), 2), _f(max(sl), 2)
+    V["cal_bss_lo"], V["cal_bss_hi"] = _num(min(bs), 2), _num(max(bs), 2)
+    V["cal_bss_neg"] = _of(sum(b < 0 for b in bs), len(bs))
+    rc = [o["recalibrated"]["observed_over_predicted"] for o in cm]
+    V["cal_rec_oe_lo"], V["cal_rec_oe_hi"] = _f(min(rc), 2), _f(max(rc), 2)
+    rs = [o["recalibrated"]["calibration_slope"] for o in cm]
+    V["cal_rec_slope_lo"], V["cal_rec_slope_hi"] = _f(min(rs), 2), _f(max(rs), 2)
+    V["cal_rec_bss_neg"] = _of(sum(o["recalibrated"]["brier_skill"] < 0 for o in cm), len(cm))
+    cc = _load("calibration_cities")["cities"]
+    full = lambda v: next(k for k in v if k not in ("E", "train", "test"))
+    coe = [v[full(v)]["raw"]["observed_over_predicted"] for v in cc.values()]
+    cre = [v[full(v)]["recalibrated"]["observed_over_predicted"] for v in cc.values()]
+    V["calc_oe_lo"], V["calc_oe_hi"] = _f(min(coe), 2), _f(max(coe), 2)
+    V["calc_rec_oe_lo"], V["calc_rec_oe_hi"] = _f(min(cre), 2), _f(max(cre), 2)
+    V["ro_beats_phrase"] = ("every origin" if V["ro_beats"] == V["ro_n"]
+                            else f"{_of(int(V['ro_beats']), int(V['ro_n']))} origins")
+
+    # expected yield, and the rezonings
+    ly = [S[g]["likely_yield"]["ratio_total"] for g in S if "likely_yield" in S[g]]
+    V["ly_lo"], V["ly_hi"] = _f(min(ly), 2), _f(max(ly), 2)
+    rz = _load("integration_replay")
+    G = rz["rezonings"]
+    rat = lambda n: _times(G[n]["ratio_to_observed"]["likelihood_weighted"])
+    V["g_eh_ratio"], V["g_in_ratio"], V["g_sn_ratio"] = rat("East Harlem (2017)"), rat("Inwood (2018)"), rat("SoHo/NoHo (2021)")
+    for k in ("g_eh_ratio", "g_in_ratio", "g_sn_ratio"):
+        V[k] = V[k].replace("$\\times$", "")
+    sh = [v["yield_share_of_capacity"]["mean"] for v in G.values()]
+    V["g_share"] = f"{_pct(min(sh))}--{_pct(max(sh))}" if round(min(sh), 2) != round(max(sh), 2) else _pct(sh[0])
+    V["g_yield"] = _n(sum(v["homes_added_by_2025"]["likelihood_x_yield"] for v in G.values()))
+    V["of_g_yield"] = _of(sum(rz["observed_within_yield_interval"].values()), len(G))
+    V["g_sae_yield"] = _n(rz["sum_of_absolute_errors"]["likelihood_x_yield"])
+    V["g_sae_lik"] = _n(rz["sum_of_absolute_errors"]["likelihood_weighted"])
+
+    # optimizer denominators, NSGA-III test, plausibility at equal counts
+    det = og["areas_detail"]
+    pos = [a for a in det if a["exact"] > 1e-12]
+    V["og_pos"] = _w(len(pos))
+    V["og_first_frac"] = _of(sum(a["gap"] <= 1e-9 for a in pos), len(pos))
+    V["og_polished_frac"] = _of(sum(a["gap_polished"] <= 1e-9 for a in pos), len(pos))
+    pt = _load("pareto_test")
+    md = pt["summary"]["medium"]
+    V["pt_med_n"], V["pt_small_n"] = _w(len(pt["medium"])), _w(len(pt["small"]))
+    V["pt_med_plans"] = f"{_n(min(r['plans'] for r in pt['medium']))}--{_n(max(r['plans'] for r in pt['medium']))}"
+    V["pt_med_hv"], V["pt_med_hv_min"] = _pct(md["surrogate.hv_share_nsga"]["median"], 1), _pct(md["surrogate.hv_share_nsga"]["min"], 1)
+    V["pt_rand_hv"] = _pct(md["surrogate.hv_share_random"]["median"], 1)
+    eq = ra["equal_counts"]
+    nm = ("no realism layer", "precedent filter (default)", "precedent filter + likelihood layer")
+    V["ra_eq_none"], V["ra_eq_prec"], V["ra_eq_lik"] = (_pct(eq[k]["share_redeveloped_by_2025"], 0) for k in nm)
+    into = sum(round(eq[k]["share_redeveloped_into_recommended_use"] * eq[k]["recommended_parcels"]) for k in nm)
+    V["ra_into_phrase"] = ("None of the" if into == 0 else
+                           f"Only {_w(into)} of the {_n(sum(eq[k]['recommended_parcels'] for k in nm))}")
+    J = {k: eq[k]["sum_district_objective"] for k in nm}
+    V["ra_cost_prec"] = _pct(1 - J[nm[1]] / J[nm[0]])
+    V["ra_cost_lik"] = _pct(1 - J[nm[2]] / J[nm[0]])
+    rd = sv["rule_disagreement_by_candidate_set"]
+    V["vs_gen_winners"] = _w(int(rd["generated"]["median_distinct_winners"]))
+    V["vs_ideal_winners"] = _w(int(rd["ideal plans only"]["median_distinct_winners"]))
+    V["vs_rand_winners"] = _w(int(rd["random only"]["median_distinct_winners"]))
+    V["vs_het"] = _pct(sv["median_residents_winner_unchanged_with_heterogeneous_weights"])
+    V["release"] = RELEASE
+
     # counts in the prose are words ("seven cities", "all five", "four of seven")
     pairs = {"zE": ("n_zE_sig", "n_zE"), "z": ("n_z_sig", "n_z"), "p": ("n_p_sig", "n_p"),
              "ctx_spatial": ("n_ctx_spatial_pos", "n_test"), "z_spatial": ("n_z_spatial_pos", "n_z_spatial"),
              "dest_z": ("n_dest_z_better", "n_dest_z"), "model_layers": ("n_model_beats_layers", "n_dest"),
-             "trend": ("n_trend_better", "n_homes"), "transfer": ("n_transfer_worse", "n_transfer"),
+             "trend": ("n_trend_better", "n_homes"), "yield_trend": ("n_yield_vs_trend", "n_homes"),
+             "transfer": ("n_transfer_worse", "n_transfer"),
              "transfer_ctx": ("n_transfer_ctx_pos", "n_transfer"), "g": ("g_inside", "g_n")}
     for name, (k, n) in pairs.items():
         V[f"of_{name}"] = _of(int(V[k]), int(V[n]))
-    V["trend_guidance"] = ("the trend ranked districts better than any projection"
-                           if V["n_trend_better"] == V["n_homes"] else
-                           f"the trend ranked districts better in {V['of_trend']} cities")
+    V["trend_guidance"] = (f"A trend ranked districts better than build-out-based projections in {V['of_trend']} "
+                           f"cities, and likelihood $\\times$ yield as well as the trend in {V['of_yield_trend']}")
     for k in list(V):
         if (k.startswith("n_") or k in ("g_n", "g_inside")) and V[k].isdigit() and int(V[k]) <= 10:
             V[k] = _w(int(V[k]))
@@ -474,7 +575,7 @@ def tables() -> dict[str, str]:
         ["City", "C over E", "Z over E+C", "P over E+C", "Z, conservative", "P, conservative"], rows,
         "Conservative: in each window, lots whose zoning or plan dates from the window's start or later are left "
         "out; possible where a current layer records those dates (Phoenix, San Diego, Chicago). Dallas's current "
-        "layers carry no dates, so its zoning and plan gains are upper bounds.", size="\\scriptsize", sep="2.5pt")
+        "layers carry no dates, so its zoning and plan gains may include post-decision information.", size="\\scriptsize", sep="2.5pt")
 
     rows = []
     for g in cities:
@@ -499,15 +600,17 @@ def tables() -> dict[str, str]:
             continue
         f = lambda k: f"{_times(sc[k]['ratio_total'])} ({_num(sc[k]['district_spearman'])})" if k in sc else "--"
         rows.append([CITY[g], _n(sc["city_total"]["observed"]), f("zoning_buildout"), f("plan_buildout"),
-                     f("likely_zoning"), f("likely_plan"), f("trend")])
+                     f("likely_zoning"), f("likely_plan"), f("likely_yield"), f("trend")])
     out["table_homes"] = _tab(
         "Homes added in the test window: projection over observed total (Spearman correlation across districts).",
-        "tab:homes", "lrlllll", ["City", "Observed", "Zoning build-out", "Plan build-out", "Likely $\\times$ zoning",
-                                  "Likely $\\times$ plan", "Five-year trend"], rows,
-        "Build-out: every lot at the homes per acre that the 90th percentile of lots of its zoning (or plan) class "
-        "reaches in the city today. Likely: the build-out increment times the out-of-time probability of "
-        "development (blocks E+C+Z+P where available). Trend: homes completed in the five years before the window, "
-        "scaled to its length.", size="\\scriptsize")
+        "tab:homes", "lrllllll", ["City", "Observed", "Zoning build-out", "Plan build-out", "Likely $\\times$ zoning",
+                                   "Likely $\\times$ plan", "Likely $\\times$ yield", "Five-year trend"], rows,
+        "Observed: gross homes added in the window. Build-out (a proxy, not legal capacity): every lot at the homes "
+        "per acre that the 90th percentile of lots of its zoned (or planned) class reach in the city today. Likely: "
+        "the build-out increment times the out-of-time probability of development (blocks E+C+Z+P where available). "
+        "Yield: the probability times the mean homes added by developing lots of the same class and lot size in the "
+        "training window. Trend: homes completed in the five years before the window, scaled to its length.",
+        size="\\scriptsize", sep="3pt")
 
     tr = integ["transfer"]
     rows = []
@@ -524,82 +627,110 @@ def tables() -> dict[str, str]:
     for name, v in G.items():
         h = v["homes_added_by_2025"]
         lo, hi = h["likelihood_weighted_95pct"]
+        ylo, yhi = h["likelihood_x_yield_95pct"]
         rows.append([name, str(v["sites"]), _n(h["observed"]), _n(h["capacity"]), _n(h["capacity_prorated_to_2025"]),
-                     f"{_n(h['likelihood_weighted'])} ({_n(lo)}--{_n(hi)})"])
+                     f"{_n(h['likelihood_weighted'])} ({_n(lo)}--{_n(hi)})",
+                     f"{_n(h['likelihood_x_yield'])} ({_n(ylo)}--{_n(yhi)})"])
     k = lambda key: _n(sum(v["homes_added_by_2025"][key] for v in G.values()))
     rows.append(["\\textit{All three}", "", k("observed"), k("capacity"), k("capacity_prorated_to_2025"),
-                 k("likelihood_weighted")])
+                 k("likelihood_weighted"), k("likelihood_x_yield")])
+    sae = _load("integration_replay")["sum_of_absolute_errors"]
+    rows.append(["\\textit{Sum of absolute errors}", "", "", _n(sae["capacity"]), _n(sae["capacity_prorated_to_2025"]),
+                 _n(sae["likelihood_weighted"]), _n(sae["likelihood_x_yield"])])
     out["table_replay"] = _tab(
         "Three Manhattan rezonings: homes on development sites by 2025, observed and projected.", "tab:replay",
-        "lrrrrl", ["Rezoning (adopted)", "Sites", "Built by 2025", "Capacity", "Pro-rated to 2025",
-                   "Likelihood-weighted (95\\%)"], rows,
-        "Capacity is full build-out by the review's build year; pro-rated scales it linearly to 2025. The "
-        "likelihood comes from a redevelopment model trained only on outcomes known by the adoption year.")
+        "lrrrrll", ["Rezoning (adopted)", "Sites", "Built", "Capacity", "Pro-rated",
+                    "Prob.\\ $\\times$ capacity (95\\%)", "Prob.\\ $\\times$ yield (95\\%)"], rows,
+        "Capacity is full build-out by the review's build year; pro-rated scales it linearly to 2025. The probability "
+        "comes from a redevelopment model trained only on outcomes known by the adoption year; yield is the mean share "
+        "of capacity homes that soft sites redeveloped in those training years added. Ranges are conditional on the "
+        "probabilities (Supplement S5).", size="\\footnotesize", sep="3pt")
 
     from planarena.indicators.engine import INDICATORS
-    status = {"homes": "observed change", "value": "observed change", "ghg": "existing and observed change",
-              "jobs": "existing (tract, block)", "green_space": "direct accounting"}
+    status = {"homes": "held-out change", "value": "held-out change", "ghg": "existing; held-out change",
+              "jobs": "existing; change: no skill", "green_space": "direct accounting"}
     rows = [[i.label.replace("&", "\\&"), i.pillar, i.unit.replace("%", "\\%"), "higher" if i.direction > 0 else "lower",
              status.get(i.key, "not validated")] for i in INDICATORS]
     out["table_indicators"] = _tab(
-        "Indicators computed for every edit, and how each is validated (Manhattan).", "tab:indicators", "lllll",
-        ["Indicator", "Pillar", "Unit", "Better", "Validation"], rows,
+        "Indicators computed for every edit, and how each is tested (Manhattan).", "tab:indicators", "lllll",
+        ["Indicator", "Pillar", "Unit", "Better", "Test"], rows,
         "Unchanged parcels keep their observed values; changed parcels follow the delta equations. Each indicator "
         "carries a sensitivity range from low and high coefficient variants. Access, mix, green cover and runoff are "
         "recomputed from the resulting state but have no observed after-change data to test against.",
         size="\\scriptsize")
 
     rows = [["Existing conditions", "Does the twin reproduce what is there?", "LL84 energy, LODES jobs, recorded homes",
-             "\\ref{sec:r-existing}"],
+             "accounting", "\\ref{sec:r-existing}"],
             ["Planning calculations", "Does it reproduce a review's projection from the review's own inputs?",
-             "FEIS site tables (two rezonings)", "\\ref{sec:r-existing}"],
-            ["Effects of change", "Given an observed change, does it predict the effect?", "MapPLUTO 2015 vs 2025",
-             "\\ref{sec:r-change}"],
-            ["Likelihood", "Does it rank lots that redevelop, forward in time?", "Rolling origins 2016--2025",
-             "\\ref{sec:r-likely}"],
-            ["Official layers", "What do zoning and plans add, in other cities?", "Seven city panels", "\\ref{sec:r-layers}"],
-            ["Scenario projections", "Are projected homes close to what was built?", "Four cities; three rezonings",
-             "\\ref{sec:r-homes}"],
-            ["Optimizer", "How close is the best plan found to the optimum?", "Exhaustive search; 12 districts",
+             "FEIS site tables (two rezonings)", "accounting", "\\ref{sec:r-existing}"],
+            ["Effects of change", "Given an observed change, does it predict the effect?",
+             "MapPLUTO 2015 vs 2025, held-out folds", "empirical", "\\ref{sec:r-change}"],
+            ["Likelihood", "Does it rank lots that redevelop, and how many, forward in time?",
+             "Rolling origins 2016--2025", "empirical", "\\ref{sec:r-likely}"],
+            ["Official layers", "What do zoning and plans add, in other cities?", "Seven city panels", "empirical",
+             "\\ref{sec:r-layers}"],
+            ["Housing projections", "Are projected homes close to what was built?", "Four cities; three rezonings",
+             "empirical", "\\ref{sec:r-homes}"],
+            ["Optimizer", "How close is the best plan found to the best plan?", "Exhaustive search; 12 districts",
+             "algorithmic", "\\ref{sec:r-opt}"],
+            ["Pareto explorer", "Does NSGA-III find the trade-off front?", "Exhaustive enumeration of blocks",
+             "algorithmic", "\\ref{sec:r-opt}"],
+            ["Realism", "Are recommended changes plausible?", "2020 plans vs 2025 outcomes", "empirical",
              "\\ref{sec:r-opt}"],
-            ["Realism", "Are recommended changes plausible?", "2020 plans vs 2025 outcomes", "\\ref{sec:r-opt}"]]
-    out["table_design"] = _tab("Validation design: each component of the system and its test against observed data.",
-                               "tab:design", "lp{5.6cm}p{4.2cm}l", ["Component", "Question", "Data", "Section"], rows,
-                               size="\\scriptsize")
+            ["Decision module", "How does the choice depend on rule, seats and candidates?", "Assumed utilities",
+             "illustrative", "\\ref{sec:r-dec}"]]
+    out["table_design"] = _tab("Evaluation design: each component, its question, data and type of evidence.",
+                               "tab:design", "lp{5.0cm}p{4.0cm}ll", ["Component", "Question", "Data", "Evidence",
+                                                                     "Section"], rows, size="\\scriptsize")
 
-    cp = _load("change_prediction")["methods"]
+    ih = _load("impact_heldout")
+    M = ih["methods"]
+    chosen = next(k for k in M if k.startswith("engine (") and "scale" not in k)
+    lab = {"engine as deployed (hybrid, stock unit size; pre-period coefficients)": "PlanArena (deployed form)",
+           chosen: "PlanArena (form chosen on selection lots)",
+           next(k for k in M if "selection-set scale" in k): "\\quad $\\times$ selection-lot scale",
+           "gradient-boosted regression (selection set)": "Gradient-boosted regression",
+           "mean change of the same transition (selection set)": "Mean change of the same transition"}
     rows = []
-    for m, label in (("hybrid", "PlanArena"), ("transition-type mean (cross-fitted)", "Mean change of the same transition")):
-        for kind, kl in (("all", "all"), ("use change", "use change")):
-            r = cp[m][kind]
-            hr = _f(r["homes"]["pearson_r"]) if r["homes"].get("pearson_r") is not None else "--"
-            vr = _f(r["assessed_value"]["pearson_r"]) if r["assessed_value"].get("pearson_r") is not None else "--"
-            er = _f(r["emissions"]["pearson_r"]) if r["emissions"].get("pearson_r") is not None else "--"
-            rows.append([label if kind == "all" else "", kl, hr, _times(r["homes"]["total_ratio"]), vr, er])
+    for k, name in lab.items():
+        a = M[k]["all"]
+        rows.append([name, _f(a["homes"]["pearson_r"], 2), _f(a["homes"]["mae"], 1), _num(a["homes"]["bias"], 1),
+                     _f(a["homes"]["total_ratio"], 2), _f(a["value"]["pearson_r"], 2), _f(a["value"]["total_ratio"], 2),
+                     _f(a["ghg"]["pearson_r"], 2), _f(a["ghg"]["total_ratio"], 2)])
+    nc = M["no change"]["all"]["homes"]
     out["table_change"] = _tab(
-        "Effects of observed change, Manhattan 2015--2025: given the 2015 state and the observed new use and floor "
-        "area, the predicted change against the recorded change (Pearson $r$; homes: predicted over observed total).",
-        "tab:change", "llrrrr", ["Method", "Changes", "Homes $r$", "Homes total", "Value $r$", "Emissions $r$"], rows,
-        "The baseline is cross-fitted: each change takes the mean observed change of other changes of the same type and "
-        "size class. Emissions are tested on the changed buildings in the energy benchmarking data. Neither method "
-        "predicts job change at block level.", size="\\scriptsize")
+        f"Effects of observed change on {_n(ih['evaluation_events'])} held-out Manhattan lots, 2015--2025: given the "
+        "2015 state and the observed new use and floor area, predicted against recorded change (Pearson $r$; mean "
+        "absolute error and mean bias in homes per lot; predicted over observed total).",
+        "tab:change", "lrrrrrrrr", ["Method", "Homes $r$", "MAE", "Bias", "Total", "Value $r$", "Total",
+                                    "Emis.\\ $r$", "Total"], rows,
+        f"Selection lots ({_n(ih['selection_events'])}, two of five spatial folds) chose the form and fitted the "
+        f"baselines and the scale. Predicting no change gives a homes MAE of {_f(nc['mae'], 1)}. Emissions: "
+        f"{_n(M[chosen]['all']['ghg']['n'])} benchmarked buildings.", size="\\scriptsize", sep="3pt")
 
     ob = _load("optimizer_benchmark")["summary"]
     rows = [[k.replace("_", " "), _pct(x["median_share_of_best_found"], 1), str(x["districts_where_best"]), str(x["median_seconds"])]
             for k, x in ob.items()]
     out["table_opt"] = _tab(
-        "Optimizer at district scale (12 Manhattan districts, up to ten changes): share of the best plan any method found.",
+        "Optimizer at district scale (12 Manhattan districts, up to ten changes): share of the best plan any tested "
+        "method found (not a proven optimum).",
         "tab:opt", "lrrr", ["Search", "Median share of best", "Districts best", "Median seconds"], rows, size="\\small")
 
     ra = _load("realism_ablation")
+    eq = ra["equal_counts"]
     rows = [[k, _n(v["recommended_parcels"]), _pct(v["share_without_precedent"], 1), _pct(v["share_redeveloped_by_2025"], 1),
-             _f(v["median_district_plan_score"], 2)] for k, v in ra["settings"].items()]
+             _pct(v["share_of_eligible_redeveloped"], 1), _pct(v["share_redeveloped_into_recommended_use"], 1),
+             _f(v["sum_district_objective"], 1)] for k, v in eq.items() if isinstance(v, dict) and "recommended_parcels" in v]
+    full = ra["settings"]
     out["table_realism"] = _tab(
-        "Realism layers: plans recommended on the 2020 snapshot of every Manhattan district, and what happened by 2025.",
-        "tab:realism", "lrrrr", ["Optimizer setting", "Parcels", "No precedent", "Redeveloped by 2025", "Plan score"], rows,
-        f"For reference, {_pct(ra['reference']['share_of_all_lots_redeveloped'], 1)} of all lots and "
-        f"{_pct(ra['reference']['share_of_likely_fifth_redeveloped'], 1)} of the likeliest fifth were redeveloped. The plan "
-        "score is the optimizer's own objective.", size="\\small")
+        "Realism layers at equal counts: plans recommended on the 2020 snapshot of every Manhattan district, and what "
+        "happened by 2025.", "tab:realism", "lrrrrrr",
+        ["Optimizer setting", "Parcels", "No precedent", "Redeveloped", "Eligible redev.", "Into rec.\\ use",
+         "Objective"], rows,
+        "In each district every setting recommends the smallest number any setting recommended there. Eligible redev.: "
+        "share of the setting's eligible parcels redeveloped (the rate of a random choice). Objective: the sum over "
+        "districts of the overall score minus the conversion penalty. At the full budget the settings recommended "
+        + ", ".join(_n(v["recommended_parcels"]) for v in full.values()) + " parcels.", size="\\scriptsize")
 
     rows = []
     for g in cities:
@@ -613,21 +744,249 @@ def tables() -> dict[str, str]:
     return out
 
 
-# ----------------------------------------------------------------------------- render
-def render() -> str:
-    text = TEMPLATE.read_text()
-    fill = {**values(), **tables()}
+# ----------------------------------------------------------------------------- supplement
+SUPP_TEMPLATE = PAPER / "supplement.tex.in"
+SUPP_OUT = PAPER / "supplement.tex"
+RELEASE = "v1.1-review"
+EVIDENCE = [  # component, claim, type of evidence, test
+    ("Existing conditions", "records reproduced", "accounting check", "twin vs assessor, LL84, LEHD"),
+    ("Planning calculations", "reviews' projections reproduced", "accounting check", "two environmental reviews"),
+    ("Impact engine", "effects of observed change", "empirical, held out", "selection / evaluation folds"),
+    ("Job change", "effect on jobs by block", "empirical, held out (no skill)", "LEHD 2015--2023"),
+    ("Access, mix, green cover", "effects of change", "not validated", "no after-change data"),
+    ("Redevelopment model", "where change happens", "empirical, out of time", "rolling origins; seven cities"),
+    ("Calibration", "how often change happens", "empirical, out of time", "reliability, O/E, Brier skill"),
+    ("Zoning and plan layers", "added predictive value", "empirical, out of time", "block ablation, conservative variant"),
+    ("Housing projections", "homes built", "empirical, out of time", "districts; three rezonings"),
+    ("Optimizer", "best plan found", "algorithmic verification", "exhaustive search; benchmark"),
+    ("NSGA-III explorer", "trade-off front", "algorithmic verification", "exhaustive enumeration of blocks"),
+    ("Realism layers", "plausible recommendations", "empirical, out of time", "2020 plans vs 2025 outcomes"),
+    ("Decision module", "how a choice depends on its rule", "illustrative simulation", "assumed utilities and seats"),
+]
 
+
+def _code_settings() -> dict:
+    import yaml
+
+    from planarena.agents import voting
+    from planarena.optimize.suggest import SuggestConfig
+    from planarena.twin.build import CELL_M
+
+    coef = yaml.safe_load((ROOT / "planarena" / "indicators" / "coefficients.yaml").read_text())
+    a, acc = coef["assumptions"], coef["access"]
+    cfg = SuggestConfig()
+    import inspect
+
+    rob = inspect.signature(voting.robustness).parameters
+    return {"util": a["buildout_utilization"], "pph": a["persons_per_household"], "walk_m": acc["walk_radius_m"],
+            "fac_m": acc["facility_radius_m"], "park_sqft": acc["park_min_sqft"], "pen": cfg.conversion_penalty,
+            "share": cfg.max_change_share, "rounds": cfg.rounds, "wfit": cfg.w_fit, "jnd": voting.JND,
+            "rob_samples": rob["samples"].default, "rob_conc": rob["concentration"].default, "cell_m": CELL_M}
+
+
+def supplement_values() -> dict[str, str]:
+    c = _code_settings()
+    lat = _load("latency")["twins"]["Manhattan"]["derived"]
+    V = {"util": _f(c["util"]["value"], 1), "util_lo": _f(c["util"]["low"], 1), "util_hi": _f(c["util"]["high"], 1),
+         "pph": _f(c["pph"]["value"], 2), "cell_m": f"{c['cell_m']:.0f}",
+         "walk_m": str(c["walk_m"]), "fac_m": str(c["fac_m"]), "park_acres": _f(c["park_sqft"] / 43560, 0),
+         "sqft_unit": _n(lat["sqft_per_unit"]), "pen": f"{c['pen']:g}", "share": f"{c['share']:g}",
+         "rounds": str(c["rounds"]), "wfit": f"{c['wfit']:g}", "polish": "30", "jnd": f"{c['jnd']:g}",
+         "rob_samples": str(c["rob_samples"]), "rob_conc": f"{c['rob_conc']:g}", "release": RELEASE}
+    ih = _load("impact_heldout")
+    V["ih_events"], V["ih_sel"], V["ih_eval"] = _n(ih["events"]), _n(ih["selection_events"]), _n(ih["evaluation_events"])
+    V["ih_jobs_r"], V["ih_jobs_n"] = _f(ih["jobs_by_block"]["pearson_r"], 2), _n(ih["jobs_by_block"]["n"])
+    for k in ("homes", "value", "ghg"):
+        pr, ob = np.array(ih[f"points_{k}"]["predicted"]), np.array(ih[f"points_{k}"]["observed"])
+        m = (pr != 0) & (ob != 0)
+        V[f"ih_sign_{k}"] = _pct(float((np.sign(pr[m]) == np.sign(ob[m])).mean()))
+    V["n_features"] = str(_load("transition_2020_2025")["features"])
+    la = _load("leakage_audit")
+    mp = la["manhattan_pairs"]
+    V["leak_2020_lots"] = str(mp["2020->2025"]["removed_by_new_building_rule"])
+    r1, r5 = mp["2020->2021"], mp["2020->2025"]
+    V["leak_2020_1_share"] = _pct(r1["removed_by_new_building_rule"] / (r1["developed"] + r1["removed_by_new_building_rule"]))
+    V["leak_2020_5_share"] = _pct(r5["removed_by_new_building_rule"] / (r5["developed"] + r5["removed_by_new_building_rule"]))
+    cc = la["cross_city_new_building_rule"].values()
+    V["leak_cross_max"] = _pct(max(v["lots_already_built_at_t0_with_year_built_t0_or_later"] / max(v["developed"], 1)
+                                   for v in cc), 1)
+    pt = _load("pareto_test")
+    sm, md = pt["summary"]["small"], pt["summary"]["medium"]
+    plans = lambda rows: f"{_n(min(r['plans'] for r in rows))}--{_n(max(r['plans'] for r in rows))}"
+    V["pt_small_n"], V["pt_med_n"] = str(len(pt["small"])), str(len(pt["medium"]))
+    V["pt_small_plans"], V["pt_med_plans"] = plans(pt["small"]), plans(pt["medium"])
+    V["pt_new_rho_min"] = _f(min(v["min"] for v in pt["summary"]["spearman_surrogate_exact_small"].values()), 2)
+    old = _load("pareto_test_first_order_v0")
+    V["pt_old_env_min"] = _num(old["summary"]["spearman_surrogate_exact_small"]["environmental"]["min"], 2)
+    V["pt_old_hv_min"] = _pct(old["summary"]["small"]["exact.hv_share_nsga"]["min"], 1)
+    V["nsga_refdirs"], V["nsga_pop"], V["nsga_gen"], V["nsga_show"] = "45", "92", "120", "24"
+    return V
+
+
+def supplement_tables() -> dict[str, str]:
+    out = {}
+    out["table_evidence"] = _tab("Claims, the evidence behind them, and its type.", "tab:s-evidence", "llll",
+                                 ["Component", "Claim", "Evidence", "Test"], [list(r) for r in EVIDENCE])
+    la = _load("leakage_audit")
+    rows = [[k, v["existing"], v["zoning"], v["plan"], v["after_t0"]] for k, v in la["feature_timestamps"].items()]
+    out["table_timing"] = _tab(
+        "Source and date of each feature family against the decision year $t_0$. Context features (neighbour "
+        "composition, recent construction within 400 m) come from the same record as existing conditions.",
+        "tab:s-timing", "p{0.17\\linewidth}p{0.22\\linewidth}p{0.17\\linewidth}p{0.17\\linewidth}p{0.17\\linewidth}",
+        ["Panel", "Existing conditions", "Zoning", "Plan", "Measured after $t_0$"], rows, size="\\footnotesize")
+    rows = [[k.replace("->", "--"), _n(v["t0_lots"]), _n(v["t0_lots_without_t1_lot"]),
+             _n(v["merges_t1_lots_from_two_or_more"]), _n(v["t0_lots_in_merges"]),
+             _n(v["splits_t0_lots_into_two_or_more"]), _n(v["developed"]), _n(v["removed_by_new_building_rule"])]
+            for k, v in la["manhattan_pairs"].items()]
+    out["table_identity"] = _tab("Following Manhattan lots over time, and labels removed by the new-building rule.",
+                                 "tab:s-identity", "lrrrrrrr",
+                                 ["Pair", "$t_0$ lots", "No $t_1$ lot", "Mergers", "Lots merged", "Splits", "Developed",
+                                  "Removed"], rows, size="\\footnotesize")
+    ih = _load("impact_heldout")
+    M = ih["methods"]
+    chosen = next(k for k in M if k.startswith("engine (") and "scale" not in k)
+    name = {k: {"engine as deployed (hybrid, stock unit size; pre-period coefficients)": "PlanArena (deployed form)",
+                chosen: "PlanArena (form chosen on selection lots)",
+                "gradient-boosted regression (selection set)": "Gradient-boosted regression",
+                "mean change of the same transition (selection set)": "Mean change of the same transition"}.get(
+                    k, "\\quad $\\times$ selection-lot scale") for k in M}
+    short = lambda k: k
+    rows = []
+    for k, v in M.items():
+        if k == "no change":
+            continue
+        a = v["all"]
+        rows.append([short(name[k]), _f(a["homes"]["pearson_r"] or 0, 2), _f(a["homes"]["mae"], 1),
+                     _num(a["homes"]["bias"], 1), _f(a["homes"]["total_ratio"], 2),
+                     _f(a["value"]["pearson_r"] or 0, 2), _f(a["value"]["total_ratio"], 2),
+                     _f(a["ghg"]["pearson_r"] or 0, 2), _f(a["ghg"]["total_ratio"], 2), _n(a["ghg"]["n"])])
+    nc = M["no change"]["all"]["homes"]
+    out["table_ih_main"] = _tab(
+        f"Held-out impact test on {_n(ih['evaluation_events'])} evaluation lots: Pearson $r$, mean absolute error "
+        "(homes), mean bias (predicted minus observed) and total predicted over total observed.", "tab:s-ih",
+        "lrrrrrrrrr", ["Method", "Homes $r$", "MAE", "Bias", "Total", "Value $r$", "Total", "Emis.\\ $r$", "Total",
+                       "$n$ emis."], rows,
+        note=f"Predicting no change gives a homes MAE of {_f(nc['mae'], 1)}. Bias and MAE in homes per lot.",
+        size="\\footnotesize", sep="3pt")
+    dep = next(k for k in M if k.startswith("engine as deployed"))
+    rows = []
+    for b, v in M[dep]["by_size"].items():
+        h = v["homes"]
+        if not h.get("n"):
+            continue
+        rows.append([b.replace(">=", "$\\geq$").replace("<", "$<$"), _n(h["n"]), _num(h["pearson_r"] or 0, 2),
+                     _f(h["mae"], 1), _num(h["bias"], 1),
+                     _num(h["total_ratio"], 2) if h.get("total_ratio") is not None else "--",
+                     _num(v["value"]["total_ratio"], 2) if v["value"].get("total_ratio") is not None else "--"])
+    for kd in ("use change", "density only (new building)"):
+        h, v = M[dep][kd]["homes"], M[dep][kd]["value"]
+        rows.append([kd, _n(h["n"]), _num(h["pearson_r"] or 0, 2), _f(h["mae"], 1), _num(h["bias"], 1),
+                     _num(h["total_ratio"], 2), _num(v["total_ratio"], 2)])
+    out["table_ih_size"] = _tab("Deployed engine by size of the new building (sq ft) and by kind of change "
+                                "(evaluation lots).", "tab:s-ih-size", "lrrrrrr",
+                                ["Group", "$n$", "Homes $r$", "MAE", "Bias", "Total", "Value total"], rows,
+                                note="Total: predicted over observed total; negative where the two totals have opposite "
+                                     "signs (small buildings lost homes in total).", size="\\footnotesize")
+    rows = []
+    for t, v in ih["by_transition"].items():
+        h = v["homes"]
+        rows.append([t.replace(">", "$\\to$"), _n(h["n"]), _f(h["mae"], 1), _num(h["bias"], 1),
+                     _num(h["total_ratio"], 2) if h.get("total_ratio") is not None else "--",
+                     _num(v["value"]["total_ratio"], 2) if v["value"].get("total_ratio") is not None else "--"])
+    out["table_ih_type"] = _tab("Chosen engine form by transition (groups with at least 30 evaluation lots).",
+                                "tab:s-ih-type", "lrrrrr", ["Transition", "$n$", "Homes MAE", "Bias", "Total",
+                                                             "Value total"], rows, size="\\footnotesize")
+    cm = _load("calibration_manhattan")
+    rows = []
+    for o in cm["origins"]:
+        r, iso, rc = o["raw"], o.get("isotonic"), o["recalibrated"]
+        rows.append([str(o["horizon"]), o["test"].replace("->", "--"), _n(o["n_test"]),
+                     _n(round(r["prevalence_test"] * o["n_test"])), _f(r["observed_over_predicted"], 2),
+                     _num(r["calibration_intercept"], 2), _f(r["calibration_slope"], 2), _num(r["brier_skill"], 3),
+                     _f(iso["observed_over_predicted"], 2) if iso else "--", _num(iso["brier_skill"], 3) if iso else "--",
+                     _f(rc["observed_over_predicted"], 2), _f(rc["calibration_slope"], 2), _num(rc["brier_skill"], 3)])
+    out["table_cal_mn"] = _tab(
+        "Calibration of the Manhattan redevelopment model by horizon $h$ (years) and test window: observed over "
+        "predicted events (O/E), calibration intercept and slope, and Brier skill against the training-period rate; "
+        "then after temporal isotonic recalibration, and after logistic recalibration on out-of-fold training "
+        "probabilities.", "tab:s-cal-mn", "llrrrrrrrrrrr",
+        ["$h$", "Test", "Lots", "Events", "O/E", "Int.", "Slope", "Skill", "O/E iso", "Skill iso", "O/E rec.",
+         "Slope rec.", "Skill rec."], rows, size="\\scriptsize", sep="2.5pt")
+    cc = _load("calibration_cities")["cities"]
+    rows = []
+    for g in [c for c in CITY if c in cc]:
+        for k, v in cc[g].items():
+            if k in ("train", "test"):
+                continue
+            r, rc = v["raw"], v["recalibrated"]
+            rows.append([CITY[g] if k == "E" else "", k, _pct(r["prevalence_test"], 2), _f(r["observed_over_predicted"], 2),
+                         _f(r["calibration_slope"], 2), _num(r["brier_skill"], 3), _f(rc["observed_over_predicted"], 2),
+                         _f(rc["calibration_slope"], 2), _num(rc["brier_skill"], 3)])
+    out["table_cal_cities"] = _tab(
+        "Calibration in each city's test window (existing conditions only, and all blocks): raw, and after logistic "
+        "recalibration on out-of-fold training-window probabilities.", "tab:s-cal-cities", "llrrrrrrr",
+        ["City", "Blocks", "Rate", "O/E", "Slope", "Skill", "O/E rec.", "Slope rec.", "Skill rec."], rows,
+        size="\\footnotesize")
+    pt = _load("pareto_test")
+    S = pt["summary"]
+    md = lambda d: f"{_f(d['median'], 3)} ({_f(d['min'], 3)})" if d else "--"
+    rows = [["Small (exact)", str(len(pt["small"])), md(S["small"]["exact.hv_share_nsga"]),
+             md(S["small"]["exact.share_of_true_front_found"]), md(S["small"]["surrogate.hv_share_random"])],
+            ["Medium (first order)", str(len(pt["medium"])), md(S["medium"]["surrogate.hv_share_nsga"]),
+             md(S["medium"]["surrogate.share_of_true_front_found"]), md(S["medium"]["surrogate.hv_share_random"])],
+            ["Medium, re-scored", str(len(pt["medium"])), md(S["medium"]["exact.hv_share_nsga_vs_surrogate_front_rescored"]),
+             "--", "--"]]
+    out["table_nsga"] = _tab("NSGA-III against the true front: median (minimum) over blocks of the hypervolume share "
+                             "and of the share of true-front plans returned; random search with the same number of "
+                             "evaluations for comparison.", "tab:s-nsga", "lrrrr",
+                             ["Blocks", "$n$", "Hypervolume share", "Front plans found", "Random search"], rows,
+                             size="\\footnotesize")
+    from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
+    from planarena.indicators.engine import INDICATORS
+
+    keys = [i.key for i in INDICATORS]
+    lab = {"homes": "Homes", "jobs": "Jobs", "value": "Value", "park_access": "Park", "services_access": "Services",
+           "facility_access": "Facilities", "mix": "Mix", "green_space": "Green sp.", "runoff": "Runoff",
+           "ghg": "Emissions", "green_cover": "Green cov."}
+    rows = [[s.name] + [(_f(s.normalized()[k], 2) if s.normalized()[k] else "") for k in keys]
+            for s in DEFAULT_STAKEHOLDERS]
+    out["table_weights"] = _tab("Indicator weights of the five stakeholder agents (assumptions; each sums to one).",
+                                "tab:s-weights", "l" + "r" * len(keys), ["Agent"] + [lab[k] for k in keys], rows,
+                                size="\\footnotesize", sep="3pt")
+    vs = _load("vote_sensitivity")["summary"]
+    rd = vs["rule_disagreement_by_candidate_set"]
+    rows = [[k, _f(v["median_candidates"], 0), _f(v["median_distinct_winners"], 0), str(v["max_distinct_winners"]),
+             str(v["districts_all_rules_agree"]), str(v["districts_with_condorcet_winner"])] for k, v in rd.items()]
+    out["table_vote_sets"] = _tab(
+        f"Disagreement among the nine rules by candidate set ({vs['districts']} districts): median candidates, median "
+        "and maximum number of distinct winners, districts where all rules agree and with a Condorcet winner.",
+        "tab:s-vote-sets", "lrrrrr", ["Candidate set", "Candidates", "Winners", "Max", "All agree", "Condorcet"],
+        rows, note=f"With each block's resident weights drawn independently, the residents' winner is unchanged in a "
+                   f"median {_pct(vs['median_residents_winner_unchanged_with_heterogeneous_weights'])} of draws.",
+        size="\\footnotesize")
+    return out
+
+
+# ----------------------------------------------------------------------------- render
+def _fill(template, fill: dict) -> str:
     def sub(m):
         k = m.group(1)
         if k not in fill:
             raise KeyError(f"no value for @@{k}@@")
         return fill[k]
-    return re.sub(r"@@(\w+)@@", sub, text)
+    return re.sub(r"@@(\w+)@@", sub, template.read_text())
+
+
+def render() -> str:
+    return _fill(TEMPLATE, {**values(), **tables()})
+
+
+def render_supplement() -> str:
+    return _fill(SUPP_TEMPLATE, {**supplement_values(), **supplement_tables()})
 
 
 def outputs() -> dict:
-    return {OUT: render()}
+    return {OUT: render(), SUPP_OUT: render_supplement()}
 
 
 def citations(text: str) -> set[str]:
@@ -642,8 +1001,9 @@ def main() -> None:
         p.write_text(text)
         print("written", p.relative_to(ROOT))
     if shutil.which("tectonic"):
-        r = subprocess.run(["tectonic", "--keep-logs", OUT.name], cwd=PAPER, capture_output=True, text=True)
-        print("paper.pdf" if r.returncode == 0 else r.stderr[-3000:])
+        for f in (OUT, SUPP_OUT):
+            r = subprocess.run(["tectonic", "--keep-logs", f.name], cwd=PAPER, capture_output=True, text=True)
+            print(f.with_suffix(".pdf").name if r.returncode == 0 else r.stderr[-3000:])
 
 
 if __name__ == "__main__":

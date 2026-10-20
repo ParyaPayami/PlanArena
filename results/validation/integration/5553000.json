@@ -227,7 +227,8 @@
         "plan_buildout": 0.0,
         "likely_zoning": 3679.449446019632,
         "likely_plan": 0.0,
-        "trend": 1203.9999999999998
+        "trend": 1203.9999999999998,
+        "likely_yield": 467.7271995744572
       },
       "capacity_homes_per_acre": {
         "sf": 12.1,
@@ -238,17 +239,160 @@
       "zoning_buildout": {
         "ratio_total": 115.41558510436356,
         "district_spearman": -0.22939215447444924,
-        "district_mae": 28970.02614842485
+        "district_mae": 28970.02614842485,
+        "district_bias": 28970.02614842485,
+        "district_median_ratio": 849.7407422361222
       },
       "likely_zoning": {
         "ratio_total": 0.9687860574037997,
         "district_spearman": -0.36917799860731676,
-        "district_mae": 349.9245701024586
+        "district_mae": 349.9245701024586,
+        "district_bias": -7.903370265357896,
+        "district_median_ratio": 2.0028468669994446
       },
       "trend": {
         "ratio_total": 0.3170089520800421,
         "district_spearman": 0.5058314273325766,
-        "district_mae": 225.44000000000003
+        "district_mae": 225.44000000000003,
+        "district_bias": -172.93333333333334,
+        "district_median_ratio": 0.9294871794871795
+      },
+      "likely_yield": {
+        "ratio_total": 0.12315092142560748,
+        "district_spearman": -0.2831559406793983,
+        "district_mae": 246.48244630555683,
+        "district_bias": -222.01818669503615,
+        "district_median_ratio": 1.0177660957305832
+      }
+    },
+    "calibration": {
+      "E": {
+        "bins": 10,
+        "reliability": [
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 6.777822963264199e-05,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.0,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.0,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.0,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 0.016866879410147608,
+            "observed_rate": 0.005015928963600624,
+            "n": 14753
+          }
+        ],
+        "ece": 0.0012592793087787477,
+        "observed_over_predicted": 0.34140678997856333,
+        "calibration_intercept": -3.0088865585408033,
+        "calibration_slope": 0.371429605564124,
+        "brier": 0.0016026677421377014,
+        "brier_prevalence": 0.0005757900491736555,
+        "brier_skill": -1.7834238268580163,
+        "prevalence_train": 0.0006318449873631002,
+        "prevalence_test": 0.0005761188567090735
+      },
+      "E+C+Z": {
+        "bins": 10,
+        "reliability": [
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00033889114816320996,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.0011522299037549138,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.0,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00020333468889792598,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00020333468889792598,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 6.777822963264199e-05,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 1.0000000000000004e-06,
+            "observed_rate": 0.00013555645926528398,
+            "n": 14754
+          },
+          {
+            "mean_predicted": 0.013573719954432132,
+            "observed_rate": 0.003389141191622043,
+            "n": 14753
+          }
+        ],
+        "ece": 0.0012549211563568769,
+        "observed_over_predicted": 0.42418159148657186,
+        "calibration_intercept": -4.771259377088407,
+        "calibration_slope": 0.21072643029907684,
+        "brier": 0.0017402511771787358,
+        "brier_prevalence": 0.0005757900491736555,
+        "brier_skill": -2.0223710529146097,
+        "prevalence_train": 0.0006318449873631002,
+        "prevalence_test": 0.0005761188567090735
       }
     },
     "scenario_existing_only": {
@@ -258,7 +402,8 @@
         "plan_buildout": 0.0,
         "likely_zoning": 4181.380676741076,
         "likely_plan": 0.0,
-        "trend": 1203.9999999999998
+        "trend": 1203.9999999999998,
+        "likely_yield": 0.0
       },
       "capacity_homes_per_acre": {
         "sf": 12.1,
@@ -269,17 +414,23 @@
       "zoning_buildout": {
         "ratio_total": 115.41558510436356,
         "district_spearman": -0.22939215447444924,
-        "district_mae": 28970.02614842485
+        "district_mae": 28970.02614842485,
+        "district_bias": 28970.02614842485,
+        "district_median_ratio": 849.7407422361222
       },
       "likely_zoning": {
         "ratio_total": 1.1009427795526794,
         "district_spearman": -0.08602205792791848,
-        "district_mae": 351.242078292773
+        "district_mae": 351.242078292773,
+        "district_bias": 25.55871178273838,
+        "district_median_ratio": 1.1986002722648703
       },
       "trend": {
         "ratio_total": 0.3170089520800421,
         "district_spearman": 0.5058314273325766,
-        "district_mae": 225.44000000000003
+        "district_mae": 225.44000000000003,
+        "district_bias": -172.93333333333334,
+        "district_median_ratio": 0.9294871794871795
       }
     },
     "destination": {
@@ -315,5 +466,5 @@
       }
     }
   },
-  "seconds": 206.0
+  "seconds": 460.3
 }

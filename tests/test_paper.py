@@ -23,3 +23,11 @@ def test_no_number_is_typed_into_the_text():
     body = paper.TEMPLATE.read_text().split("\\section{Introduction}")[1].split("\\bibliographystyle")[0]
     body = re.sub(r"\\begin\{figure\}.*?\\end\{figure\}", "", body, flags=re.S)
     assert not re.findall(r"(?<![\w@.])\d+\.\d+(?![\w@])", body.replace("0.04", "")), "decimal typed into the text"
+
+
+def test_supplement_is_current():
+    text = paper.render_supplement()  # raises if a placeholder has no value
+    assert "@@" not in text
+    assert paper.SUPP_OUT.read_text() == text, "run: python -I -m planarena.paper"
+    keys = {e["key"] for e in parse_bib((ROOT / "docs" / "refs.bib").read_text())}
+    assert paper.citations(paper.SUPP_TEMPLATE.read_text()) <= keys

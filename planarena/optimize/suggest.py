@@ -104,10 +104,13 @@ class Suggester:
                 gain += coef[k] * g
         return gain
 
-    def _access_gain(self, use, st, acc, mask, pu) -> np.ndarray:
-        """Need-weighted marginal change of the resident-weighted access shares, for each (parcel, use)."""
+    def _access_gain(self, use, st, acc, mask, pu) -> dict[str, np.ndarray]:
+        """First-order change of the five resident-weighted indicators (park, services and facility access, land-use
+        mix, green cover) for each (parcel, use): the change in what residents near the parcel can reach, plus the
+        change in who is counted when the parcel's own residents change."""
         e = self.e
         n = e.n
+        rows = np.arange(n)
         R = st["residents"] * mask
         Rtot = max(R.sum(), 1.0)
         cell = e.cell
@@ -116,6 +119,10 @@ class Suggester:
         def conv(weights, k):
             r = np.bincount(cell, weights=weights, minlength=nx * ny).reshape(ny, nx)
             return np.clip(fftconvolve(r, k, mode="same").ravel(), 0, None)
+
+        def spread(per_cell, k):
+            """Kernel sum of a per-cell quantity, read at each parcel's cell (signed)."""
+            return fftconvolve(per_cell.reshape(ny, nx), k, mode="same").ravel()[cell]
 
         gains = {}
         # Park access (threshold): residents near p who lack access and would cross the threshold.
@@ -135,19 +142,61 @@ class Suggester:
                 g_park[:, u] = np.where(losing, -near_has * frac_new * 0.5, 0.0)
         gains["park_access"] = g_park / Rtot
 
-        # Services / facilities adequacy = mean over residents of min(ratio / target, 1).
-        # Added floor area helps only residents in under-served cells (ratio < target).
+        # Services / facilities adequacy = mean over residents of min(ratio / target, 1), where the ratio is floor
+        # area per resident within the radius (all residents, as in the engine). Added floor area helps only
+        # residents in under-served cells; added residents dilute the ratio there.
+        d_res = pu["residents"] - pu["residents"][rows, use][:, None]
+
         def adequacy_gain(fa_key, kernel, target):
-            RW = conv(R, kernel)
+            RW = conv(st["residents"] * 1.0, kernel)
             FA = conv(st[fa_key] * 1.0, kernel)
             ratio = np.divide(FA, RW, out=np.zeros_like(FA), where=RW > 1)
-            weight = np.divide(Rc, RW, out=np.zeros_like(Rc), where=RW > 1) * (ratio < target) / target
-            G = np.clip(fftconvolve(weight.reshape(ny, nx), kernel, mode="same").ravel(), 0, None)[cell]
-            d_fa = pu[fa_key] - pu[fa_key][np.arange(n), use][:, None]
-            return d_fa * G[:, None] / Rtot
+            under = (ratio < target) & (RW > 1)
+            weight = np.divide(Rc, RW, out=np.zeros_like(Rc), where=RW > 1) * under / target
+            G = spread(weight, kernel)
+            dil = spread(-weight * ratio, kernel)  # d(adequacy)/d(residents nearby)
+            d_fa = pu[fa_key] - pu[fa_key][rows, use][:, None]
+            return (d_fa * G[:, None] + d_res * dil[:, None]) / Rtot
 
         gains["services_access"] = adequacy_gain("services_fa", e.k_walk, e.t_serv)
         gains["facility_access"] = adequacy_gain("pubfac_fa", e.k_fac, e.t_fac)
+
+        # Land-use mix (normalised entropy of five land groups within the walk radius) and green cover (open-space
+        # share of that land). Moving a lot of area a from group g0 to g1 changes each nearby cell's land by
+        # a * (e_g1 - e_g0); the gradient of entropy is -(log s_g + H log G) / (T log G). Parking and vacant land
+        # belong to no group. Shares are floored at one median lot so that a first lot of a missing group counts
+        # a finite amount.
+        groups = [("res",), ("mix", "com"), ("ind", "tra"), ("pub",), ("opn",)]
+        gid = np.full(N_USES, -1)
+        for j, grp in enumerate(groups):
+            for k in grp:
+                gid[U[k]] = j
+        ng = len(groups)
+        g_now = np.where(use >= 0, gid[np.clip(use, 0, None)], -1)
+        land = np.stack([conv(np.where(g_now == j, e.lot, 0.0), e.k_walk) for j in range(ng)])
+        lot_med = float(np.median(e.lot[mask])) if mask.any() else float(np.median(e.lot))
+        T = np.maximum(land.sum(0), lot_med)
+        s = land / T
+        sf = np.maximum(s, lot_med / T)
+        H = -(s * np.log(np.where(s > 0, s, 1.0))).sum(0) / np.log(ng)
+        d_mix = np.zeros((ng + 1, n))  # last row: no group
+        d_green = np.zeros((ng + 1, n))
+        for j in range(ng):
+            d_mix[j] = spread(Rc * -(np.log(sf[j]) + H * np.log(ng)) / (T * np.log(ng)), e.k_walk)
+            d_green[j] = spread(Rc * ((j == ng - 1) - s[-1]) / T, e.k_walk)
+        g_use = np.where(gid >= 0, gid, ng)  # group row per use
+        g_cur = np.where(g_now >= 0, g_now, ng)
+        a = e.lot[:, None]
+        gains["mix"] = a * (d_mix[g_use].T - d_mix[g_cur, rows][:, None]) / Rtot
+        gains["green_cover"] = a * (d_green[g_use].T - d_green[g_cur, rows][:, None]) / Rtot
+
+        # Who is counted: a parcel's own residents enter every resident-weighted mean with its own value.
+        own = {"park_access": acc["park_access"].astype(float), "services_access": acc["services_access"],
+               "facility_access": acc["facility_access"], "mix": acc["mix"], "green_cover": acc["green_cover"]}
+        dR = d_res * mask[:, None]
+        for k, v in own.items():
+            mean = float((v * R).sum() / Rtot)
+            gains[k] = gains[k] + dR * (v - mean)[:, None] / Rtot
         return gains
 
     def feasible(self, cfg: SuggestConfig, use: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

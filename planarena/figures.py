@@ -41,7 +41,7 @@ def integration():
         return None
     names = list(r["rezonings"])
     keys = [("capacity", "Capacity", MUTED), ("capacity_prorated_to_2025", "Capacity pro-rated to 2025", B),
-            ("likelihood_weighted", "Likelihood-weighted", A), ("observed", "Built by 2025", INK)]
+            ("likelihood_weighted", "Probability × capacity", A), ("observed", "Built by 2025", INK)]
     fig, ax = plt.subplots(figsize=(6.4, 3.2))
     x = np.arange(len(names))
     w = 0.2
@@ -145,8 +145,81 @@ def layers():
     return _save(fig, "integration_layers")
 
 
+def impact_scatter():
+    """Observed against predicted change on the held-out evaluation lots (Manhattan 2015-2025)."""
+    r = _load("impact_heldout")
+    if not r or "points_value" not in r:
+        return None
+    # (result key, title, unit, linear range around zero, decades labelled)
+    panels = [("points_homes", "Homes", "homes", 1.0, [1, 10, 100]),
+              ("points_value", "Assessed value", "USD", 1e4, [1e5, 1e7]),
+              ("points_ghg", "Building emissions", "tCO$_2$e/yr", 10.0, [10, 1000])]
+    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.5))
+    for ax, (k, title, unit, th, dec) in zip(axes, panels):
+        pr, ob = np.array(r[k]["predicted"]), np.array(r[k]["observed"])
+        lim = float(np.percentile(np.abs(np.r_[pr, ob]), 99.5)) * 1.1 or 1.0
+        ax.scatter(pr, ob, s=4, alpha=0.35, color=A, linewidths=0)
+        ax.plot([-lim, lim], [-lim, lim], color=MUTED, lw=0.8, ls="--")
+        ticks = [-d for d in dec[::-1]] + [0] + dec
+        lab = [("$-$" if t < 0 else "") + (f"{abs(t):g}" if abs(t) < 1e4 else f"$10^{{{int(np.log10(abs(t)))}}}$")
+               if t else "0" for t in ticks]
+        for axis in ("x", "y"):
+            getattr(ax, f"set_{axis}scale")("symlog", linthresh=th)
+            getattr(ax, f"set_{axis}lim")(-lim, lim)
+            getattr(ax, f"set_{axis}ticks")(ticks, lab)
+        ax.set_title(f"{title} (n = {len(pr):,})", fontsize=8, loc="left")
+        ax.set_xlabel(f"predicted change ({unit})", fontsize=7)
+        ax.tick_params(labelsize=6)
+    axes[0].set_ylabel("observed change", fontsize=7)
+    return _save(fig, "impact_scatter")
+
+
+def reliability():
+    """Reliability of redevelopment probabilities: Manhattan by horizon (latest origin), and each city's test window."""
+    m, c = _load("calibration_manhattan"), (_load("calibration_cities") or {}).get("cities")
+    if not m:
+        return None
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.7))
+    ax = axes[0]
+    for h, col in ((1, A), (3, B), (5, C)):
+        rows = [o for o in m["origins"] if o["horizon"] == h]
+        if not rows:
+            continue
+        o = rows[-1]
+        rel = o["raw"]["reliability"]
+        ax.plot([b["mean_predicted"] for b in rel], [max(b["observed_rate"], 1e-4) for b in rel], marker="o", ms=3,
+                color=col, lw=1, label=f"{h}-year, {o['test'].replace('->', '–')}")
+    ax.set_title("Manhattan (latest origin per horizon)", fontsize=8, loc="left")
+    ax = axes[1]
+    cols = [A, B, C, D, MUTED, INK, "#8e6bbf"]
+    names = {"0644000": "Los Angeles", "4819000": "Dallas", "3651000": "New York", "5553000": "Milwaukee",
+             "0455000": "Phoenix", "0666000": "San Diego", "1714000": "Chicago"}
+    if c:
+        for (g, name), col in zip(names.items(), cols):
+            cal = c.get(g)
+            if not cal:
+                continue
+            k = next(x for x in cal if x not in ("E", "train", "test"))
+            rel = cal[k]["raw"]["reliability"]
+            ax.plot([b["mean_predicted"] for b in rel], [max(b["observed_rate"], 1e-4) for b in rel], marker="o",
+                    ms=2.5, color=col, lw=0.9, label=name)
+    ax.set_title("Seven cities, all blocks (test window)", fontsize=8, loc="left")
+    for ax in axes:
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        lo, hi = 1e-4, 1.0
+        ax.plot([lo, hi], [lo, hi], color=MUTED, lw=0.8, ls="--")
+        ax.set_xlim(lo, hi)
+        ax.set_ylim(lo, hi)
+        ax.set_xlabel("mean predicted probability (decile; observed 0 drawn at 0.0001)", fontsize=7)
+        ax.tick_params(labelsize=6)
+        ax.legend(frameon=False, fontsize=6, loc="upper left")
+    axes[0].set_ylabel("observed rate", fontsize=7)
+    return _save(fig, "reliability")
+
+
 def main():
-    made = [f() for f in (integration, rolling, crosscity, layers)]
+    made = [f() for f in (integration, rolling, crosscity, layers, impact_scatter, reliability)]
     print("written:", ", ".join(m for m in made if m))
 
 

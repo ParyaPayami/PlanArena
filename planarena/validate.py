@@ -634,14 +634,10 @@ def _metrics(pred: np.ndarray, obs: np.ndarray) -> dict:
             "sign_agreement": round(float(np.mean(np.sign(np.round(p, 6)) == np.sign(np.round(o, 6)))), 3)}
 
 
-def changes(min_sqft: float = 2000.0) -> dict:
-    """Prediction of change (R1): lots that changed use or floor area between MapPLUTO 15v1 and 25v3.1.
-
-    The 2015 engine gets the 2015 state plus the observed new use and floor area and predicts the change in homes,
-    jobs, assessed value and emissions. Observed changes: homes and value from MapPLUTO (value net of the district
-    trend of unchanged lots), jobs from LODES 2015 -> 2023 by 2020 census block (net of the trend of blocks without
-    changes), emissions from LL84 calendar 2015 -> 2024 metered energy x LL97 factors.
-    """
+def _change_events(min_sqft: float = 2000.0) -> dict:
+    """Lots that changed use or floor area between MapPLUTO 15v1 and 25v3.1, with their observed changes in homes,
+    assessed value (net of the district trend) and emissions (LL84 2015 -> 2024), and the LODES 2015/2023 job counts
+    by 2020 census block. Shared by changes() and planarena.models.impact_test."""
     import pyogrio
 
     from planarena.calibrate import LL97, plausible_ll84
@@ -728,6 +724,23 @@ def changes(min_sqft: float = 2000.0) -> dict:
     w15, w23 = w15.reindex(allb, fill_value=0), w23.reindex(allb, fill_value=0)
     quiet = ~allb.isin(ev.block.unique())
     jg = float(w23[quiet].sum() / w15[quiet].sum())
+
+    return {"ev": ev, "p0": p0, "p1": p1, "w15": w15, "w23": w23, "jg": jg, "audit": audit}
+
+
+def changes(min_sqft: float = 2000.0) -> dict:
+    """Prediction of change (R1): lots that changed use or floor area between MapPLUTO 15v1 and 25v3.1.
+
+    The 2015 engine gets the 2015 state plus the observed new use and floor area and predicts the change in homes,
+    jobs, assessed value and emissions. Observed changes: homes and value from MapPLUTO (value net of the district
+    trend of unchanged lots), jobs from LODES 2015 -> 2023 by 2020 census block (net of the trend of blocks without
+    changes), emissions from LL84 calendar 2015 -> 2024 metered energy x LL97 factors.
+    """
+    d = _change_events(min_sqft)
+    ev, p0, p1, w15, w23, jg, audit = d["ev"], d["p0"], d["p1"], d["w15"], d["w23"], d["jg"], d["audit"]
+    from planarena.indicators.engine import load_engine
+    from planarena.models.common import spatial_folds
+    from planarena.models.transition import size_class
 
     # Predictions per delta form
     lodes15_total = int(w15.sum())

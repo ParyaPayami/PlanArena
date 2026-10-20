@@ -45,6 +45,7 @@ transition:
 
 rolling:
 	$(RUN) planarena.models.rolling
+	$(RUN) planarena.models.calibration_report
 
 ablation:
 	$(RUN) planarena.models.ablation all
@@ -60,12 +61,14 @@ CITY_LIST := "New York" "Los Angeles" Chicago Houston Phoenix Philadelphia "San 
 cities:
 	for c in $(CITY_LIST); do $(RUN) planarena.cities.build "$$c" || exit 1; done
 	$(RUN) planarena.cities.adapters.philadelphia_plan
+	$(RUN) planarena.cities.adapters.philadelphia_check
 	$(RUN) planarena.cities.build Philadelphia
 	for c in $(CITY_LIST); do $(RUN) planarena.cities.ingestion "$$c" > /dev/null || exit 1; done
 	$(RUN) planarena.cities.ingestion --summary > /dev/null
 	$(RUN) planarena.models.integration
 	$(RUN) planarena.models.integration transfer
 	$(RUN) planarena.models.integration profile
+	$(RUN) planarena.models.leakage_audit
 	$(RUN) planarena.cities.mke_history
 	$(RUN) planarena.models.crosscity
 	$(RUN) planarena.models.replay
@@ -78,6 +81,8 @@ city:
 validate:
 	$(RUN) planarena.tools.latency
 	$(RUN) planarena.validate all
+	$(RUN) planarena.models.impact_test
+	$(RUN) planarena.optimize.pareto_test
 
 report:
 	$(RUN) planarena.report

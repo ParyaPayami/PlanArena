@@ -157,14 +157,14 @@ Models are in D and the optimizer in E.
 | C | Change in homes after real use changes (3,234) | r 0.872 (baseline 0.435); total 1.29× |
 | C | Change in emissions after real use changes (193 buildings) | r 0.857 (baseline 0.090); total 1.00× |
 | C | Change in jobs by census block | r 0.068: no useful skill |
-| D | Redevelopment within 5 years, temporal holdout 2020→2025 | LightGBM AUC 0.847, precision in top 1% 26% (base rate 1.4%); best baseline Land-value share of assessed value AUC 0.754 |
+| D | Redevelopment within 5 years, temporal holdout 2020→2025 | LightGBM AUC 0.855, precision in top 1% 26% (base rate 1.2%); best baseline Underbuilt share of zoning capacity AUC 0.802 |
 | A | Building-level emissions error vs a single citywide intensity | median 31% vs 29% (totals 1.04× vs 0.96×) |
 | A | Jobs rates tested forward (fit 2015, test 2023), block median error | fitted rates 46%; CBECS 45%; flat rate 48% |
-| D | Redevelopment, rolling origin (15 tests, 1-, 3- and 5-year horizons) | AUC 0.847–0.952; above the best simple baseline in every test |
-| D | Labels vs DOB certificates of occupancy (2020→2025) | 55% of labelled lots have a certificate (a lower bound); labels are noisy |
-| C | Homes built by 2025 on the development sites of three rezonings (561) | likelihood-weighted projection 585; capacity 8,423 (pro-rated 5,207); three cases only |
-| D | Redevelopment model moved between cities (new buildings, 3 years) | Milwaukee: trained on Manhattan AUC 0.951 vs own city 0.946; Manhattan: trained on Milwaukee 0.774 vs own city 0.903 (best baseline 0.857) |
-| E | Optimizer vs exhaustive search (15 single-block areas, up to 2 changes) | optimum found in 93% with exact re-scoring; small cases only |
+| D | Redevelopment, rolling origin (15 tests, 1-, 3- and 5-year horizons) | AUC 0.851–0.902; above the best simple baseline in every test |
+| D | Labels vs DOB certificates of occupancy (2020→2025) | 52% of labelled lots have a certificate (a lower bound); labels are noisy |
+| C | Homes built by 2025 on the development sites of three rezonings (561) | likelihood-weighted projection 607; capacity 8,423 (pro-rated 5,207); three cases only |
+| D | Redevelopment model moved between cities (new buildings, 3 years) | Milwaukee: trained on Manhattan AUC 0.946 vs own city 0.920; Manhattan: trained on Milwaukee 0.830 vs own city 0.903 (best baseline 0.857) |
+| E | Optimizer vs exhaustive search (15 single-block areas, up to 2 changes) | optimum found in 100% with exact re-scoring; small cases only |
 <!-- END GENERATED: key_results -->
 
 **What this supports, and what it does not**
@@ -230,8 +230,8 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 | The council winner beats no change in both simulated electorates | 12 of 12 |
 | The simulated residents' winner is the council's winner | 1 of 12 |
 | The council winner is also the Nash bargaining solution | 0 of 12 |
-| One insincere ballot could change the Schulze result | 6 of 12 |
-| Median robustness of the winner (coefficients and seats varied, 200 draws) | 75.8% |
+| One insincere ballot could change the Schulze result | 8 of 12 |
+| Median robustness of the winner (coefficients and seats varied, 200 draws) | 67.8% |
 <!-- END GENERATED: vote -->
 
 ## Honesty rules built in

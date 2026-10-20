@@ -69,7 +69,7 @@ def labels(city: str, y0: int, y1: int) -> pd.DataFrame:
         t1 = np.where(ok, j1, 0)
         fa0, fa1 = p0.bldg_area.to_numpy(), p1.bldg_area.to_numpy()[t1]
         grew = (fa1 - fa0 > 0.25 * fa0) & (fa1 - fa0 > 2000)
-        newb = p1.year_built.to_numpy()[t1] >= y0
+        newb = (p1.year_built.to_numpy()[t1] >= y0) & ~(p0.year_built.to_numpy() >= y0)  # not already on the t0 roll
         lab = pd.DataFrame({"matched": ok, "developed": ok & (grew | newb), "dest": np.where(ok, p1.use.to_numpy()[t1], -1),
                             "new_building": ok & newb, "floor_area_growth": ok & grew, "j1": j1,
                             "use0": p0.use.to_numpy()})

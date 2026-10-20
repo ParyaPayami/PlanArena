@@ -1,0 +1,465 @@
+{
+ "test": "For every district plan used, the map is registered again on its own pages, and each parcel's category is read in two ways: from the vector shape that contains the parcel's point (the method used) and from the colour of the rendered page around that point (pixels matched to the legend's rendered colours). Agreement between the two measures how often the category drawn on a parcel is the one the method assigns, independently of the shape parsing (both use the same registration, which the shifted-map control in the main run checks).",
+ "districts": {
+  "Central": {
+   "pages": [
+    90,
+    91
+   ],
+   "parcels": 30740,
+   "vector_labelled": 28233,
+   "pixel_labelled": 28648,
+   "both": 28222,
+   "agreement": 0.9948,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 3.37,
+   "top_disagreements": [
+    {
+     "vector": "Commercial Mixed Residential",
+     "pixels": "Residential Medium Density",
+     "parcels": 45
+    },
+    {
+     "vector": "Commercial Consumer",
+     "pixels": "Commercial Mixed Residential",
+     "parcels": 25
+    },
+    {
+     "vector": "Residential High Density",
+     "pixels": "Residential Medium Density",
+     "parcels": 12
+    }
+   ]
+  },
+  "Central Northeast": {
+   "pages": [
+    70,
+    71
+   ],
+   "parcels": 23938,
+   "vector_labelled": 23909,
+   "pixel_labelled": 23782,
+   "both": 23770,
+   "agreement": 0.9986,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 4.02,
+   "top_disagreements": [
+    {
+     "vector": "Transportation",
+     "pixels": "Residential Medium Density",
+     "parcels": 6
+    },
+    {
+     "vector": "Residential Low Density",
+     "pixels": "Residential Medium Density",
+     "parcels": 5
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Residential Low Density",
+     "parcels": 4
+    }
+   ]
+  },
+  "Lower Far Northeast + Upper Far Northeast": {
+   "pages": [
+    78,
+    79
+   ],
+   "parcels": 40193,
+   "vector_labelled": 39942,
+   "pixel_labelled": 39798,
+   "both": 39715,
+   "agreement": 0.9964,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 3.73,
+   "top_disagreements": [
+    {
+     "vector": "Transportation",
+     "pixels": "Mixed Residential",
+     "parcels": 36
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Low Density",
+     "parcels": 30
+    },
+    {
+     "vector": "Low Density",
+     "pixels": "Transportation",
+     "parcels": 16
+    }
+   ]
+  },
+  "Lower North": {
+   "pages": [
+    78,
+    79
+   ],
+   "parcels": 45047,
+   "vector_labelled": 42166,
+   "pixel_labelled": 42324,
+   "both": 42155,
+   "agreement": 0.9991,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 1.43,
+   "top_disagreements": [
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Commercial Mixed Residential",
+     "parcels": 9
+    },
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Civic/Institution",
+     "parcels": 8
+    },
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Industrial",
+     "parcels": 4
+    }
+   ]
+  },
+  "Lower Northeast": {
+   "pages": [
+    64,
+    65
+   ],
+   "parcels": 32462,
+   "vector_labelled": 32420,
+   "pixel_labelled": 31635,
+   "both": 31621,
+   "agreement": 0.998,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 3.22,
+   "top_disagreements": [
+    {
+     "vector": "Transportation",
+     "pixels": "Residential Medium Density",
+     "parcels": 22
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Residential Low Density",
+     "parcels": 13
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Commercial Mixed Residential",
+     "parcels": 7
+    }
+   ]
+  },
+  "Lower Northwest": {
+   "pages": [
+    78,
+    79
+   ],
+   "parcels": 18926,
+   "vector_labelled": 18457,
+   "pixel_labelled": 18589,
+   "both": 18394,
+   "agreement": 0.9971,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 3.85,
+   "top_disagreements": [
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Transportation",
+     "parcels": 11
+    },
+    {
+     "vector": "Active Recreation",
+     "pixels": "Park / Open Space",
+     "parcels": 6
+    },
+    {
+     "vector": "Residential Low Density",
+     "pixels": "Transportation",
+     "parcels": 5
+    }
+   ]
+  },
+  "Lower South": {
+   "pages": [
+    68,
+    69
+   ],
+   "parcels": 2189,
+   "vector_labelled": 2046,
+   "pixel_labelled": 2086,
+   "both": 2020,
+   "agreement": 0.9955,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 3.98,
+   "top_disagreements": [
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Transportation",
+     "parcels": 4
+    },
+    {
+     "vector": "Active Recreation",
+     "pixels": "Park / Open Space",
+     "parcels": 2
+    },
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Vacant",
+     "parcels": 1
+    }
+   ]
+  },
+  "Lower Southwest": {
+   "pages": [
+    68,
+    69
+   ],
+   "parcels": 15494,
+   "vector_labelled": 14747,
+   "pixel_labelled": 14789,
+   "both": 14719,
+   "agreement": 0.9982,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 2.34,
+   "top_disagreements": [
+    {
+     "vector": "Consumer",
+     "pixels": "Business / Professional",
+     "parcels": 5
+    },
+    {
+     "vector": "Medium Density",
+     "pixels": "Transportation",
+     "parcels": 4
+    },
+    {
+     "vector": "Low Density",
+     "pixels": "Medium Density",
+     "parcels": 3
+    }
+   ]
+  },
+  "North": {
+   "pages": [
+    82,
+    83
+   ],
+   "parcels": 56344,
+   "vector_labelled": 49458,
+   "pixel_labelled": 50040,
+   "both": 49224,
+   "agreement": 0.9986,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 1.43,
+   "top_disagreements": [
+    {
+     "vector": "Mixed Residential",
+     "pixels": "Transportation",
+     "parcels": 20
+    },
+    {
+     "vector": "Medium Density",
+     "pixels": "Low Density",
+     "parcels": 13
+    },
+    {
+     "vector": "Active Recreation",
+     "pixels": "Park / Open Space",
+     "parcels": 11
+    }
+   ]
+  },
+  "North Delaware": {
+   "pages": [
+    70,
+    71
+   ],
+   "parcels": 32633,
+   "vector_labelled": 32466,
+   "pixel_labelled": 31646,
+   "both": 31591,
+   "agreement": 0.9986,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 3.56,
+   "top_disagreements": [
+    {
+     "vector": "Transportation",
+     "pixels": "Low Density",
+     "parcels": 14
+    },
+    {
+     "vector": "Active Recreation",
+     "pixels": "Park / Open Space",
+     "parcels": 8
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Medium Density",
+     "parcels": 4
+    }
+   ]
+  },
+  "River Wards": {
+   "pages": [
+    98,
+    99
+   ],
+   "parcels": 33253,
+   "vector_labelled": 30570,
+   "pixel_labelled": 29679,
+   "both": 29269,
+   "agreement": 0.9958,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 1.49,
+   "top_disagreements": [
+    {
+     "vector": "Transportation",
+     "pixels": "Residential Medium Density",
+     "parcels": 32
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Residential Low Density",
+     "parcels": 18
+    },
+    {
+     "vector": "Residential Medium Density",
+     "pixels": "Transportation",
+     "parcels": 12
+    }
+   ]
+  },
+  "University Southwest": {
+   "pages": [
+    72,
+    73
+   ],
+   "parcels": 20629,
+   "vector_labelled": 20596,
+   "pixel_labelled": 20615,
+   "both": 20596,
+   "agreement": 0.9995,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 1.2,
+   "top_disagreements": [
+    {
+     "vector": "Active Recreation",
+     "pixels": "Park / Open Space",
+     "parcels": 6
+    },
+    {
+     "vector": "Commercial Consumer",
+     "pixels": "Commercial Mixed Residential",
+     "parcels": 1
+    },
+    {
+     "vector": "Commercial Consumer",
+     "pixels": "Residential Medium Density",
+     "parcels": 1
+    }
+   ]
+  },
+  "Upper North": {
+   "pages": [
+    76,
+    77
+   ],
+   "parcels": 50298,
+   "vector_labelled": 49433,
+   "pixel_labelled": 49447,
+   "both": 49365,
+   "agreement": 0.9973,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 1.62,
+   "top_disagreements": [
+    {
+     "vector": "Mixed Residential",
+     "pixels": "Transportation",
+     "parcels": 37
+    },
+    {
+     "vector": "Low Density",
+     "pixels": "Vacant",
+     "parcels": 30
+    },
+    {
+     "vector": "Transportation",
+     "pixels": "Medium Density",
+     "parcels": 8
+    }
+   ]
+  },
+  "Upper Northwest": {
+   "pages": [
+    92,
+    93
+   ],
+   "parcels": 28738,
+   "vector_labelled": 27752,
+   "pixel_labelled": 28359,
+   "both": 27711,
+   "agreement": 0.9937,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 7.25,
+   "top_disagreements": [
+    {
+     "vector": "Low Density",
+     "pixels": "Medium Density",
+     "parcels": 32
+    },
+    {
+     "vector": "Medium Density",
+     "pixels": "Low Density",
+     "parcels": 15
+    },
+    {
+     "vector": "Mixed Residential",
+     "pixels": "Medium Density",
+     "parcels": 15
+    }
+   ]
+  },
+  "West": {
+   "pages": [
+    80,
+    81
+   ],
+   "parcels": 44601,
+   "vector_labelled": 43417,
+   "pixel_labelled": 43422,
+   "both": 43319,
+   "agreement": 0.9991,
+   "same_as_stored_labels": 1.0,
+   "median_error_ft": 1.13,
+   "top_disagreements": [
+    {
+     "vector": "Medium Density",
+     "pixels": "Transportation",
+     "parcels": 11
+    },
+    {
+     "vector": "Low Density",
+     "pixels": "Medium Density",
+     "parcels": 5
+    },
+    {
+     "vector": "Medium Density",
+     "pixels": "Mixed Residential",
+     "parcels": 4
+    }
+   ]
+  }
+ },
+ "overall": {
+  "districts": 15,
+  "parcels_read_both_ways": 451691,
+  "agreement": 0.9976,
+  "agreement_range": [
+   0.9937,
+   0.9995
+  ],
+  "manual_sample": 150
+ }
+}

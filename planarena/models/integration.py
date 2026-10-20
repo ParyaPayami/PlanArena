@@ -98,7 +98,9 @@ def panel_los_angeles(t0: int, t1: int) -> pd.DataFrame:
     df["fa0"], df["units0"], df["year0"] = fa0, r0.homes.fillna(0).to_numpy(), r0.yb.to_numpy()
     df["land_share0"] = np.divide(r0.land.to_numpy(), r0.tot.to_numpy(), out=np.full(len(df), np.nan),
                                   where=r0.tot.to_numpy() > 0)
-    df["developed"] = ((r1.yb.to_numpy() >= t0) | ((fa1 > 1.25 * fa0) & (fa1 - fa0 > 2000))).astype(bool)
+    # a building already on the t0 roll with a year built of t0 or later is not new in (t0, t1]
+    newb = (r1.yb.to_numpy() >= t0) & ~(r0.yb.to_numpy() >= t0)
+    df["developed"] = (newb | ((fa1 > 1.25 * fa0) & (fa1 - fa0 > 2000))).astype(bool)
     df["homes_added"] = np.clip(r1.homes.fillna(0).to_numpy() - df.units0.to_numpy(), 0, None)
     df["dest16"] = r1.cls.fillna(-1).astype("int16").to_numpy()
     df["observed"] = r0.fa.notna().to_numpy() & r1.fa.notna().to_numpy()  # lots on both rolls
@@ -175,7 +177,9 @@ def panel_dallas(t0: int, t1: int) -> pd.DataFrame:
     df["fa0"], df["units0"], df["year0"] = fa0, r0.homes.to_numpy(), r0.yb.to_numpy()
     df["land_share0"] = np.divide(r0.land.to_numpy(), r0.tot.to_numpy(), out=np.full(len(df), np.nan),
                                   where=np.nan_to_num(r0.tot.to_numpy()) > 0)
-    df["developed"] = ((r1.yb.to_numpy() >= t0) | ((fa1 > 1.25 * fa0) & (fa1 - fa0 > 2000))).astype(bool)
+    # a building already on the t0 roll with a year built of t0 or later is not new in (t0, t1]
+    newb = (r1.yb.to_numpy() >= t0) & ~(r0.yb.to_numpy() >= t0)
+    df["developed"] = (newb | ((fa1 > 1.25 * fa0) & (fa1 - fa0 > 2000))).astype(bool)
     df["homes_added"] = np.clip(r1.homes.to_numpy() - df.units0.to_numpy(), 0, None)
     df["dest16"] = r1.cls.to_numpy().astype("int16")
     df["observed"] = r0.known.to_numpy() & r1.known.to_numpy()
@@ -553,8 +557,74 @@ def _gain_ci(s_full, s_base, y, tiles, metric, reps=200):
     return [float(np.nanpercentile(out, 2.5)), float(np.nanpercentile(out, 97.5))]
 
 
-def scenario(p: pd.DataFrame, likely: np.ndarray) -> dict:
-    """Homes added by district: observed vs zoning and plan build-out, likelihood-weighted, and the trend."""
+LOT_BINS = (0, 5_000, 10_000, 25_000, 100_000, np.inf)  # lot area, sq ft
+
+
+def calibration(prob: np.ndarray, y: np.ndarray, prevalence: float, bins: int = 10) -> dict:
+    """How well out-of-time probabilities match outcomes, not only how well they rank.
+
+    reliability: lots in ten equal-count bins of predicted probability, mean predicted vs observed rate;
+    ece: bin-size-weighted mean |predicted - observed| over those bins; observed_over_predicted: event totals;
+    calibration intercept and slope: logistic regression of the outcome on logit(p) (perfect: 0 and 1);
+    brier and brier_skill: against a constant forecast of the training-period prevalence."""
+    from sklearn.linear_model import LogisticRegression
+
+    prob = np.clip(np.asarray(prob, float), 1e-6, 1 - 1e-6)
+    y = np.asarray(y, bool)
+    order = np.argsort(prob)
+    rel = []
+    for chunk in np.array_split(order, bins):
+        rel.append({"mean_predicted": float(prob[chunk].mean()), "observed_rate": float(y[chunk].mean()),
+                    "n": int(len(chunk))})
+    ece = float(sum(r["n"] * abs(r["mean_predicted"] - r["observed_rate"]) for r in rel) / len(y))
+    lg = np.log(prob / (1 - prob)).reshape(-1, 1)
+    fit = LogisticRegression(C=1e6, max_iter=1000).fit(lg, y)
+    brier = float(np.mean((prob - y) ** 2))
+    ref = float(np.mean((prevalence - y) ** 2))
+    return {"bins": bins, "reliability": rel, "ece": ece,
+            "observed_over_predicted": float(y.sum() / prob.sum()),
+            "calibration_intercept": float(fit.intercept_[0]), "calibration_slope": float(fit.coef_[0, 0]),
+            "brier": brier, "brier_prevalence": ref, "brier_skill": 1 - brier / ref if ref > 0 else None,
+            "prevalence_train": prevalence, "prevalence_test": float(y.mean())}
+
+
+def recalibrator(p_oof: np.ndarray, y: np.ndarray):
+    """Logistic recalibration (intercept and slope on logit p) fitted on out-of-fold training-window probabilities;
+    returns a function to apply to test-window probabilities. Uses no test-window information."""
+    from sklearn.linear_model import LogisticRegression
+
+    lg = lambda q: np.log(np.clip(q, 1e-6, 1 - 1e-6) / (1 - np.clip(q, 1e-6, 1 - 1e-6))).reshape(-1, 1)
+    fit = LogisticRegression(C=1e6, max_iter=1000).fit(lg(p_oof), np.asarray(y, bool))
+    return lambda q: fit.predict_proba(lg(q))[:, 1]
+
+
+def yield_model(tr: pd.DataFrame):
+    """Expected homes added if a lot develops, learned from the training window's developed lots: the mean in the
+    cell of (zoning class, else existing class) x lot-size bin with at least 20 lots, else the class mean, else the
+    overall mean. Applied to the test window, it turns a probability of development into expected homes."""
+    d = tr[tr.developed.astype(bool) & tr.homes_added.notna()]
+    cls = lambda q: np.where(q.zone16.to_numpy() >= 0, q.zone16.to_numpy(), q.lu16.to_numpy())
+    size = lambda q: np.digitize(q.lot_area.to_numpy(), LOT_BINS[1:-1])
+    t = pd.DataFrame({"c": cls(d), "s": size(d), "h": d.homes_added.to_numpy()})
+    cell = t.groupby(["c", "s"]).h.agg(["mean", "size"])
+    by_c = t.groupby("c").h.agg(["mean", "size"])
+    overall = float(t.h.mean()) if len(t) else 0.0
+
+    def predict(q: pd.DataFrame) -> np.ndarray:
+        c, s_ = cls(q), size(q)
+        out = np.full(len(q), overall)
+        for i, (ci, si) in enumerate(zip(c, s_)):
+            if (ci, si) in cell.index and cell.loc[(ci, si), "size"] >= 20:
+                out[i] = cell.loc[(ci, si), "mean"]
+            elif ci in by_c.index and by_c.loc[ci, "size"] >= 20:
+                out[i] = by_c.loc[ci, "mean"]
+        return out
+    return predict
+
+
+def scenario(p: pd.DataFrame, likely: np.ndarray, train: pd.DataFrame | None = None) -> dict:
+    """Homes added by district: observed vs zoning and plan build-out, likelihood-weighted, the expected yield
+    (probability x homes a developing lot of its kind added in the training window), and the trend."""
     acres = np.maximum(p.lot_area.to_numpy(), 1) / 43560
     dens = p.units0.to_numpy() / acres
     lu = p.lu16.to_numpy()
@@ -569,14 +639,17 @@ def scenario(p: pd.DataFrame, likely: np.ndarray) -> dict:
     d = pd.DataFrame({"district": p.cd.to_numpy(), "observed": p.homes_added.to_numpy(),
                       "zoning_buildout": zone_inc, "plan_buildout": plan_inc,
                       "likely_zoning": likely * zone_inc, "likely_plan": likely * plan_inc,
-                      "trend": np.where(rec, p.units0.to_numpy(), 0.0) * years / 5}).groupby("district").sum()
+                      "trend": np.where(rec, p.units0.to_numpy(), 0.0) * years / 5,
+                      "likely_yield": likely * yield_model(train)(p) if train is not None else 0.0}).groupby("district").sum()
     res = {"city_total": {k: float(v) for k, v in d.sum().items()}, "capacity_homes_per_acre": {CLASSES[c].key: round(v, 1) for c, v in cap.items() if v}}
     for k in d.columns.drop("observed"):
         if d[k].sum() <= 0:
             continue
         res[k] = {"ratio_total": float(d[k].sum() / max(d.observed.sum(), 1)),
                   "district_spearman": float(d[k].rank().corr(d.observed.rank())),
-                  "district_mae": float((d[k] - d.observed).abs().mean())}
+                  "district_mae": float((d[k] - d.observed).abs().mean()),
+                  "district_bias": float((d[k] - d.observed).mean()),
+                  "district_median_ratio": float(np.median(d[k] / d.observed.clip(lower=1)))}
     return res
 
 
@@ -686,7 +759,8 @@ def evaluate_city(geoid: str) -> dict:
         res["temporal"] = {"train": list(windows[0]), "test": list(windows[1]), "n_lots": int(len(te)),
                            "developed": int(yte.sum()), "homes_added": float(np.nansum(te.homes_added)),
                            "sets": sets, "gains": gains, "scenario_model": full,
-                           "scenario": scenario(te, scores[full]) if homes else None,
+                           "scenario": scenario(te, scores[full], tr) if homes else None,
+                           "calibration": {k: calibration(scores[k], yte, float(ytr.mean())) for k in ("E", full)},
                            "scenario_existing_only": scenario(te, scores["E"]) if homes and "E" in scores else None,
                            "destination": destination(te, bte, spatial_folds(te, tile_m=TILE_M), has)}
         # conservative: lots whose zoning or plan changed after t0 (current layers only) are left out of both windows

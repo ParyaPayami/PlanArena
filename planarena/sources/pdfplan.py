@@ -407,6 +407,38 @@ def classify(polys, labs, transform: dict, parcel_points: np.ndarray) -> np.ndar
     return out
 
 
+def classify_pixels(transform: dict, parcel_points: np.ndarray, images: list, widths: list, colours: np.ndarray,
+                    colour_labels: np.ndarray, paper: np.ndarray, dpi: int = 300, tol: float = 10.0) -> np.ndarray:
+    """Plan label of each parcel point read from the rendered page instead of the vector shapes: the legend category
+    whose rendered colour (Lab) is nearest the pixels around the point (3 x 3, majority), if within `tol` delta E and
+    nearer than the paper; '' on line work, text or paper. An independent check of `classify` (same registration)."""
+    s, R, t = transform["s"], np.array(transform["R"]), np.array(transform["t"])
+    src = (R.T @ ((parcel_points - t) / s).T).T
+    x, y = src[:, 0], -src[:, 1]
+    offs = np.cumsum([0.0] + list(widths[:-1]))
+    page = np.searchsorted(offs, x, side="right") - 1
+    k = dpi / 72
+    C = np.vstack([colours, paper])
+    votes = np.full((9, len(x)), -1)
+    for pi, img in enumerate(images):
+        m = np.nonzero(page == pi)[0]
+        cx, cy = ((x[m] - offs[pi]) * k).astype(int), (y[m] * k).astype(int)
+        inside = (cx >= 0) & (cy >= 0) & (cx < img.shape[1]) & (cy < img.shape[0])
+        m, cx, cy = m[inside], cx[inside], cy[inside]
+        for w, (dx, dy) in enumerate((dx, dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+            px = img[np.clip(cy + dy, 0, img.shape[0] - 1), np.clip(cx + dx, 0, img.shape[1] - 1)]
+            d = np.linalg.norm(_lab(px)[:, None, :] - C[None], axis=2)
+            near = d.argmin(1)
+            ok = (near < len(colours)) & (d[np.arange(len(m)), near] <= tol)
+            votes[w, m[ok]] = near[ok]
+    out = np.full(len(x), "", dtype=object)
+    for i in range(len(x)):
+        v = votes[:, i][votes[:, i] >= 0]
+        if len(v):
+            out[i] = colour_labels[np.bincount(v).argmax()]
+    return out
+
+
 def page_texts(pdf_path) -> dict[int, str]:
     """Each page's text, whitespace collapsed (poppler's pdftotext; fast on large layout files)."""
     import subprocess
@@ -463,6 +495,11 @@ def digitise(pdf_path, district, parcels, phrases=("Proposed Land Use", "Future 
                 imgs = [images[i] if i in images else images.setdefault(i, render(pdf_path, i)) for i in spread]
                 seen, rendered = visible(polys, fills, imgs, [float(p.width) for p in pages])
                 n_all = len(polys)
+                # the legend category of each rendered fill colour (as in visible: near-identical fills are one)
+                _, own = np.unique(np.round(fills, 2), axis=0, return_inverse=True)
+                own = own.ravel()
+                fill_labels = np.array([pd.Series(pl[own == i]).mode().iloc[0] for i in range(len(rendered[0]))],
+                                       dtype=object)
                 polys, pl = polys[seen], pl[seen]
                 if len(polys) < 200:
                     continue
@@ -479,6 +516,8 @@ def digitise(pdf_path, district, parcels, phrases=("Proposed Land Use", "Future 
                     shifted = {**tf, "t": [tf["t"][0] + 300.0, tf["t"][1]]}  # control: the map 300 ft off
                     best = {"pages": spread, "transform": tf, "coverage": cover, "labels": lab, "colours": table,
                             "control_labels": classify(polys, pl, shifted, xy),
+                            "pixel_labels": classify_pixels(tf, xy, imgs, [float(p.width) for p in pages],
+                                                            rendered[0], fill_labels, rendered[1]),
                             "shapes_visible": int(len(polys)), "shapes_drawn": int(n_all),
                             "legend": dict(zip([str(c) for c in cols], labs))}
     return best

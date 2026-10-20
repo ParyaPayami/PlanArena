@@ -2,34 +2,34 @@
   "test": "Every district, budget 10 changes, objective = overall score - conversion penalty x changes (GNN term off). Exact-evaluation heuristics search the 150 best first-order moves. No method guarantees a global optimum; 'share of best found' compares each method with the best plan any method found.",
   "summary": {
     "surrogate_top_moves": {
-      "median_share_of_best_found": 0.926,
+      "median_share_of_best_found": 0.91,
       "districts_where_best": 0,
       "median_seconds": 0.02
     },
     "first_order": {
-      "median_share_of_best_found": 0.964,
-      "districts_where_best": 1,
-      "median_seconds": 0.13
+      "median_share_of_best_found": 0.941,
+      "districts_where_best": 0,
+      "median_seconds": 0.25
     },
     "first_order_plus_exact_polish": {
-      "median_share_of_best_found": 0.974,
+      "median_share_of_best_found": 0.957,
       "districts_where_best": 1,
-      "median_seconds": 1.14
+      "median_seconds": 1.88
     },
     "greedy_exact": {
       "median_share_of_best_found": 1.0,
       "districts_where_best": 12,
-      "median_seconds": 25.87
+      "median_seconds": 36.15
     },
     "simulated_annealing": {
-      "median_share_of_best_found": 0.948,
+      "median_share_of_best_found": 0.936,
       "districts_where_best": 0,
-      "median_seconds": 7.54
+      "median_seconds": 10.65
     },
     "random_restarts_50": {
-      "median_share_of_best_found": 0.659,
+      "median_share_of_best_found": 0.655,
       "districts_where_best": 0,
-      "median_seconds": 0.94
+      "median_seconds": 1.31
     }
   },
   "districts": [
@@ -39,35 +39,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 5.965849754806422,
-        "s": 0.03,
+        "J": 6.061267680726227,
+        "s": 0.07,
         "evals": 1
       },
       "first_order": {
-        "J": 6.452399820751152,
-        "s": 0.13,
+        "J": 6.215656690250503,
+        "s": 0.24,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
-        "J": 6.505156770637132,
-        "s": 1.47,
+        "J": 6.215656690250503,
+        "s": 1.22,
         "changes": 10
       },
       "greedy_exact": {
         "J": 6.663778275235106,
-        "s": 26.35,
+        "s": 37.22,
         "evals": 1414
       },
       "simulated_annealing": {
-        "J_mean": 6.279201622860147,
-        "J_sd": 0.168853727614601,
-        "s_mean": 7.49,
+        "J_mean": 6.395452508189649,
+        "J_sd": 0.13901617945143166,
+        "s_mean": 10.36,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 5.118315669439392,
-        "s": 0.94,
+        "J": 5.093076770615164,
+        "s": 1.34,
         "evals": 50
       }
     },
@@ -83,29 +83,29 @@
       },
       "first_order": {
         "J": 9.531034717183324,
-        "s": 0.13,
+        "s": 0.3,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
         "J": 9.744773835294776,
-        "s": 1.48,
+        "s": 2.14,
         "changes": 10
       },
       "greedy_exact": {
         "J": 9.81859145394114,
-        "s": 26.11,
-        "evals": 1397
+        "s": 37.87,
+        "evals": 1391
       },
       "simulated_annealing": {
-        "J_mean": 9.682092308090821,
-        "J_sd": 0.07356718524192622,
-        "s_mean": 7.53,
+        "J_mean": 8.5125955184264,
+        "J_sd": 1.0622117346406361,
+        "s_mean": 10.58,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 7.016937325256608,
-        "s": 0.94,
+        "J": 7.214467299204141,
+        "s": 1.6,
         "evals": 50
       }
     },
@@ -115,35 +115,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 3.5223650883157687,
+        "J": 2.701027813192875,
         "s": 0.02,
         "evals": 1
       },
       "first_order": {
-        "J": 3.628053084595496,
-        "s": 0.13,
-        "changes": 10
+        "J": 2.6308826191745176,
+        "s": 0.31,
+        "changes": 9
       },
       "first_order_plus_exact_polish": {
-        "J": 3.628053084595496,
-        "s": 0.8,
-        "changes": 10
+        "J": 2.76606288513452,
+        "s": 2.27,
+        "changes": 9
       },
       "greedy_exact": {
-        "J": 3.628053084595496,
-        "s": 24.92,
-        "evals": 1329
+        "J": 3.7604346832759696,
+        "s": 35.83,
+        "evals": 1342
       },
       "simulated_annealing": {
-        "J_mean": 3.518546275918696,
-        "J_sd": 0.06373123568998369,
-        "s_mean": 7.5,
+        "J_mean": 3.315837777411495,
+        "J_sd": 0.2824149496416832,
+        "s_mean": 11.86,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 2.3345521638905966,
-        "s": 0.94,
+        "J": 2.380618354237076,
+        "s": 1.39,
         "evals": 50
       }
     },
@@ -158,30 +158,30 @@
         "evals": 1
       },
       "first_order": {
-        "J": 9.539388668168964,
-        "s": 0.13,
+        "J": 9.560906624538525,
+        "s": 0.59,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
-        "J": 9.972794352907083,
-        "s": 1.51,
+        "J": 9.989884241595806,
+        "s": 2.58,
         "changes": 10
       },
       "greedy_exact": {
         "J": 10.474273115599992,
-        "s": 24.97,
-        "evals": 1332
+        "s": 34.93,
+        "evals": 1325
       },
       "simulated_annealing": {
-        "J_mean": 10.466849623555206,
-        "J_sd": 0.08859775137454974,
-        "s_mean": 7.59,
+        "J_mean": 10.328708537592709,
+        "J_sd": 0.20487893000583193,
+        "s_mean": 11.48,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 8.512786428699073,
-        "s": 0.94,
+        "J": 8.40156371544579,
+        "s": 1.2,
         "evals": 50
       }
     },
@@ -191,35 +191,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 2.8125677087019882,
-        "s": 0.02,
+        "J": 3.863306637985007,
+        "s": 0.03,
         "evals": 1
       },
       "first_order": {
-        "J": 2.828156904768534,
-        "s": 0.13,
+        "J": 3.659441126318782,
+        "s": 0.29,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
-        "J": 2.828156904768534,
-        "s": 0.84,
+        "J": 3.659441126318782,
+        "s": 1.41,
         "changes": 10
       },
       "greedy_exact": {
         "J": 4.2218034440893,
-        "s": 26.59,
+        "s": 38.69,
         "evals": 1413
       },
       "simulated_annealing": {
-        "J_mean": 4.043542827135596,
-        "J_sd": 0.03290781585315944,
-        "s_mean": 7.55,
+        "J_mean": 4.006646832830909,
+        "J_sd": 0.10176500182834063,
+        "s_mean": 10.41,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 2.830211855358114,
-        "s": 0.93,
+        "J": 2.7911614843308716,
+        "s": 1.22,
         "evals": 50
       }
     },
@@ -229,35 +229,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 5.869319760584232,
+        "J": 5.3970453435696335,
         "s": 0.02,
         "evals": 1
       },
       "first_order": {
-        "J": 5.9907317142694385,
-        "s": 0.13,
-        "changes": 10
+        "J": 5.737978346083399,
+        "s": 0.24,
+        "changes": 8
       },
       "first_order_plus_exact_polish": {
-        "J": 5.9907317142694385,
-        "s": 0.83,
+        "J": 6.015336817886315,
+        "s": 2.14,
         "changes": 10
       },
       "greedy_exact": {
-        "J": 6.006385506993146,
-        "s": 25.09,
-        "evals": 1337
+        "J": 6.015336817886315,
+        "s": 36.47,
+        "evals": 1334
       },
       "simulated_annealing": {
-        "J_mean": 5.221601945174436,
-        "J_sd": 0.6310295707931761,
-        "s_mean": 7.53,
+        "J_mean": 5.222766636672876,
+        "J_sd": 0.4127943601995832,
+        "s_mean": 11.47,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 3.8948066149404927,
-        "s": 0.94,
+        "J": 3.7249213369263474,
+        "s": 1.28,
         "evals": 50
       }
     },
@@ -267,35 +267,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 10.98789205511234,
+        "J": 11.101804067230162,
         "s": 0.02,
         "evals": 1
       },
       "first_order": {
-        "J": 10.9387906866202,
-        "s": 0.13,
+        "J": 11.052702698738022,
+        "s": 0.24,
         "changes": 9
       },
       "first_order_plus_exact_polish": {
-        "J": 18.9893534474243,
-        "s": 1.43,
+        "J": 18.874940164536333,
+        "s": 2.06,
         "changes": 10
       },
       "greedy_exact": {
         "J": 19.021532101476275,
-        "s": 26.08,
-        "evals": 1380
+        "s": 37.85,
+        "evals": 1381
       },
       "simulated_annealing": {
-        "J_mean": 18.841905675713424,
-        "J_sd": 0.10698591956294369,
-        "s_mean": 7.57,
+        "J_mean": 16.743755665948456,
+        "J_sd": 3.1141434053188597,
+        "s_mean": 10.72,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 17.295992952877825,
-        "s": 0.95,
+        "J": 17.374043414974146,
+        "s": 1.37,
         "evals": 50
       }
     },
@@ -306,34 +306,34 @@
       "budget": 10,
       "surrogate_top_moves": {
         "J": 4.224547216874399,
-        "s": 0.02,
+        "s": 0.06,
         "evals": 1
       },
       "first_order": {
-        "J": 4.299599530113658,
-        "s": 0.13,
+        "J": 4.301285733363941,
+        "s": 0.33,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
-        "J": 4.299599530113658,
-        "s": 0.82,
+        "J": 4.301285733363941,
+        "s": 1.26,
         "changes": 10
       },
       "greedy_exact": {
         "J": 4.483473920028274,
-        "s": 25.76,
-        "evals": 1364
+        "s": 36.65,
+        "evals": 1380
       },
       "simulated_annealing": {
-        "J_mean": 4.277444156432208,
-        "J_sd": 0.03263806832439256,
-        "s_mean": 7.58,
+        "J_mean": 4.348405839878171,
+        "J_sd": 0.05786277031427527,
+        "s_mean": 11.39,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 3.3121036764137117,
-        "s": 0.95,
+        "J": 3.332172571650948,
+        "s": 1.14,
         "evals": 50
       }
     },
@@ -343,35 +343,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 2.4856831820208796,
+        "J": 2.4970418272982537,
         "s": 0.02,
         "evals": 1
       },
       "first_order": {
-        "J": 2.559970387857064,
-        "s": 0.13,
+        "J": 2.5459976150494428,
+        "s": 0.26,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
-        "J": 2.559970387857064,
-        "s": 0.83,
+        "J": 2.5459976150494428,
+        "s": 1.61,
         "changes": 10
       },
       "greedy_exact": {
         "J": 2.579190476929479,
-        "s": 25.98,
+        "s": 33.28,
         "evals": 1383
       },
       "simulated_annealing": {
-        "J_mean": 2.3930039696503136,
-        "J_sd": 0.06044353237083435,
-        "s_mean": 7.52,
+        "J_mean": 2.255375575311614,
+        "J_sd": 0.3868191230375276,
+        "s_mean": 10.3,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 1.3945174033529115,
-        "s": 0.94,
+        "J": 1.3993737272275617,
+        "s": 1.33,
         "evals": 50
       }
     },
@@ -387,29 +387,29 @@
       },
       "first_order": {
         "J": 4.278550473994379,
-        "s": 0.13,
+        "s": 0.23,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
         "J": 4.278550473994379,
-        "s": 0.84,
+        "s": 1.35,
         "changes": 10
       },
       "greedy_exact": {
         "J": 4.406311858175189,
-        "s": 26.17,
-        "evals": 1390
+        "s": 33.68,
+        "evals": 1394
       },
       "simulated_annealing": {
-        "J_mean": 3.8170375426189356,
-        "J_sd": 0.5680203163395713,
-        "s_mean": 7.56,
+        "J_mean": 4.13309501528716,
+        "J_sd": 0.2248288669743048,
+        "s_mean": 9.8,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 2.255801307850247,
-        "s": 0.94,
+        "J": 2.4004393093830085,
+        "s": 1.43,
         "evals": 50
       }
     },
@@ -419,35 +419,35 @@
       "moves_shortlisted": 150,
       "budget": 10,
       "surrogate_top_moves": {
-        "J": 2.632761660507527,
+        "J": 2.4604222336375483,
         "s": 0.02,
         "evals": 1
       },
       "first_order": {
-        "J": 2.7474006030392735,
-        "s": 0.13,
+        "J": 2.961641205322045,
+        "s": 0.24,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
         "J": 2.970681739713936,
-        "s": 1.5,
+        "s": 1.98,
         "changes": 10
       },
       "greedy_exact": {
         "J": 3.1198054367906836,
-        "s": 25.74,
-        "evals": 1370
+        "s": 34.49,
+        "evals": 1374
       },
       "simulated_annealing": {
-        "J_mean": 2.837972544457603,
-        "J_sd": 0.07961487401705775,
-        "s_mean": 7.55,
+        "J_mean": 2.9123819751361855,
+        "J_sd": 0.07873480092692825,
+        "s_mean": 10.72,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 1.73100324231278,
-        "s": 0.94,
+        "J": 2.0090779121397033,
+        "s": 1.19,
         "evals": 50
       }
     },
@@ -463,29 +463,29 @@
       },
       "first_order": {
         "J": 4.4689837984984155,
-        "s": 0.13,
+        "s": 0.24,
         "changes": 10
       },
       "first_order_plus_exact_polish": {
         "J": 4.4975240982969105,
-        "s": 1.51,
+        "s": 1.78,
         "changes": 10
       },
       "greedy_exact": {
         "J": 5.2553669560157426,
-        "s": 25.74,
-        "evals": 1374
+        "s": 33.45,
+        "evals": 1376
       },
       "simulated_annealing": {
-        "J_mean": 4.196914670329215,
-        "J_sd": 0.8800116028826865,
-        "s_mean": 7.53,
+        "J_mean": 4.984398381052105,
+        "J_sd": 0.05079977192350788,
+        "s_mean": 9.68,
         "evals": 400,
         "seeds": 3
       },
       "random_restarts_50": {
-        "J": 3.339885722503019,
-        "s": 0.94,
+        "J": 3.4136773289718865,
+        "s": 1.21,
         "evals": 50
       }
     }

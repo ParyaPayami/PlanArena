@@ -1,0 +1,580 @@
+{
+ "test": "Study areas are Manhattan tax blocks, chosen at random, with the explorer's own options per parcel (zoning, protections, precedent). Every plan of a block (every combination of options) is enumerated, so the true front is known: * small blocks (64-2,000 plans): every plan is also scored by the full impact engine, so the exact front is known,   and the explorer's front (re-scored exactly, as in the Studio) is compared with it; this measures search and   first-order (surrogate) error together; * medium blocks (20,000-1,000,000 plans): the front of the first-order pillar gains the explorer searches is known;   this measures the search alone. The exhaustive surrogate front is also re-scored exactly (up to 300 plans) and   compared with the explorer's re-scored front. Quality is the hypervolume of a front as a share of the hypervolume of the true front (pillar values normalised to the range of the plans compared; the worst value of each pillar is the reference point), and the share of true-front plans the explorer returns. A random search with the same number of evaluations as NSGA-III (population 92 x 120 generations) is the baseline. The explorer keeps every plan it evaluates and returns the non-dominated ones.",
+ "small": [
+  {
+   "cd": 110,
+   "block": 1906,
+   "parcels": 30,
+   "free_parcels": 5,
+   "plans": 64,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 0.53,
+   "surrogate": {
+    "true_front": 6,
+    "nsga_front": 6,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 6,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 1.0,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 2.4
+  },
+  {
+   "cd": 109,
+   "block": 2060,
+   "parcels": 40,
+   "free_parcels": 6,
+   "plans": 64,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 0.52,
+   "surrogate": {
+    "true_front": 7,
+    "nsga_front": 7,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 7,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 1.0,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 2.2
+  },
+  {
+   "cd": 112,
+   "block": 2163,
+   "parcels": 10,
+   "free_parcels": 8,
+   "plans": 1024,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 4.05,
+   "surrogate": {
+    "true_front": 34,
+    "nsga_front": 34,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 39,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 0.8462,
+    "spearman_surrogate_exact": {
+     "social": 0.9976,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 35.5
+  },
+  {
+   "cd": 108,
+   "block": 1433,
+   "parcels": 26,
+   "free_parcels": 8,
+   "plans": 384,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 7.29,
+   "surrogate": {
+    "true_front": 61,
+    "nsga_front": 61,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 60,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 0.9999,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 20.2
+  },
+  {
+   "cd": 106,
+   "block": 1369,
+   "parcels": 27,
+   "free_parcels": 8,
+   "plans": 256,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 8.14,
+   "surrogate": {
+    "true_front": 44,
+    "nsga_front": 44,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 44,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 1.0,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 16.6
+  },
+  {
+   "cd": 105,
+   "block": 1006,
+   "parcels": 5,
+   "free_parcels": 5,
+   "plans": 72,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 2.18,
+   "surrogate": {
+    "true_front": 60,
+    "nsga_front": 60,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 45,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 0.9951,
+     "economic": 1.0,
+     "environmental": 0.9972
+    }
+   },
+   "seconds": 4.6
+  },
+  {
+   "cd": 112,
+   "block": 2115,
+   "parcels": 33,
+   "free_parcels": 9,
+   "plans": 1024,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 4.97,
+   "surrogate": {
+    "true_front": 49,
+    "nsga_front": 49,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 49,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 1.0,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 37.8
+  },
+  {
+   "cd": 108,
+   "block": 1564,
+   "parcels": 45,
+   "free_parcels": 10,
+   "plans": 1024,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 5.68,
+   "surrogate": {
+    "true_front": 82,
+    "nsga_front": 82,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 82,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 1.0,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 40.9
+  },
+  {
+   "cd": 112,
+   "block": 2226,
+   "parcels": 16,
+   "free_parcels": 4,
+   "plans": 64,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 0.72,
+   "surrogate": {
+    "true_front": 6,
+    "nsga_front": 6,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 6,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 0.9956,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 2.9
+  },
+  {
+   "cd": 107,
+   "block": 1166,
+   "parcels": 24,
+   "free_parcels": 5,
+   "plans": 320,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 8.7,
+   "surrogate": {
+    "true_front": 22,
+    "nsga_front": 22,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 1.0,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "true_front": 22,
+    "hv_share_nsga": 1.0,
+    "hv_share_surrogate_front_rescored": 1.0,
+    "share_of_true_front_found": 1.0,
+    "spearman_surrogate_exact": {
+     "social": 0.9898,
+     "economic": 1.0,
+     "environmental": 1.0
+    }
+   },
+   "seconds": 20.9
+  }
+ ],
+ "medium": [
+  {
+   "cd": 110,
+   "block": 1922,
+   "parcels": 25,
+   "free_parcels": 14,
+   "plans": 32768,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 3.12,
+   "surrogate": {
+    "true_front": 40,
+    "nsga_front": 40,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9657,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "surrogate_front_rescored": 40,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0
+   },
+   "seconds": 4.5
+  },
+  {
+   "cd": 108,
+   "block": 1472,
+   "parcels": 35,
+   "free_parcels": 12,
+   "plans": 50176,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 9.98,
+   "surrogate": {
+    "true_front": 205,
+    "nsga_front": 196,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9623,
+    "share_of_true_front_found": 0.9561
+   },
+   "exact": {
+    "surrogate_front_rescored": 205,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0
+   },
+   "seconds": 18.5
+  },
+  {
+   "cd": 102,
+   "block": 564,
+   "parcels": 21,
+   "free_parcels": 14,
+   "plans": 327680,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 28.06,
+   "surrogate": {
+    "true_front": 1181,
+    "nsga_front": 798,
+    "hv_share_nsga": 0.9901,
+    "hv_share_random": 0.9439,
+    "share_of_true_front_found": 0.6376
+   },
+   "exact": {
+    "surrogate_front_rescored": 300,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0171
+   },
+   "seconds": 50.0
+  },
+  {
+   "cd": 110,
+   "block": 1599,
+   "parcels": 13,
+   "free_parcels": 10,
+   "plans": 40960,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 7.13,
+   "surrogate": {
+    "true_front": 146,
+    "nsga_front": 146,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9565,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "surrogate_front_rescored": 146,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0
+   },
+   "seconds": 12.4
+  },
+  {
+   "cd": 108,
+   "block": 1432,
+   "parcels": 37,
+   "free_parcels": 15,
+   "plans": 81920,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 22.12,
+   "surrogate": {
+    "true_front": 816,
+    "nsga_front": 581,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9998,
+    "share_of_true_front_found": 0.663
+   },
+   "exact": {
+    "surrogate_front_rescored": 300,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0179
+   },
+   "seconds": 34.6
+  },
+  {
+   "cd": 106,
+   "block": 927,
+   "parcels": 28,
+   "free_parcels": 16,
+   "plans": 294912,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 18.9,
+   "surrogate": {
+    "true_front": 820,
+    "nsga_front": 638,
+    "hv_share_nsga": 0.9861,
+    "hv_share_random": 0.972,
+    "share_of_true_front_found": 0.6951
+   },
+   "exact": {
+    "surrogate_front_rescored": 300,
+    "hv_share_nsga_vs_surrogate_front_rescored": 0.9909
+   },
+   "seconds": 33.9
+  },
+  {
+   "cd": 105,
+   "block": 1313,
+   "parcels": 8,
+   "free_parcels": 8,
+   "plans": 76800,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 45.96,
+   "surrogate": {
+    "true_front": 2156,
+    "nsga_front": 1625,
+    "hv_share_nsga": 0.9998,
+    "hv_share_random": 0.995,
+    "share_of_true_front_found": 0.7041
+   },
+   "exact": {
+    "surrogate_front_rescored": 300,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0115
+   },
+   "seconds": 56.9
+  },
+  {
+   "cd": 105,
+   "block": 1291,
+   "parcels": 10,
+   "free_parcels": 8,
+   "plans": 24576,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 8.55,
+   "surrogate": {
+    "true_front": 334,
+    "nsga_front": 323,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9885,
+    "share_of_true_front_found": 0.9671
+   },
+   "exact": {
+    "surrogate_front_rescored": 300,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0048
+   },
+   "seconds": 15.9
+  },
+  {
+   "cd": 104,
+   "block": 728,
+   "parcels": 7,
+   "free_parcels": 6,
+   "plans": 65536,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 1.97,
+   "surrogate": {
+    "true_front": 16,
+    "nsga_front": 16,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9616,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "surrogate_front_rescored": 16,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0
+   },
+   "seconds": 2.5
+  },
+  {
+   "cd": 101,
+   "block": 595,
+   "parcels": 19,
+   "free_parcels": 15,
+   "plans": 131072,
+   "nsga_evaluations": 11040,
+   "nsga_seconds": 8.01,
+   "surrogate": {
+    "true_front": 289,
+    "nsga_front": 289,
+    "hv_share_nsga": 1.0,
+    "hv_share_random": 0.9622,
+    "share_of_true_front_found": 1.0
+   },
+   "exact": {
+    "surrogate_front_rescored": 289,
+    "hv_share_nsga_vs_surrogate_front_rescored": 1.0
+   },
+   "seconds": 16.0
+  }
+ ],
+ "summary": {
+  "small": {
+   "surrogate.hv_share_nsga": {
+    "median": 1.0,
+    "min": 1.0,
+    "n": 10
+   },
+   "surrogate.hv_share_random": {
+    "median": 1.0,
+    "min": 1.0,
+    "n": 10
+   },
+   "surrogate.share_of_true_front_found": {
+    "median": 1.0,
+    "min": 1.0,
+    "n": 10
+   },
+   "exact.hv_share_nsga": {
+    "median": 1.0,
+    "min": 1.0,
+    "n": 10
+   },
+   "exact.hv_share_surrogate_front_rescored": {
+    "median": 1.0,
+    "min": 1.0,
+    "n": 10
+   },
+   "exact.share_of_true_front_found": {
+    "median": 1.0,
+    "min": 0.8462,
+    "n": 10
+   }
+  },
+  "medium": {
+   "surrogate.hv_share_nsga": {
+    "median": 1.0,
+    "min": 0.9861,
+    "n": 10
+   },
+   "surrogate.hv_share_random": {
+    "median": 0.964,
+    "min": 0.9439,
+    "n": 10
+   },
+   "surrogate.share_of_true_front_found": {
+    "median": 0.9616,
+    "min": 0.6376,
+    "n": 10
+   },
+   "exact.hv_share_nsga_vs_surrogate_front_rescored": {
+    "median": 1.0,
+    "min": 0.9909,
+    "n": 10
+   },
+   "plans": {
+    "median": 71168.0,
+    "min": 24576.0,
+    "n": 10
+   },
+   "nsga_seconds": {
+    "median": 9.265,
+    "min": 1.97,
+    "n": 10
+   }
+  },
+  "spearman_surrogate_exact_small": {
+   "social": {
+    "median": 1.0,
+    "min": 0.9898,
+    "n": 10
+   },
+   "economic": {
+    "median": 1.0,
+    "min": 1.0,
+    "n": 10
+   },
+   "environmental": {
+    "median": 1.0,
+    "min": 0.9972,
+    "n": 10
+   }
+  }
+ }
+}

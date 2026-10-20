@@ -129,6 +129,17 @@ class ImpactEngine:
         ratio = res.res_area / res.units_res.replace(0, np.nan)
         r_ok = ratio[(ratio > 150) & (ratio < 10000)]
         self.sqft_per_unit = float(r_ok.median())
+        # Floor area per home of buildings completed in the ten years up to the twin's latest year of construction: the
+        # reference for new construction (recent buildings have larger gross area per home than the stock).
+        yb = pd.to_numeric(p.get("year_built", pd.Series(0, index=p.index)), errors="coerce").fillna(0)
+        counts = yb[yb > 0].value_counts()
+        ref = float(counts[counts >= 20].index.max()) if (counts >= 20).any() else 0.0  # latest real year (typos aside)
+        both = p[p.use.isin([U["res"], U["mix"]]) & (p.units_res > 0) & (p.res_area > 0)]
+        rb = (both.res_area / both.units_res)[(yb.loc[both.index] > ref - 10) & (yb.loc[both.index] <= ref)]
+        rb = rb[(rb > 150) & (rb < 10000)]
+        self.sqft_per_unit_new = float(rb.median()) if len(rb) >= 30 else self.sqft_per_unit
+        self.unit_rule = "stock"  # "stock": a changed building keeps its own unit size or the stock median;
+        # "recent": a new or converted building takes the unit size of recent construction
         # Empirical sensitivity multipliers (Q25/Q50 and Q75/Q50) for modelled quantities.
         self.mult_unit = {"a": float(r_ok.quantile(0.25) / r_ok.median()), "b": float(r_ok.quantile(0.75) / r_ok.median())}
         mix = p[(p.use == U["mix"]) & (p.bldg_area > 0)]
@@ -317,17 +328,19 @@ class ImpactEngine:
             m = self._model_components(use, changed, far)
             u0, u1 = self.base_use[changed], use[changed]
             fa0 = self.bldg[changed]
+            q = (np.full(len(changed), self.sqft_per_unit_new) if self.unit_rule == "recent"
+                 else self.unit_size[changed])
             if self.delta_form == "replacement":
                 for k in self.COMPONENTS:
                     comp[k][changed] = m[k]
-                units[changed] = m["res"] / (self.unit_size[changed] * mu)
+                units[changed] = m["res"] / (q * mu)
             elif self.delta_form == "difference":
                 m0 = self._split(u0, fa0)
                 for k in self.COMPONENTS:
                     raw = self.obs[k][changed] + m[k] - m0[k]
                     self.clip_events += int((raw < -1e-6).sum())
                     comp[k][changed] = np.clip(raw, 0, None)
-                raw = self.obs_units[changed] + (m["res"] - m0["res"]) / (self.unit_size[changed] * mu)
+                raw = self.obs_units[changed] + (m["res"] - m0["res"]) / (q * mu)
                 self.clip_events += int((raw < -1e-6).sum())
                 units[changed] = np.clip(raw, 0, None)
             else:  # hybrid
@@ -340,8 +353,7 @@ class ImpactEngine:
                 ratio = np.divide(m["_fa"], fa0, out=np.zeros(len(changed)), where=fa0 > 0)
                 for k in self.COMPONENTS:
                     comp[k][changed] = np.where(same, self.obs[k][changed] * ratio, m[k])
-                units[changed] = np.where(same, self.obs_units[changed] * ratio,
-                                          m["res"] / (self.unit_size[changed] * mu))
+                units[changed] = np.where(same, self.obs_units[changed] * ratio, m["res"] / (q * mu))
             fa_total[changed] = m["_fa"]
             old_fa = self.bldg[changed]
             far_set = np.zeros(len(changed), bool) if far is None else np.isfinite(far[changed])

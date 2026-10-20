@@ -3,20 +3,20 @@
   "areas": 20,
   "areas_with_positive_optimum": 15,
   "median_gap": 0.0,
-  "mean_gap": 0.1193,
-  "share_exact_optimum_found": 0.733,
-  "optimizer_over_random_mean": 0.0702,
+  "mean_gap": 0.0274,
+  "share_exact_optimum_found": 0.933,
+  "optimizer_over_random_mean": 0.0747,
   "polished": {
     "median_gap": 0.0,
-    "mean_gap": 0.0006,
-    "share_exact_optimum_found": 0.933,
-    "median_seconds": 0.28
+    "mean_gap": 0.0,
+    "share_exact_optimum_found": 1.0,
+    "median_seconds": 0.51
   },
   "material_areas": {
     "rule": "optimum > 0.01 score points",
     "n": 11,
-    "share_exact_first_order": 0.818,
-    "share_exact_polished": 0.909
+    "share_exact_first_order": 1.0,
+    "share_exact_polished": 1.0
   },
   "areas_detail": [
     {
@@ -27,7 +27,7 @@
       "exact": 0.002052092199038071,
       "optimizer": 0.002052092199038071,
       "optimizer_polished": 0.002052092199038071,
-      "polish_seconds": 0.23,
+      "polish_seconds": 0.41,
       "random_mean": -0.008478196790245392,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -40,7 +40,7 @@
       "exact": 0.04261838069838011,
       "optimizer": 0.04261838069838011,
       "optimizer_polished": 0.04261838069838011,
-      "polish_seconds": 0.19,
+      "polish_seconds": 0.33,
       "random_mean": 0.02009588853234822,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -53,7 +53,7 @@
       "exact": 0.0,
       "optimizer": 0.0,
       "optimizer_polished": 0.0,
-      "polish_seconds": 0.29,
+      "polish_seconds": 0.47,
       "random_mean": -0.016885807124926447,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -64,12 +64,12 @@
       "eligible": 11,
       "moves": 18,
       "exact": 0.22248955253262215,
-      "optimizer": 0.21993348308100089,
-      "optimizer_polished": 0.22037636619781664,
-      "polish_seconds": 0.77,
+      "optimizer": 0.22248955253262215,
+      "optimizer_polished": 0.22248955253262215,
+      "polish_seconds": 0.72,
       "random_mean": 0.036168699938030215,
-      "gap": 0.011488492032660648,
-      "gap_polished": 0.009497912646912549
+      "gap": 0.0,
+      "gap_polished": 0.0
     },
     {
       "cd": 110,
@@ -79,7 +79,7 @@
       "exact": 0.0008177689685119223,
       "optimizer": 0.0008177689685119223,
       "optimizer_polished": 0.0008177689685119223,
-      "polish_seconds": 0.22,
+      "polish_seconds": 0.38,
       "random_mean": -0.001510476781062782,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -90,11 +90,11 @@
       "eligible": 12,
       "moves": 33,
       "exact": 0.17502830797635957,
-      "optimizer": 0.11079493757817195,
+      "optimizer": 0.17502830797635957,
       "optimizer_polished": 0.17502830797635957,
-      "polish_seconds": 1.22,
+      "polish_seconds": 1.07,
       "random_mean": 0.03388723592845118,
-      "gap": 0.36698846684196584,
+      "gap": 0.0,
       "gap_polished": 0.0
     },
     {
@@ -105,7 +105,7 @@
       "exact": 0.1330714095553972,
       "optimizer": 0.1330714095553972,
       "optimizer_polished": 0.1330714095553972,
-      "polish_seconds": 0.24,
+      "polish_seconds": 0.4,
       "random_mean": 0.05400248648495441,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -118,7 +118,7 @@
       "exact": 0.13545277468930014,
       "optimizer": 0.13545277468930014,
       "optimizer_polished": 0.13545277468930014,
-      "polish_seconds": 0.57,
+      "polish_seconds": 0.85,
       "random_mean": 0.02740064168404449,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -131,7 +131,7 @@
       "exact": 0.0,
       "optimizer": 0.0,
       "optimizer_polished": 0.0,
-      "polish_seconds": 0.16,
+      "polish_seconds": 0.28,
       "random_mean": -0.028548815241481302,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -144,7 +144,7 @@
       "exact": 0.0,
       "optimizer": 0.0,
       "optimizer_polished": 0.0,
-      "polish_seconds": 0.3,
+      "polish_seconds": 0.52,
       "random_mean": -0.06394590959974653,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -157,7 +157,7 @@
       "exact": 0.14418243655017407,
       "optimizer": 0.14418243655017407,
       "optimizer_polished": 0.14418243655017407,
-      "polish_seconds": 0.48,
+      "polish_seconds": 0.8,
       "random_mean": 0.009516828692618053,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -170,7 +170,7 @@
       "exact": 0.0069250515403003155,
       "optimizer": 0.004075289010558678,
       "optimizer_polished": 0.0069250515403003155,
-      "polish_seconds": 0.56,
+      "polish_seconds": 0.9,
       "random_mean": -0.012339750114284686,
       "gap": 0.4115149920773085,
       "gap_polished": 0.0
@@ -181,11 +181,11 @@
       "eligible": 4,
       "moves": 4,
       "exact": 0.00017387804013685438,
-      "optimizer": 0.0,
+      "optimizer": 0.00017387804013685438,
       "optimizer_polished": 0.00017387804013685438,
-      "polish_seconds": 0.22,
+      "polish_seconds": 0.28,
       "random_mean": -0.058411425976918466,
-      "gap": 1.0,
+      "gap": 0.0,
       "gap_polished": 0.0
     },
     {
@@ -196,7 +196,7 @@
       "exact": 0.05556829783588151,
       "optimizer": 0.05556829783588151,
       "optimizer_polished": 0.05556829783588151,
-      "polish_seconds": 0.28,
+      "polish_seconds": 0.5,
       "random_mean": 0.012054997236503348,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -209,7 +209,7 @@
       "exact": 0.1303675181330812,
       "optimizer": 0.1303675181330812,
       "optimizer_polished": 0.1303675181330812,
-      "polish_seconds": 0.31,
+      "polish_seconds": 0.51,
       "random_mean": 0.02211302358509164,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -222,7 +222,7 @@
       "exact": 0.03464514571492081,
       "optimizer": 0.03464514571492081,
       "optimizer_polished": 0.03464514571492081,
-      "polish_seconds": 0.27,
+      "polish_seconds": 0.54,
       "random_mean": -0.000711920390503672,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -235,7 +235,7 @@
       "exact": 0.12203461122063708,
       "optimizer": 0.12203461122063708,
       "optimizer_polished": 0.12203461122063708,
-      "polish_seconds": 0.57,
+      "polish_seconds": 1.02,
       "random_mean": 0.010294549669093878,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -248,7 +248,7 @@
       "exact": 0.07521249927305453,
       "optimizer": 0.07521249927305453,
       "optimizer_polished": 0.07521249927305453,
-      "polish_seconds": 0.27,
+      "polish_seconds": 0.56,
       "random_mean": 0.013274846011132744,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -261,7 +261,7 @@
       "exact": 0.0,
       "optimizer": 0.0,
       "optimizer_polished": 0.0,
-      "polish_seconds": 0.24,
+      "polish_seconds": 0.4,
       "random_mean": -0.018742682227324843,
       "gap": 0.0,
       "gap_polished": 0.0
@@ -274,7 +274,7 @@
       "exact": 0.0,
       "optimizer": 0.0,
       "optimizer_polished": 0.0,
-      "polish_seconds": 0.19,
+      "polish_seconds": 0.33,
       "random_mean": -0.02539483434612467,
       "gap": 0.0,
       "gap_polished": 0.0

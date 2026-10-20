@@ -342,8 +342,10 @@ def robustness(evaluations, stakeholders, seats: np.ndarray, samples: int = 200,
 
 
 # ----------------------------------------------------------------------------- residents' referendum
-def resident_electorate(engine, uses: list[np.ndarray], mask: np.ndarray, weights: dict, jnd: float = None):
-    """Utility of each precinct (tax block) for each plan. Voters are today's residents."""
+def resident_components(engine, uses: list[np.ndarray], mask: np.ndarray):
+    """Per plan, precinct (tax block) and criterion: the score each precinct's residents see (the change in their
+    own block's access, mix and green cover, in clipped points, then homes in the study area). Voters are today's
+    residents; precinct weight = residents."""
     e = engine
     base_st = e.baseline_state
     base_acc = e.access(base_st)
@@ -353,18 +355,22 @@ def resident_electorate(engine, uses: list[np.ndarray], mask: np.ndarray, weight
     ids, inv = np.unique(blocks, return_inverse=True)
     Wp = np.bincount(inv, weights=R[sel])
     homes_base = max(float(base_st["homes"][mask].sum()), 1.0)
-    U = np.zeros((len(uses), len(ids)))
-    L = np.zeros_like(U)  # local part only: which blocks' own access changes
+    C = np.zeros((len(uses), len(ids), len(LOCAL_KEYS) + 1))
     for a, use in enumerate(uses):
         st = e.parcel_state(use)
         acc = e.access(st)
-        u = np.zeros(len(ids))
-        for k in LOCAL_KEYS:
+        for j, k in enumerate(LOCAL_KEYS):
             dk = acc[k][sel].astype(float) - base_acc[k][sel].astype(float)
-            u += weights.get(k, 0.0) * np.clip(100 * np.bincount(inv, weights=R[sel] * dk) / Wp, -100, 100)
-        homes = np.clip(100 * (float(st["homes"][mask].sum()) - homes_base) / homes_base, -100, 100)
-        L[a] = u
-        U[a] = u + weights.get("homes", 0.0) * homes
+            C[a, :, j] = np.clip(100 * np.bincount(inv, weights=R[sel] * dk) / Wp, -100, 100)
+        C[a, :, -1] = np.clip(100 * (float(st["homes"][mask].sum()) - homes_base) / homes_base, -100, 100)
+    return C, Wp, ids
+
+
+def resident_electorate(engine, uses: list[np.ndarray], mask: np.ndarray, weights: dict, jnd: float = None):
+    """Utility of each precinct (tax block) for each plan. Voters are today's residents."""
+    C, Wp, ids = resident_components(engine, uses, mask)
+    w = np.array([weights.get(k, 0.0) for k in LOCAL_KEYS] + [weights.get("homes", 0.0)])
+    U, L = C @ w, C[:, :, :-1] @ w[:-1]  # L: local part only, which blocks' own access changes
     j = JND if jnd is None else jnd
     if j <= 0:
         return U, Wp, ids, L
@@ -669,13 +675,18 @@ if __name__ == "__main__":
 
 
 # ----------------------------------------------------------------------------- sensitivity of the simulated scenario (R6)
-def sensitivity(sug: Suggester, stakeholders, scope: str, draws: int = 200, n_random: int = 10, seed: int = 0) -> dict:
+def sensitivity(sug: Suggester, stakeholders, scope: str, draws: int = 200, n_random: int = 16, seed: int = 0) -> dict:
     """How much the simulated outcome depends on its assumptions, in one district.
 
     1. utility weights: each stakeholder's indicator weights drawn from a Dirichlet centred on the assumed weights
     2. candidate generation: random feasible plans (not built from the stakeholder utilities) added to the ballot
     3. residents' indifference threshold (JND) swept
     4. seat allocations: equal seats, then each stakeholder with three seats
+    5. rule disagreement by candidate set: how many of the nine rules pick a different winner, and whether a
+       Condorcet winner exists, on the generated ballot, on the stakeholders' ideal plans only, on the generated
+       ballot plus random plans, and on random plans only (each set with the status quo)
+    6. heterogeneous residents: each precinct's indicator weights drawn from a Dirichlet centred on the residents'
+       profile, independently per precinct; share of draws in which the residents' winner is unchanged
     """
     rng = np.random.default_rng(seed)
     base = hold_vote(sug, stakeholders, scope=scope, samples=0, residents=True)
@@ -717,6 +728,21 @@ def sensitivity(sug: Suggester, stakeholders, scope: str, draws: int = 200, n_ra
     out["winner_with_random_candidates"] = win_all
     out["winner_unchanged_with_random_candidates"] = bool(win_all == W0)
     out["winner_beats_every_random_plan"] = bool(all(P[wi, len(plans) + k] > P[len(plans) + k, wi] for k in range(n_random)))
+    # 5. rule disagreement by candidate set
+    sets = {"generated": list(range(len(plans))),
+            "ideal plans only": [0] + [a for a, p in enumerate(plans) if p.id.startswith("ideal-")],
+            "generated + random": list(range(len(allp))),
+            "random only": [0] + list(range(len(plans), len(allp)))}
+    dis = {}
+    for name, rows_ in sets.items():
+        rr = run_rules(Ua[rows_], sv)
+        winners = [rr[r]["winner"] for r in ORDINAL_RULES if r in rr]
+        dis[name] = {"candidates": len(rows_), "distinct_winners": len(set(winners)),
+                     "rules_with_modal_winner": int(np.bincount(winners).max()),
+                     "condorcet_winner_exists": rr["condorcet_winner"] is not None,
+                     "smith_set_size": len(rr["smith_set"]),
+                     "schulze_winner": [allp[i].id for i in rows_][rr["schulze"]["winner"]]}
+    out["rule_disagreement_by_candidate_set"] = dis
     # 3. residents' indifference threshold
     weights = next((s_.normalized() for s_ in stakeholders if s_.key == "residents"), None)
     mask = e.scope_mask(e.base_use, scope)
@@ -726,6 +752,18 @@ def sensitivity(sug: Suggester, stakeholders, scope: str, draws: int = 200, n_ra
         jres[str(j)] = ids[_winner("schulze", UR, WR)] if len(WR) else None
     out["residents_winner_by_jnd"] = jres
     out["residents_winner_stable_across_jnd"] = len(set(jres.values())) == 1
+    # 6. heterogeneous residents: one weight draw per precinct
+    C, WR, _ = resident_components(e, [p.use for p in plans], mask)
+    if len(WR):
+        crit = list(LOCAL_KEYS) + ["homes"]
+        w0 = np.array([weights.get(k, 0.0) for k in crit])
+        w0 = w0 / w0.sum()
+        same = 0
+        for _ in range(draws // 2):
+            Wb = rng.dirichlet(w0 * 20 + 0.05, size=len(WR))  # (precincts, criteria)
+            UR = np.round(np.einsum("abk,bk->ab", C, Wb) / JND) * JND
+            same += ids[_winner("schulze", UR, WR)] == jres[str(JND)]
+        out["residents_winner_unchanged_with_heterogeneous_weights"] = round(same / (draws // 2), 3)
     # 4. seat allocations
     seat_res = {"equal": W0}
     for j, s_ in enumerate(stakeholders):
@@ -760,6 +798,15 @@ def sensitivity_all_districts(out=None) -> dict:
         "districts_winner_beats_every_random_plan": int(sum(r["winner_beats_every_random_plan"] for r in rows)),
         "districts_residents_winner_stable_across_jnd": int(sum(r["residents_winner_stable_across_jnd"] for r in rows)),
         "median_share_of_seat_allocations_with_same_winner": float(np.median([r["share_of_seat_allocations_with_same_winner"] for r in rows])),
+        "median_residents_winner_unchanged_with_heterogeneous_weights": float(np.median(
+            [r.get("residents_winner_unchanged_with_heterogeneous_weights", np.nan) for r in rows])),
+        "rule_disagreement_by_candidate_set": {
+            name: {"median_candidates": float(np.median([r["rule_disagreement_by_candidate_set"][name]["candidates"] for r in rows])),
+                   "median_distinct_winners": float(np.median([r["rule_disagreement_by_candidate_set"][name]["distinct_winners"] for r in rows])),
+                   "max_distinct_winners": int(max(r["rule_disagreement_by_candidate_set"][name]["distinct_winners"] for r in rows)),
+                   "districts_all_rules_agree": int(sum(r["rule_disagreement_by_candidate_set"][name]["distinct_winners"] == 1 for r in rows)),
+                   "districts_with_condorcet_winner": int(sum(r["rule_disagreement_by_candidate_set"][name]["condorcet_winner_exists"] for r in rows))}
+            for name in rows[0]["rule_disagreement_by_candidate_set"]},
         "districts": len(rows)}
     res = {"test": sensitivity.__doc__.strip(), "summary": summary, "by_district": rows}
     path = out or ROOT / "results" / "validation" / "vote_sensitivity.json"

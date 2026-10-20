@@ -2,7 +2,7 @@
 
 For the Manhattan demo twin and the largest city twin (New York, all boroughs): a one-parcel change and a 50-parcel
 change in one district, each evaluated with the sensitivity ranges on, 20 times after a warm-up. Writes the medians
-to results/validation/latency.json with the machine description.
+to results/validation/latency.json with the machine description and each twin's derived settings (unit size, targets).
 
 Run:  python -I -m planarena.tools.latency
 """
@@ -43,7 +43,8 @@ def main() -> dict:
            "test": "ImpactEngine.evaluate with sensitivity ranges, after one warm-up; 20 repetitions", "twins": {}}
     for name, path in (("Manhattan", PROCESSED), ("New York City", city_dir("3651000"))):
         e = load_engine(path)
-        out["twins"][name] = {"parcels": int(e.n), "one_change": bench(e, 1), "fifty_changes": bench(e, 50)}
+        out["twins"][name] = {"parcels": int(e.n), "one_change": bench(e, 1), "fifty_changes": bench(e, 50),
+                              "derived": e.derived_summary() | {"sqft_per_unit_new": round(e.sqft_per_unit_new, 1)}}
         print(name, out["twins"][name], flush=True)
     OUT.write_text(json.dumps(out, indent=2))
     return out

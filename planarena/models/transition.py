@@ -89,7 +89,12 @@ def labels(d0: Path, d1: Path, year0: int) -> pd.DataFrame:
     fa0[fa0_in_t1.index.to_numpy()] = fa0_in_t1.to_numpy()
     fa1 = p1.bldg_area.to_numpy()
     grew = (fa1 - fa0 > 0.25 * fa0) & (fa1 - fa0 > 2000)
-    newb = p1.year_built.to_numpy() >= year0
+    # A building already in the t0 snapshot with a year built of t0 or later (late releases, e.g. 20v8 in December
+    # 2020) is not new in (t0, t1].
+    yb0_in_t1 = pd.Series(p0.year_built.to_numpy()[ok]).groupby(j1[ok]).max()
+    yb0 = np.zeros(len(p1))
+    yb0[yb0_in_t1.index.to_numpy()] = yb0_in_t1.to_numpy()
+    newb = (p1.year_built.to_numpy() >= year0) & ~(yb0 >= year0)
     dev1 = (grew | newb)
     lab = pd.DataFrame({"matched": ok, "developed": ok & dev1[t1], "dest": np.where(ok, p1.use.to_numpy()[t1], -1),
                         "new_building": ok & newb[t1], "floor_area_growth": ok & grew[t1], "j1": j1})

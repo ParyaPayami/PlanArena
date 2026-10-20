@@ -43,6 +43,20 @@ def pillar_gain_matrices(sug: Suggester, idx: np.ndarray, cfg: SuggestConfig, us
     return np.stack(out)
 
 
+def _nondominated(F: np.ndarray, chunk: int = 20_000) -> np.ndarray:
+    """Indices of the plans no other plan beats on every pillar (maximisation); identical plans count once."""
+    keep = np.zeros(0, int)
+    for s in range(0, len(F), chunk):
+        c = np.arange(s, min(s + chunk, len(F)))
+        if len(keep):
+            A, B = F[c][:, None, :], F[keep][None, :, :]
+            c = c[~((B >= A).all(-1) & (B > A).any(-1)).any(1)]
+        pool = np.concatenate([keep, c])
+        keep = pool[NonDominatedSorting().do(-F[pool], only_non_dominated_front=True)]
+    _, first = np.unique(F[keep].round(12), axis=0, return_index=True)
+    return np.sort(keep[first])
+
+
 def options_for(sug: Suggester, idx: np.ndarray, cfg: SuggestConfig, use: np.ndarray) -> list[np.ndarray]:
     """Land-use options per parcel under the same protections the optimizer uses."""
     e = sug.e
@@ -61,6 +75,8 @@ def options_for(sug: Suggester, idx: np.ndarray, cfg: SuggestConfig, use: np.nda
             allowed &= np.isin(np.arange(N_USES), [U["res"], U["mix"]])
         if not cfg.allow_demolition and e.bldg[i] > 0:
             allowed &= ~np.isin(np.arange(N_USES), [U["opn"], U["prk"], U["vac"]])
+        if cfg.require_precedent and e.precedent is not None and e.bldg[i] > 0:
+            allowed &= e.has_precedent(np.full(N_USES, i), np.arange(N_USES))
         allowed[cur] = True
         o = np.nonzero(allowed)[0]
         opts.append(np.concatenate([[cur], o[o != cur]]))  # option 0 = keep the current use
@@ -68,7 +84,7 @@ def options_for(sug: Suggester, idx: np.ndarray, cfg: SuggestConfig, use: np.nda
 
 
 def pareto(sug: Suggester, parcels: list[int], cfg: SuggestConfig | None = None, use: np.ndarray | None = None,
-           seed: int = 42, generations: int = 120, max_plans: int = 24) -> dict:
+           seed: int = 42, generations: int = 120, max_plans: int = 24, drop_dominated: bool = True) -> dict:
     e = sug.e
     cfg = cfg or SuggestConfig(scope="affected")
     use = (e.base_use if use is None else np.asarray(use)).astype("int16").copy()
@@ -83,6 +99,8 @@ def pareto(sug: Suggester, parcels: list[int], cfg: SuggestConfig | None = None,
     gain = pillar_gain_matrices(sug, idx, cfg, use, mask)  # (3, n_sel, N_USES)
     opt_gain = [gain[:, k, opts[k]] for k in active]  # each (3, n_opts)
 
+    archive = []  # every plan evaluated; the front is taken from all of them, not only the final population
+
     class LandUseProblem(Problem):
         def __init__(self):
             super().__init__(n_var=len(active), n_obj=3, xl=0, xu=np.array([len(opts[k]) - 1 for k in active]), vtype=int)
@@ -92,6 +110,7 @@ def pareto(sug: Suggester, parcels: list[int], cfg: SuggestConfig | None = None,
             F = np.zeros((len(X), 3))
             for j, g in enumerate(opt_gain):
                 F += g[:, X[:, j]].T
+            archive.append(X.astype("int16"))
             out["F"] = -F
 
     ref = get_reference_directions("das-dennis", 3, n_partitions=8)
@@ -99,12 +118,13 @@ def pareto(sug: Suggester, parcels: list[int], cfg: SuggestConfig | None = None,
                 crossover=SBX(prob=0.9, eta=15, vtype=float, repair=RoundingRepair()),
                 mutation=PM(eta=20, vtype=float, repair=RoundingRepair()), eliminate_duplicates=True)
     res = minimize(LandUseProblem(), alg, ("n_gen", generations), seed=seed, verbose=False)
-    X = np.unique(np.clip(np.rint(res.pop.get("X")).astype(int), 0, None), axis=0)
-    X = np.vstack([np.zeros((1, X.shape[1]), int), X])  # the status quo is always a candidate
+    X = np.vstack([np.zeros((1, len(active)), "int16"), np.clip(np.rint(res.pop.get("X")), 0, None).astype("int16")]
+                  + archive)  # the status quo is always a candidate
+    X = np.unique(X, axis=0)
     F = np.zeros((len(X), 3))
     for j, g in enumerate(opt_gain):
         F += g[:, np.minimum(X[:, j], g.shape[1] - 1)].T
-    nd = NonDominatedSorting().do(-F, only_non_dominated_front=True)
+    nd = _nondominated(F)
     nd = nd[np.argsort(-F[nd].sum(axis=1))]
     if len(nd) > max_plans:  # keep a spread: best per pillar, then evenly spaced by total gain
         keep = set(int(nd[np.argmax(F[nd, p])]) for p in range(3))
@@ -120,6 +140,11 @@ def pareto(sug: Suggester, parcels: list[int], cfg: SuggestConfig | None = None,
         front.append({"changes": changes, "n_changed": len(changes), "pillars": ev["pillars"],
                       "overall": ev["overall"], "estimated": F[i].round(3).tolist()})
     vals = np.array([[f["pillars"][p] for p in PILLARS] for f in front])
+    # after exact re-scoring, drop plans that another plan on the front now beats on every pillar
+    beaten = ((vals[None, :, :] >= vals[:, None, :]).all(-1) & (vals[None, :, :] > vals[:, None, :]).any(-1)).any(1)
+    beaten &= drop_dominated
+    dropped = int(beaten.sum())
+    front, vals = [f for f, b in zip(front, beaten) if not b], vals[~beaten]
     lo, span = vals.min(0), np.ptp(vals, 0)
     span[span == 0] = 1
     presets = []
@@ -127,7 +152,8 @@ def pareto(sug: Suggester, parcels: list[int], cfg: SuggestConfig | None = None,
                     ("Environment first", [0, 0, 1])):
         k = int(np.argmax(((vals - lo) / span) @ np.array(w, float)))
         presets.append({"name": name, "weights": dict(zip(PILLARS, w)), "index": k})
-    return {"algorithm": "NSGA-III (pymoo), first-order search; exact re-scoring", "seed": seed,
+    return {"algorithm": "NSGA-III (pymoo), first-order search with an archive of every plan evaluated; exact re-scoring",
+            "seed": seed,
             "generations": generations, "n_parcels": int(len(idx)), "n_free": int(len(active)),
-            "front": front, "presets": presets, "objectives": list(PILLARS),
+            "front": front, "presets": presets, "objectives": list(PILLARS), "dropped_after_rescoring": dropped,
             "study_area_parcels": int(mask.sum())}

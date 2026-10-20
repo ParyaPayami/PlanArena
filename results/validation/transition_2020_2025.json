@@ -3,87 +3,87 @@
   "train_parcels": 42623,
   "train_developed": 1814,
   "test_parcels": 42170,
-  "test_developed": 569,
-  "test_base_rate": 0.0135,
+  "test_developed": 520,
+  "test_base_rate": 0.0123,
   "development": {
     "GNN": {
-      "auc": 0.809,
-      "average_precision": 0.109,
+      "auc": 0.833,
+      "average_precision": 0.116,
       "precision_top1pct": 0.183,
-      "recall_top1pct": 0.135,
+      "recall_top1pct": 0.148,
       "precision_top5pct": 0.102,
-      "recall_top5pct": 0.38,
-      "brier": 0.0333,
-      "ece": 0.0829,
+      "recall_top5pct": 0.415,
+      "brier": 0.0323,
+      "ece": 0.0841,
       "mean_predicted": 0.0964
     },
     "LightGBM": {
-      "auc": 0.847,
-      "average_precision": 0.139,
+      "auc": 0.855,
+      "average_precision": 0.146,
       "precision_top1pct": 0.264,
-      "recall_top1pct": 0.195,
-      "precision_top5pct": 0.106,
-      "recall_top5pct": 0.392,
-      "brier": 0.0136,
-      "ece": 0.0113,
+      "recall_top1pct": 0.213,
+      "precision_top5pct": 0.104,
+      "recall_top5pct": 0.423,
+      "brier": 0.0125,
+      "ece": 0.0125,
       "mean_predicted": 0.0247
     },
     "GNN + LightGBM (mean)": {
-      "auc": 0.831,
-      "average_precision": 0.136,
+      "auc": 0.85,
+      "average_precision": 0.145,
       "precision_top1pct": 0.24,
-      "recall_top1pct": 0.178,
+      "recall_top1pct": 0.194,
       "precision_top5pct": 0.111,
-      "recall_top5pct": 0.413,
-      "brier": 0.0193,
-      "ece": 0.047,
+      "recall_top5pct": 0.452,
+      "brier": 0.0182,
+      "ece": 0.0482,
       "mean_predicted": 0.0605
     },
     "Underbuilt share of zoning capacity": {
-      "auc": 0.749,
-      "average_precision": 0.068,
+      "auc": 0.802,
+      "average_precision": 0.073,
       "precision_top1pct": 0.105,
-      "recall_top1pct": 0.077,
+      "recall_top1pct": 0.085,
       "precision_top5pct": 0.105,
-      "recall_top5pct": 0.388
+      "recall_top5pct": 0.425
     },
     "Land-value share of assessed value": {
-      "auc": 0.754,
-      "average_precision": 0.075,
-      "precision_top1pct": 0.126,
-      "recall_top1pct": 0.093,
-      "precision_top5pct": 0.11,
-      "recall_top5pct": 0.406
+      "auc": 0.736,
+      "average_precision": 0.06,
+      "precision_top1pct": 0.114,
+      "recall_top1pct": 0.092,
+      "precision_top5pct": 0.09,
+      "recall_top5pct": 0.363
     }
   },
   "destination": {
     "GNN": {
-      "top1": 0.579,
-      "top3": 0.925,
-      "top1_when_use_changed": 0.411
+      "top1": 0.562,
+      "top3": 0.923,
+      "top1_when_use_changed": 0.416
     },
     "LightGBM": {
-      "top1": 0.579,
-      "top3": 0.903,
-      "top1_when_use_changed": 0.414
+      "top1": 0.55,
+      "top3": 0.894,
+      "top1_when_use_changed": 0.416
     },
     "GNN + LightGBM (mean)": {
-      "top1": 0.597,
-      "top3": 0.925,
-      "top1_when_use_changed": 0.432
+      "top1": 0.572,
+      "top3": 0.917,
+      "top1_when_use_changed": 0.434
     },
     "Zoning-family prior (training period)": {
-      "top1": 0.405,
-      "top3": 0.867,
-      "top1_when_use_changed": 0.334
+      "top1": 0.411,
+      "top3": 0.861,
+      "top1_when_use_changed": 0.332
     },
     "Same use, then training-period transitions": {
-      "top1": 0.394,
-      "top3": 0.862,
+      "top1": 0.344,
+      "top3": 0.845,
       "top1_when_use_changed": 0.0
     }
   },
-  "destination_n": 558,
-  "destination_n_use_changed": 338,
+  "destination_n": 509,
+  "destination_n_use_changed": 334,
   "features": 59
 }

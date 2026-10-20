@@ -10,6 +10,11 @@ budget, exact re-scoring of the top 30 moves), under three settings:
 Recommended parcels are then compared with what happened by 2025 (redevelopment label; 2025 land use). This tests
 plausibility, not desirability: a plan can be good without resembling the market.
 
+The settings recommend different numbers of parcels, so they are also compared at equal counts: in each district
+every setting is rerun with a budget equal to the smallest count any setting recommended there, and all plans are
+scored with one objective (the balanced overall score of the district minus the conversion penalty per change).
+The share of each setting's eligible parcels that were redeveloped is the rate a random choice would reach.
+
 Run:  python -I -m planarena.models.ablate_recs
 """
 from __future__ import annotations
@@ -49,27 +54,50 @@ def main() -> dict:
     settings = {"no realism layer": {"require_precedent": False},
                 "precedent filter (default)": {"require_precedent": True},
                 "precedent filter + likelihood layer": {"require_precedent": True, "candidate_parcels": likely}}
-    res = {"test": __doc__.strip().split("\n\n")[1], "snapshot": T0, "outcome_year": T1, "settings": {}}
-    for name, kw in settings.items():
-        rec, new_use, score = [], [], []
-        for cd in range(101, 113):
-            cfg = SuggestConfig(scope=f"cd:{cd}", max_change_share=0.02, polish=30, **kw)
-            out = sug.suggest(cfg)
-            ch = np.asarray(out["changed"], dtype=int)  # indices of changed parcels
-            rec.append(ch)
-            new_use.append(out["use"][ch])
-            score.append(out["evaluation"]["overall"])
-        rec, new_use = np.concatenate(rec), np.concatenate(new_use)
-        prec_ok = e.has_precedent(rec, new_use)
-        res["settings"][name] = {
-            "recommended_parcels": int(len(rec)),
-            "share_without_precedent": round(float(1 - prec_ok.mean()), 3) if len(rec) else None,
-            "share_redeveloped_by_2025": round(float(developed[rec].mean()), 4) if len(rec) else None,
-            "share_with_recommended_use_in_2025": round(float((use25[rec] == new_use).mean()), 4) if len(rec) else None,
-            "share_redeveloped_into_recommended_use": round(float((developed[rec] & (use25[rec] == new_use)).mean()), 4) if len(rec) else None,
-            "median_district_plan_score": round(float(np.median(score)), 3),
+    res = {"test": "\n\n".join(__doc__.strip().split("\n\n")[1:3]), "snapshot": T0, "outcome_year": T1,
+           "settings": {}, "equal_counts": {}}
+    pen = SuggestConfig().conversion_penalty
+
+    def run(cd, kw, budget=None):
+        cfg = SuggestConfig(scope=f"cd:{cd}", max_change_share=0.02, polish=30, **kw)
+        if budget == 0:
+            _, eligible, _ = sug.feasible(cfg, e.base_use)
+            return np.zeros(0, int), np.zeros(0, "int16"), 0.0, np.nonzero(eligible)[0]
+        if budget is not None:
+            _, eligible, _ = sug.feasible(cfg, e.base_use)
+            cfg.max_change_share = (budget + 0.5) / max(int(eligible.sum()), 1)
+        out = sug.suggest(cfg)
+        ch = np.asarray(out["changed"], dtype=int)
+        _, eligible, _ = sug.feasible(cfg, e.base_use)
+        return ch, out["use"][ch], out["evaluation"]["overall"] - pen * len(ch), np.nonzero(eligible)[0]
+
+    def metrics(rec, new_use, J, elig):
+        n = len(rec)
+        return {
+            "recommended_parcels": int(n),
+            "share_without_precedent": round(float(1 - e.has_precedent(rec, new_use).mean()), 3) if n else None,
+            "share_redeveloped_by_2025": round(float(developed[rec].mean()), 4) if n else None,
+            "share_of_eligible_redeveloped": round(float(developed[elig].mean()), 4) if len(elig) else None,
+            "share_with_recommended_use_in_2025": round(float((use25[rec] == new_use).mean()), 4) if n else None,
+            "share_redeveloped_into_recommended_use": round(float((developed[rec] & (use25[rec] == new_use)).mean()), 4) if n else None,
+            "median_district_objective": round(float(np.median(J)), 3),
+            "sum_district_objective": round(float(np.sum(J)), 3),
         }
+
+    first = {}
+    for name, kw in settings.items():
+        runs = [run(cd, kw) for cd in range(101, 113)]
+        first[name] = runs
+        res["settings"][name] = metrics(np.concatenate([r[0] for r in runs]), np.concatenate([r[1] for r in runs]),
+                                        [r[2] for r in runs], np.unique(np.concatenate([r[3] for r in runs])))
         print(name, res["settings"][name], flush=True)
+    k = {cd: min(len(first[n][j][0]) for n in settings) for j, cd in enumerate(range(101, 113))}
+    res["equal_counts"]["budget_by_district"] = {str(cd): int(v) for cd, v in k.items()}
+    for name, kw in settings.items():
+        runs = [run(cd, kw, budget=k[cd]) for cd in range(101, 113)]
+        res["equal_counts"][name] = metrics(np.concatenate([r[0] for r in runs]), np.concatenate([r[1] for r in runs]),
+                                            [r[2] for r in runs], np.unique(np.concatenate([r[3] for r in runs])))
+        print("equal counts", name, res["equal_counts"][name], flush=True)
     rows = (lab.matched & (lab.use0 >= 0)).to_numpy()
     res["reference"] = {"share_of_all_lots_redeveloped": round(float(developed[rows].mean()), 4),
                         "share_of_likely_fifth_redeveloped": round(float(developed[likely].mean()), 4)}

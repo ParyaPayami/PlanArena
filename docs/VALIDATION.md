@@ -101,15 +101,28 @@ Jobs change by 2020 census block (LODES 2015 → 2023, net of the trend of block
 
 **Not validated:** access to parks, shops and facilities after a change; runoff after a change; emissions of buildings under 25,000 sq ft (not in LL84); jobs at lot level (LODES is by block).
 
+**Held-out test** (`planarena/models/impact_test.py`): coefficients from 2015 data; delta form, unit-size rule and scale chosen on 1,314 lots in two of five spatial folds; metrics on the other 2,036. Baselines are fitted on the selection lots with the same information.
+
+| Method | Homes r | Homes MAE | Homes bias | Homes total ratio | Value r | Value total ratio | Emissions r | Emissions total ratio |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| engine (replacement, stock unit size; pre-period coefficients) | 0.794 | 12.7 | 6.1 | 1.51× | 0.738 | 0.70× | 0.596 | 1.24× |
+| engine (replacement, stock unit size) x selection-set scale | 0.794 | 11.8 | 4.2 | 1.35× | 0.738 | 1.09× | 0.596 | 1.06× |
+| engine as deployed (hybrid, stock unit size; pre-period coefficients) | 0.795 | 12.5 | 5.6 | 1.47× | 0.738 | 0.70× | 0.596 | 1.24× |
+| mean change of the same transition (selection set) | 0.394 | 22.3 | 1.5 | 1.12× | 0.096 | 1.07× | 0.260 | 2.26× |
+| gradient-boosted regression (selection set) | 0.680 | 15.4 | 2.9 | 1.24× | 0.571 | 1.19× | 0.363 | 1.10× |
+| no change | – | 16.5 | -12.1 | 0.00× | – | 0.00× | – | 0.00× |
+
+Job change by block (evaluation blocks only): r 0.049.
+
 **Do baseline residuals change the recommendations?** Optimizer recommendations in 12 districts, with and without synthetic log-normal error on the observed baseline (Jaccard overlap of recommended parcels; 1 = identical):
 
 | Delta form | Median overlap | Lowest overlap |
 |---|---:|---:|
-| replacement | 0.901 | 0.658 |
-| difference | 0.964 | 0.771 |
-| hybrid | 0.901 | 0.658 |
+| replacement | 0.909 | 0.722 |
+| difference | 0.952 | 0.794 |
+| hybrid | 0.909 | 0.722 |
 
-Agreement between forms (median overlap): replacement vs hybrid 1.000; difference vs hybrid 0.820; replacement vs difference 0.820.
+Agreement between forms (median overlap): replacement vs hybrid 1.000; difference vs hybrid 0.805; replacement vs difference 0.805.
 
 ## D. Models
 
@@ -147,16 +160,16 @@ New building on the lot within 3 years. Portable features (computed the same way
 
 | Test city (pair) | Trained on | AUC (95% CI) | Average precision (95% CI) | Precision, top 1% |
 |---|---|---|---|---|
-| Manhattan (2022->2025; 226 new buildings, base rate 0.54%) | same city | 0.903 (0.879–0.925) | 0.122 (0.089–0.163) | 17.8% |
-|  | other city only | 0.774 (0.725–0.822) | 0.050 (0.018–0.124) | 5.0% |
-|  | both cities | 0.905 (0.884–0.925) | 0.113 (0.082–0.156) | 15.0% |
-|  | same city, full feature set | 0.922 (0.901–0.940) | 0.123 (0.089–0.170) | 15.4% |
+| Manhattan (2022->2025; 226 new buildings, base rate 0.54%) | same city | 0.903 (0.880–0.925) | 0.129 (0.092–0.169) | 17.6% |
+|  | other city only | 0.830 (0.799–0.863) | 0.033 (0.021–0.054) | 4.8% |
+|  | both cities | 0.903 (0.882–0.922) | 0.109 (0.079–0.150) | 14.7% |
+|  | same city, full feature set | 0.922 (0.902–0.941) | 0.131 (0.097–0.179) | 16.2% |
 | | best simple baseline: Built FAR below nearby lots | 0.857 | 0.051 | 9.3% |
-| Milwaukee (2023->2026; 121 new buildings, base rate 0.08%) | same city | 0.946 (0.915–0.971) | 0.020 (0.014–0.031) | 2.3% |
-|  | other city only | 0.951 (0.926–0.972) | 0.022 (0.011–0.043) | 1.7% |
-|  | both cities | 0.968 (0.953–0.981) | 0.032 (0.017–0.055) | 2.6% |
-|  | same city, full feature set | 0.943 (0.902–0.967) | 0.028 (0.018–0.041) | 2.9% |
-| | best simple baseline: Built FAR below nearby lots | 0.855 | 0.008 | 0.8% |
+| Milwaukee (2023->2026; 129 new buildings, base rate 0.09%) | same city | 0.920 (0.883–0.953) | 0.023 (0.014–0.041) | 2.7% |
+|  | other city only | 0.946 (0.919–0.968) | 0.020 (0.011–0.030) | 2.2% |
+|  | both cities | 0.964 (0.944–0.979) | 0.056 (0.019–0.105) | 2.8% |
+|  | same city, full feature set | 0.937 (0.908–0.961) | 0.050 (0.021–0.090) | 3.1% |
+| | best simple baseline: Built FAR below nearby lots | 0.878 | 0.009 | 1.0% |
 
 ### Pattern models as redevelopment predictors (2015 → 2025)
 
@@ -171,25 +184,25 @@ New building on the lot within 3 years. Portable features (computed the same way
 
 ### Redevelopment-transition model (temporal holdout)
 
-Trained on 2015 features with 2015–2020 outcomes (1,814 redeveloped lots of 42,623); tested on 2020 features with 2020–2025 outcomes (569 of 42,170; base rate 1.35%).
+Trained on 2015 features with 2015–2020 outcomes (1,814 redeveloped lots of 42,623); tested on 2020 features with 2020–2025 outcomes (520 of 42,170; base rate 1.23%).
 
 | Will the lot be redeveloped within 5 years? | AUC | Average precision | Precision, top 1% | Recall, top 5% | ECE |
 |---|---:|---:|---:|---:|---:|
-| GNN | 0.809 | 0.109 | 18.3% | 38.0% | 0.083 |
-| LightGBM | 0.847 | 0.139 | 26.4% | 39.2% | 0.011 |
-| GNN + LightGBM (mean) | 0.831 | 0.136 | 24.0% | 41.3% | 0.047 |
-| Underbuilt share of zoning capacity | 0.749 | 0.068 | 10.5% | 38.8% | – |
-| Land-value share of assessed value | 0.754 | 0.075 | 12.6% | 40.6% | – |
+| GNN | 0.833 | 0.116 | 18.3% | 41.5% | 0.084 |
+| LightGBM | 0.855 | 0.146 | 26.4% | 42.3% | 0.013 |
+| GNN + LightGBM (mean) | 0.850 | 0.145 | 24.0% | 45.2% | 0.048 |
+| Underbuilt share of zoning capacity | 0.802 | 0.073 | 10.5% | 42.5% | – |
+| Land-value share of assessed value | 0.736 | 0.060 | 11.4% | 36.3% | – |
 
-Best simple baseline: Land-value share of assessed value (AUC 0.754).
+Best simple baseline: Underbuilt share of zoning capacity (AUC 0.802).
 
-| Into what use? (558 redeveloped lots) | Top-1 | Top-3 | Top-1 when the use changed |
+| Into what use? (509 redeveloped lots) | Top-1 | Top-3 | Top-1 when the use changed |
 |---|---:|---:|---:|
-| GNN | 57.9% | 92.5% | 41.1% |
-| LightGBM | 57.9% | 90.3% | 41.4% |
-| GNN + LightGBM (mean) | 59.7% | 92.5% | 43.2% |
-| Zoning-family prior (training period) | 40.5% | 86.7% | 33.4% |
-| Same use, then training-period transitions | 39.4% | 86.2% | 0.0% |
+| GNN | 56.2% | 92.3% | 41.6% |
+| LightGBM | 55.0% | 89.4% | 41.6% |
+| GNN + LightGBM (mean) | 57.2% | 91.7% | 43.4% |
+| Zoning-family prior (training period) | 41.1% | 86.1% | 33.2% |
+| Same use, then training-period transitions | 34.4% | 84.5% | 0.0% |
 
 Model selection for the GNN used a spatial hold-out inside the training period, which is not a temporal test; its accuracy there is not comparable with the temporal test above.
 
@@ -199,21 +212,21 @@ Each row trains only on outcomes known at the decision year and tests on the nex
 
 | Horizon | Test | Positives | Base rate | AUC (95% CI) | Avg precision (95% CI) | Best baseline AUC | Spatial CV in the same period, AP | ECE raw → isotonic |
 |---:|---|---:|---:|---|---|---:|---:|---|
-| 1 y | 2016->2017 | 187 | 0.44% | 0.901 (0.875–0.926) | 0.118 (0.080–0.172) | 0.841 | 0.110 | 0.001 |
-| 1 y | 2017->2018 | 206 | 0.48% | 0.889 (0.861–0.918) | 0.199 (0.149–0.261) | 0.840 | 0.181 | 0.001 → 0.001 |
-| 1 y | 2018->2019 | 267 | 0.63% | 0.898 (0.873–0.918) | 0.251 (0.192–0.307) | 0.781 | 0.311 | 0.001 → 0.001 |
-| 1 y | 2019->2020 | 313 | 0.74% | 0.885 (0.861–0.908) | 0.191 (0.121–0.251) | 0.787 | 0.140 | 0.003 → 0.002 |
-| 1 y | 2020->2021 | 66 | 0.16% | 0.952 (0.923–0.972) | 0.029 (0.019–0.043) | 0.916 | 0.771 | 0.003 → 0.006 |
-| 1 y | 2021->2022 | 128 | 0.30% | 0.886 (0.850–0.913) | 0.068 (0.043–0.102) | 0.759 | 0.035 | 0.002 → 0.002 |
-| 1 y | 2022->2023 | 73 | 0.17% | 0.849 (0.770–0.902) | 0.083 (0.040–0.149) | 0.735 | 0.031 | 0.002 → 0.001 |
-| 1 y | 2023->2024 | 139 | 0.33% | 0.849 (0.802–0.897) | 0.077 (0.048–0.125) | 0.833 | 0.032 | 0.001 → 0.002 |
-| 1 y | 2024->2025 | 126 | 0.30% | 0.855 (0.814–0.890) | 0.095 (0.054–0.138) | 0.735 | 0.025 | 0.001 → 0.001 |
-| 3 y | 2018->2021 | 570 | 1.34% | 0.881 (0.863–0.896) | 0.150 (0.125–0.179) | 0.807 | 0.244 | 0.007 |
-| 3 y | 2019->2022 | 461 | 1.09% | 0.863 (0.844–0.884) | 0.175 (0.132–0.232) | 0.784 | 0.152 | 0.004 → 0.005 |
-| 3 y | 2020->2023 | 260 | 0.62% | 0.882 (0.858–0.901) | 0.113 (0.080–0.163) | 0.769 | 0.299 | 0.008 → 0.012 |
-| 3 y | 2021->2024 | 355 | 0.84% | 0.879 (0.858–0.897) | 0.140 (0.106–0.182) | 0.816 | 0.105 | 0.004 → 0.004 |
-| 3 y | 2022->2025 | 350 | 0.83% | 0.865 (0.838–0.888) | 0.120 (0.086–0.163) | 0.799 | 0.085 | 0.003 → 0.002 |
-| 5 y | 2020->2025 | 569 | 1.35% | 0.847 (0.826–0.865) | 0.139 (0.107–0.183) | 0.754 | 0.256 | 0.011 |
+| 1 y | 2016->2017 | 183 | 0.43% | 0.897 (0.868–0.923) | 0.114 (0.073–0.168) | 0.852 | 0.116 | 0.001 |
+| 1 y | 2017->2018 | 204 | 0.48% | 0.890 (0.864–0.921) | 0.210 (0.153–0.278) | 0.847 | 0.182 | 0.001 → 0.001 |
+| 1 y | 2018->2019 | 267 | 0.63% | 0.896 (0.871–0.915) | 0.266 (0.207–0.320) | 0.781 | 0.311 | 0.001 → 0.000 |
+| 1 y | 2019->2020 | 313 | 0.74% | 0.883 (0.856–0.906) | 0.199 (0.136–0.263) | 0.787 | 0.140 | 0.003 → 0.002 |
+| 1 y | 2020->2021 | 14 | 0.03% | 0.902 (0.780–0.986) | 0.011 (0.003–0.025) | 0.818 | 0.002 | 0.004 → 0.008 |
+| 1 y | 2021->2022 | 128 | 0.30% | 0.890 (0.855–0.925) | 0.107 (0.065–0.167) | 0.759 | 0.035 | 0.001 → 0.003 |
+| 1 y | 2022->2023 | 73 | 0.17% | 0.853 (0.775–0.903) | 0.116 (0.061–0.187) | 0.735 | 0.031 | 0.002 → 0.001 |
+| 1 y | 2023->2024 | 139 | 0.33% | 0.851 (0.808–0.897) | 0.097 (0.060–0.158) | 0.833 | 0.032 | 0.001 → 0.002 |
+| 1 y | 2024->2025 | 126 | 0.30% | 0.856 (0.816–0.891) | 0.087 (0.052–0.138) | 0.735 | 0.025 | 0.001 → 0.001 |
+| 3 y | 2018->2021 | 570 | 1.34% | 0.881 (0.865–0.895) | 0.152 (0.126–0.185) | 0.807 | 0.244 | 0.007 |
+| 3 y | 2019->2022 | 461 | 1.09% | 0.860 (0.840–0.881) | 0.176 (0.129–0.237) | 0.784 | 0.152 | 0.004 → 0.005 |
+| 3 y | 2020->2023 | 208 | 0.49% | 0.870 (0.836–0.893) | 0.117 (0.074–0.181) | 0.777 | 0.053 | 0.009 → 0.013 |
+| 3 y | 2021->2024 | 355 | 0.84% | 0.877 (0.854–0.897) | 0.148 (0.109–0.195) | 0.816 | 0.105 | 0.003 → 0.004 |
+| 3 y | 2022->2025 | 350 | 0.83% | 0.866 (0.840–0.889) | 0.119 (0.086–0.162) | 0.799 | 0.085 | 0.002 → 0.003 |
+| 5 y | 2020->2025 | 520 | 1.23% | 0.855 (0.834–0.874) | 0.146 (0.111–0.192) | 0.802 | 0.138 | 0.013 |
 
 Within-period spatial cross-validation (right-hand columns) is not a guide to forward performance: it is much higher than the temporal test in some periods and lower in others. Only the temporal rows estimate forward performance. Probabilities track the development rate of the training periods, so rankings are more reliable than five-year probabilities.
 
@@ -221,27 +234,27 @@ Within-period spatial cross-validation (right-hand columns) is not a guide to fo
 
 | Horizon | Test | Positives | Base rate | AUC | Average precision | Best baseline AUC |
 |---:|---|---:|---:|---:|---:|---:|
-| 5 y | 2020->2025 | 485 | 1.15% | 0.886 | 0.146 | 0.789 |
-| 3 y | 2022->2025 | 278 | 0.66% | 0.893 | 0.125 | 0.835 |
-| 1 y | 2024->2025 | 77 | 0.18% | 0.897 | 0.070 | 0.806 |
+| 5 y | 2020->2025 | 436 | 1.03% | 0.887 | 0.149 | 0.831 |
+| 3 y | 2022->2025 | 278 | 0.66% | 0.891 | 0.126 | 0.835 |
+| 1 y | 2024->2025 | 77 | 0.18% | 0.896 | 0.095 | 0.806 |
 
 **Label audit 2015->2020** (2015-03-01 to 2020-12-01): 1,814 lots labelled redeveloped; 47% of them have a DOB new-building or alteration-type-1 certificate of occupancy in the window (25% new-building only); 49% of lots with a new-building certificate are labelled redeveloped. Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound.
-**Label audit 2020->2025** (2020-12-01 to 2025-09-01): 569 lots labelled redeveloped; 55% of them have a DOB new-building or alteration-type-1 certificate of occupancy in the window (45% new-building only); 33% of lots with a new-building certificate are labelled redeveloped. Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound.
+**Label audit 2020->2025** (2020-12-01 to 2025-09-01): 520 lots labelled redeveloped; 52% of them have a DOB new-building or alteration-type-1 certificate of occupancy in the window (41% new-building only); 27% of lots with a new-building certificate are labelled redeveloped. Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound.
 
 ## E. Optimizer (best plan found, not a global optimum)
 
-Exhaustive search over every plan with up to 2 changes in 20 single-block study areas (4–33 candidate moves each; 15 with a positive optimum). First-order search alone found the exhaustive optimum in 73% of them (mean gap 11.9%); with the exact re-scoring step, 93% (median 0.28 s). This says nothing about district or city scale.
+Exhaustive search over every plan with up to 2 changes in 20 single-block study areas (4–33 candidate moves each; 15 with a positive optimum). First-order search alone found the exhaustive optimum in 93% of them (mean gap 2.7%); with the exact re-scoring step, 100% (median 0.51 s). This says nothing about district or city scale.
 
 **District scale** (Every district, budget 10 changes, objective = overall score - conversion penalty x changes (GNN term off). Exact-evaluation heuristics search the 150 best first-order moves. No method guarantees a global optimum; 'share of best found' compares each method with the best plan any method found.)
 
 | Method | Median share of best plan found | Districts where best | Median seconds |
 |---|---:|---:|---:|
-| surrogate top moves | 92.6% | 0 | 0.02 |
-| first order | 96.4% | 1 | 0.13 |
-| first order plus exact polish | 97.4% | 1 | 1.14 |
-| greedy exact | 100.0% | 12 | 25.87 |
-| simulated annealing | 94.8% | 0 | 7.54 |
-| random restarts 50 | 65.9% | 0 | 0.94 |
+| surrogate top moves | 91.0% | 0 | 0.02 |
+| first order | 94.1% | 0 | 0.25 |
+| first order plus exact polish | 95.7% | 1 | 1.88 |
+| greedy exact | 100.0% | 12 | 36.15 |
+| simulated annealing | 93.6% | 0 | 10.65 |
+| random restarts 50 | 65.5% | 0 | 1.31 |
 
 ## F. Simulated stakeholder scenarios
 
@@ -254,32 +267,33 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 | The council winner beats no change in both simulated electorates | 12 of 12 |
 | The simulated residents' winner is the council's winner | 1 of 12 |
 | The council winner is also the Nash bargaining solution | 0 of 12 |
-| One insincere ballot could change the Schulze result | 6 of 12 |
-| Median robustness of the winner (coefficients and seats varied, 200 draws) | 75.8% |
+| One insincere ballot could change the Schulze result | 8 of 12 |
+| Median robustness of the winner (coefficients and seats varied, 200 draws) | 67.8% |
 
 **Sensitivity of the simulated outcome:**
 
 | Change to the assumptions | Result |
 |---|---|
-| Stakeholder utility weights redrawn (Dirichlet around the assumed weights) | winner unchanged in a median 54% of draws |
+| Stakeholder utility weights redrawn (Dirichlet around the assumed weights) | winner unchanged in a median 58% of draws |
 | Ten random feasible plans added to the ballot (not built from the utilities) | winner unchanged in 12 of 12 districts; beats every random plan head to head in 12 |
-| Residents' indifference threshold swept 0–0.1 points | residents' winner stable in 12 of 12 districts |
+| Residents' indifference threshold swept 0–0.1 points | residents' winner stable in 11 of 12 districts |
 | One stakeholder given three seats (each in turn) | same winner in a median 33% of seat allocations |
 
 ## G. Integration value: likelihood-weighted vs capacity-based projections
 
 Does weighting each development site by its probability of redevelopment bring a rezoning's projected homes closer to what was built than capacity-based analysis? Sites come from PlanArena's development-site screen under the adopted FAR; probabilities come from the redevelopment model trained only on outcomes known by the adoption year, scored with the adopted zoning (`planarena/models/replay.py`).
 
-| Rezoning | Sites | Built by 2025 (homes on the sites) | Capacity | Capacity pro-rated to 2025 | Likelihood-weighted (model 95% range) | Sites redeveloped: observed / expected |
-|---|---:|---:|---:|---:|---:|---:|
-| East Harlem (2017) | 127 | 288 | 4,117 | 3,294 | 234 (79 to 489) | 7 / 13.3 |
-| Inwood (2018) | 47 | 270 | 2,859 | 1,334 | 213 (0 to 652) | 2 / 2.4 |
-| SoHo/NoHo (2021) | 77 | 3 | 1,447 | 579 | 138 (8 to 304) | 1 / 4.1 |
-| **All three** | | 561 | 8,423 | 5,207 | 585 | |
+| Rezoning | Sites | Built by 2025 (homes on the sites) | Capacity | Capacity pro-rated to 2025 | Probability × capacity (95% range) | Probability × empirical yield (95% range) | Sites redeveloped: observed / expected |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| East Harlem (2017) | 127 | 288 | 4,117 | 3,294 | 241 (82 to 497) | 91 (0 to 444) | 7 / 13.6 |
+| Inwood (2018) | 47 | 270 | 2,859 | 1,334 | 234 (0 to 677) | 127 (0 to 1,033) | 2 / 2.5 |
+| SoHo/NoHo (2021) | 77 | 3 | 1,447 | 579 | 132 (8 to 296) | 134 (0 to 801) | 1 / 4.1 |
+| **All three** | | 561 | 8,423 | 5,207 | 607 | 352 | |
+| **Sum of absolute errors** | | | 7,862 | 4,646 | 212 | 471 | |
 
-Observed homes fall inside the model's 95% range in 2 of 3 rezonings.
+Observed homes fall inside the 95% range in 2 of 3 rezonings (probability × capacity) and 3 (probability × yield). The ranges are conditional on the model's probabilities. Close totals can come from errors that cancel across rezonings; the sum of absolute errors shows them.
 
-Model used for each rezoning (training pairs known by the adoption year; extended to 2025 with a constant hazard): East Harlem (2017): 1-year model on 2015->2016, 2016->2017, mean site probability 0.018 with the adopted zoning vs 0.012 before; Inwood (2018): 3-year model on 2015->2018, mean site probability 0.022 with the adopted zoning vs 0.006 before; SoHo/NoHo (2021): 3-year model on 2015->2018, 2016->2019, 2017->2020, 2018->2021, mean site probability 0.041 with the adopted zoning vs 0.028 before.
+Model used for each rezoning (training pairs known by the adoption year; extended to 2025 with a constant hazard): East Harlem (2017): 1-year model on 2015->2016, 2016->2017, mean site probability 0.019 with the adopted zoning vs 0.013 before; Inwood (2018): 3-year model on 2015->2018, mean site probability 0.023 with the adopted zoning vs 0.007 before; SoHo/NoHo (2021): 3-year model on 2015->2018, 2016->2019, 2017->2020, 2018->2021, mean site probability 0.040 with the adopted zoning vs 0.027 before.
 
 - Three rezonings; few sites were redeveloped by 2025, so site-level rankings are not informative where fewer than five were.
 - Capacity projections describe full build-out by the review's build year; the comparison is with what was built by 2025, which is the near-term question.
@@ -287,13 +301,16 @@ Model used for each rezoning (training pairs known by the adoption year; extende
 
 **Realism layers in the optimizer** (`planarena/models/ablate_recs.py`): plans for every district on the 2020 snapshot, compared with what happened by 2025. This tests plausibility, not desirability.
 
-| Setting | Recommended parcels | Without precedent | Redeveloped by 2025 | Redeveloped into the recommended use | Median district plan score |
-|---|---:|---:|---:|---:|---:|
-| no realism layer | 529 | 16.6% | 11.9% | 0.6% | 7.524 |
-| precedent filter (default) | 544 | 0.0% | 12.1% | 0.5% | 8.267 |
-| precedent filter + likelihood layer | 118 | 0.0% | 21.2% | 0.0% | 2.734 |
+| Setting | Budget | Recommended parcels | Without precedent | Redeveloped by 2025 | Eligible parcels redeveloped | Redeveloped into the recommended use | Objective (sum over districts) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| no realism layer | full | 539 | 17.4% | 11.7% | 1.5% | 0.6% | 112.435 |
+| precedent filter (default) | full | 543 | 0.0% | 11.8% | 1.5% | 0.5% | 115.362 |
+| precedent filter + likelihood layer | full | 118 | 0.0% | 21.2% | 5.0% | 0.0% | 43.429 |
+| no realism layer | equal counts | 116 | 16.4% | 11.2% | 1.5% | 0.0% | 83.674 |
+| precedent filter (default) | equal counts | 117 | 0.0% | 15.4% | 1.5% | 0.0% | 81.291 |
+| precedent filter + likelihood layer | equal counts | 118 | 0.0% | 21.2% | 5.0% | 0.0% | 43.429 |
 
-For reference, 1.4% of all lots and 5.2% of the likeliest fifth were redeveloped. The plan score is the optimizer's own objective; search is heuristic, so a constraint can change the plan found in either direction.
+For reference, 1.2% of all lots and 5.0% of the likeliest fifth were redeveloped. The objective is the overall score minus the conversion penalty, the same for every setting; at equal counts each setting recommends, in each district, the smallest number any setting recommended there. Search is heuristic, so a constraint can change the plan found in either direction.
 
 ## H. Integration value across cities: component ablation on observed history
 
@@ -301,8 +318,8 @@ Out-of-time test: fitted on the first window, scored on the next (METHODS sectio
 
 | City | Windows (train → test) | Lots | Developed in test | E | E+C | E+C+Z | E+C+P | E+C+Z+P |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| Los Angeles | 2021–2023 → 2023–2025 | 667,844 | 2,222 | 0.864 | 0.892 | 0.894 | 0.892 | 0.894 |
-| Dallas | 2022–2024 → 2024–2026 | 291,841 | 3,916 | 0.898 | 0.918 | 0.922 | 0.920 | 0.923 |
+| Los Angeles | 2021–2023 → 2023–2025 | 667,844 | 2,215 | 0.863 | 0.889 | 0.894 | 0.891 | 0.894 |
+| Dallas | 2022–2024 → 2024–2026 | 291,841 | 3,892 | 0.897 | 0.917 | 0.921 | 0.919 | 0.922 |
 | New York | 2021–2023 → 2023–2025 | 856,901 | 4,064 | 0.892 | 0.914 | 0.919 | – | – |
 | Milwaukee | 2021–2023 → 2023–2025 | 147,539 | 85 | 0.911 | 0.896 | 0.924 | – | – |
 | Phoenix | 2022–2024 → 2024–2026 | 503,635 | 1,835 | 0.859 | 0.793 | 0.842 | 0.847 | 0.853 |
@@ -313,8 +330,8 @@ Gain in AUC from adding a block (out-of-time; 95% bootstrap interval over 2 km t
 
 | City | + context over E | + zoning over E+C | + plan over E+C | + zoning and plan over E+C |
 |---|---|---|---|---|
-| Los Angeles | +0.028 [+0.020, +0.036] * | +0.002 [-0.001, +0.005] | -0.000 [-0.004, +0.003] | +0.002 [-0.001, +0.006] |
-| Dallas | +0.020 [+0.015, +0.025] * | +0.004 [+0.002, +0.005] * | +0.002 [+0.001, +0.003] * | +0.005 [+0.003, +0.007] * |
+| Los Angeles | +0.027 [+0.020, +0.034] * | +0.005 [+0.001, +0.008] * | +0.002 [-0.002, +0.006] | +0.004 [+0.001, +0.007] * |
+| Dallas | +0.021 [+0.016, +0.026] * | +0.003 [+0.002, +0.005] * | +0.002 [+0.001, +0.003] * | +0.004 [+0.003, +0.006] * |
 | New York | +0.023 [+0.018, +0.029] * | +0.004 [+0.003, +0.007] * | – | – |
 | Milwaukee | -0.015 [-0.079, +0.048] | +0.029 [-0.031, +0.075] | – | – |
 | Phoenix | -0.066 [-0.139, +0.001] | +0.049 [+0.009, +0.091] * | +0.054 [+0.005, +0.100] * | +0.060 [+0.024, +0.088] * |
@@ -333,8 +350,8 @@ What developed lots became (out-of-time window): share named correctly by each l
 
 | City | Developed lots | Existing use (no change) | Zoning class | Plan class | Model (layers) |
 |---|---:|---|---|---|---|
-| Los Angeles | 1,883 | 57% / 79% | 70% / 87% | 70% / 87% | 74% / 89% (E+C+Z+P) |
-| Dallas | 3,910 | 37% / 40% | 61% / 65% | 80% / 89% | 86% / 95% (E+C+Z+P) |
+| Los Angeles | 1,877 | 57% / 79% | 70% / 87% | 70% / 87% | 75% / 89% (E+C+Z+P) |
+| Dallas | 3,886 | 37% / 40% | 61% / 65% | 80% / 90% | 86% / 96% (E+C+Z+P) |
 | New York | 4,002 | 24% / 37% | 49% / 65% | – | 54% / 70% (E+Z) |
 | Milwaukee | 78 | 18% / 18% | 37% / 77% | – | 63% / 76% (E+Z) |
 | Phoenix | 1,835 | 0% / 35% | 64% / 74% | 47% / 62% | 75% / 81% (E+C+Z+P) |
@@ -344,8 +361,8 @@ Homes added in the test window, by district: projections against what was built 
 
 | City | Observed homes | Zoning build-out | Plan build-out | Likely × zoning | Likely × plan | Five-year trend |
 |---|---:|---|---|---|---|---|
-| Los Angeles | 22,853 | 192.64× (0.10) | 188.54× (0.24) | 0.81× (0.46) | 0.81× (0.52) | 0.59× (0.70) |
-| Dallas | 10,926 | 140.72× (-0.00) | 126.94× (0.34) | 2.64× (0.00) | 1.69× (0.30) | 1.25× (0.72) |
+| Los Angeles | 22,853 | 192.64× (0.10) | 188.54× (0.24) | 0.80× (0.51) | 0.81× (0.54) | 0.59× (0.70) |
+| Dallas | 10,926 | 140.72× (-0.00) | 126.94× (0.34) | 2.60× (-0.05) | 1.59× (0.33) | 1.25× (0.72) |
 | New York | 116,776 | 75.92× (0.34) | – | 0.96× (0.55) | – | 0.47× (0.81) |
 | Milwaukee | 3,798 | 115.42× (-0.23) | – | 0.97× (-0.37) | – | 0.32× (0.51) |
 
@@ -353,8 +370,8 @@ Transfer: fitted on the other cities with a building outcome, scored on the city
 
 | City | E | E+C | E+C+Z | E+C+Z+P |
 |---|---|---|---|---|
-| Los Angeles | 0.719 / 0.864 | 0.817 / 0.892 | 0.828 / 0.894 | 0.837 / 0.894 |
-| Dallas | 0.844 / 0.898 | 0.877 / 0.918 | 0.878 / 0.922 | 0.877 / 0.923 |
-| New York | 0.825 / 0.892 | 0.874 / 0.914 | 0.868 / 0.919 | 0.866 / 0.919 |
-| Milwaukee | 0.959 / 0.911 | 0.965 / 0.896 | 0.966 / 0.924 | 0.967 / 0.924 |
-| Chicago | 0.742 / 0.824 | 0.808 / 0.888 | 0.804 / 0.891 | 0.822 / 0.891 |
+| Los Angeles | 0.726 / 0.863 | 0.822 / 0.889 | 0.827 / 0.894 | 0.828 / 0.894 |
+| Dallas | 0.845 / 0.897 | 0.873 / 0.917 | 0.880 / 0.921 | 0.872 / 0.922 |
+| New York | 0.824 / 0.892 | 0.871 / 0.914 | 0.874 / 0.919 | 0.865 / 0.919 |
+| Milwaukee | 0.958 / 0.911 | 0.966 / 0.896 | 0.966 / 0.924 | 0.966 / 0.924 |
+| Chicago | 0.736 / 0.824 | 0.805 / 0.888 | 0.800 / 0.891 | 0.814 / 0.891 |

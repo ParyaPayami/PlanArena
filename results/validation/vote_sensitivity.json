@@ -1,77 +1,150 @@
 {
-  "test": "How much the simulated outcome depends on its assumptions, in one district.\n\n1. utility weights: each stakeholder's indicator weights drawn from a Dirichlet centred on the assumed weights\n2. candidate generation: random feasible plans (not built from the stakeholder utilities) added to the ballot\n3. residents' indifference threshold (JND) swept\n4. seat allocations: equal seats, then each stakeholder with three seats",
+  "test": "How much the simulated outcome depends on its assumptions, in one district.\n\n1. utility weights: each stakeholder's indicator weights drawn from a Dirichlet centred on the assumed weights\n2. candidate generation: random feasible plans (not built from the stakeholder utilities) added to the ballot\n3. residents' indifference threshold (JND) swept\n4. seat allocations: equal seats, then each stakeholder with three seats\n5. rule disagreement by candidate set: how many of the nine rules pick a different winner, and whether a\n   Condorcet winner exists, on the generated ballot, on the stakeholders' ideal plans only, on the generated\n   ballot plus random plans, and on random plans only (each set with the status quo)\n6. heterogeneous residents: each precinct's indicator weights drawn from a Dirichlet centred on the residents'\n   profile, independently per precinct; share of draws in which the residents' winner is unchanged",
   "summary": {
-    "median_winner_unchanged_under_weight_draws": 0.535,
+    "median_winner_unchanged_under_weight_draws": 0.5800000000000001,
     "districts_winner_unchanged_with_random_candidates": 12,
     "districts_winner_beats_every_random_plan": 12,
-    "districts_residents_winner_stable_across_jnd": 12,
+    "districts_residents_winner_stable_across_jnd": 11,
     "median_share_of_seat_allocations_with_same_winner": 0.333,
+    "median_residents_winner_unchanged_with_heterogeneous_weights": 1.0,
+    "rule_disagreement_by_candidate_set": {
+      "generated": {
+        "median_candidates": 19.0,
+        "median_distinct_winners": 4.0,
+        "max_distinct_winners": 5,
+        "districts_all_rules_agree": 0,
+        "districts_with_condorcet_winner": 7
+      },
+      "ideal plans only": {
+        "median_candidates": 6.0,
+        "median_distinct_winners": 3.0,
+        "max_distinct_winners": 4,
+        "districts_all_rules_agree": 0,
+        "districts_with_condorcet_winner": 11
+      },
+      "generated + random": {
+        "median_candidates": 35.0,
+        "median_distinct_winners": 4.0,
+        "max_distinct_winners": 5,
+        "districts_all_rules_agree": 0,
+        "districts_with_condorcet_winner": 7
+      },
+      "random only": {
+        "median_candidates": 17.0,
+        "median_distinct_winners": 2.0,
+        "max_distinct_winners": 4,
+        "districts_all_rules_agree": 4,
+        "districts_with_condorcet_winner": 11
+      }
+    },
     "districts": 12
   },
   "by_district": [
     {
       "scope": "cd:101",
-      "winner": "blend-environment-city",
+      "winner": "blend-developer-environment",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.36,
-      "random_candidates": 10,
-      "winner_with_random_candidates": "blend-environment-city",
+      "winner_unchanged_under_weight_draws": 0.755,
+      "random_candidates": 16,
+      "winner_with_random_candidates": "blend-developer-environment",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-environment"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-developer"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-environment"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-9"
+        }
+      },
       "residents_winner_by_jnd": {
-        "0.0": "blend-developer-residents",
-        "0.005": "blend-developer-residents",
-        "0.01": "blend-developer-residents",
-        "0.05": "blend-developer-residents",
-        "0.1": "blend-developer-residents"
+        "0.0": "ideal-residents",
+        "0.005": "ideal-residents",
+        "0.01": "ideal-residents",
+        "0.05": "ideal-residents",
+        "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 0.98,
       "winner_by_seats": {
-        "equal": "blend-environment-city",
+        "equal": "blend-developer-environment",
         "developer x3": "blend-developer-city",
         "residents x3": "blend-developer-residents",
         "environment x3": "ideal-environment",
         "city x3": "blend-developer-city",
-        "business x3": "blend-environment-city"
+        "business x3": "ideal-business"
       },
-      "share_of_seat_allocations_with_same_winner": 0.333
+      "share_of_seat_allocations_with_same_winner": 0.167
     },
     {
       "scope": "cd:102",
       "winner": "blend-developer-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.435,
-      "random_candidates": 10,
+      "winner_unchanged_under_weight_draws": 0.41,
+      "random_candidates": 16,
       "winner_with_random_candidates": "blend-developer-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
-      "residents_winner_by_jnd": {
-        "0.0": "ideal-residents",
-        "0.005": "ideal-residents",
-        "0.01": "ideal-residents",
-        "0.05": "ideal-residents",
-        "0.1": "ideal-residents"
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 4,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-business"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 3,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-business"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-2"
+        }
       },
-      "residents_winner_stable_across_jnd": true,
-      "winner_by_seats": {
-        "equal": "blend-developer-business",
-        "developer x3": "ideal-developer",
-        "residents x3": "balanced",
-        "environment x3": "blend-environment-city",
-        "city x3": "blend-developer-business",
-        "business x3": "blend-developer-business"
-      },
-      "share_of_seat_allocations_with_same_winner": 0.5
-    },
-    {
-      "scope": "cd:103",
-      "winner": "blend-developer-business",
-      "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.83,
-      "random_candidates": 10,
-      "winner_with_random_candidates": "blend-developer-business",
-      "winner_unchanged_with_random_candidates": true,
-      "winner_beats_every_random_plan": true,
       "residents_winner_by_jnd": {
         "0.0": "blend-developer-residents",
         "0.005": "blend-developer-residents",
@@ -80,79 +153,246 @@
         "0.1": "blend-developer-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
         "equal": "blend-developer-business",
-        "developer x3": "blend-developer-business",
-        "residents x3": "blend-developer-residents",
-        "environment x3": "blend-developer-business",
-        "city x3": "blend-developer-business",
-        "business x3": "blend-developer-business"
+        "developer x3": "ideal-developer",
+        "residents x3": "blend-residents-environment",
+        "environment x3": "consensus",
+        "city x3": "ideal-city",
+        "business x3": "ideal-business"
       },
-      "share_of_seat_allocations_with_same_winner": 0.833
+      "share_of_seat_allocations_with_same_winner": 0.167
+    },
+    {
+      "scope": "cd:103",
+      "winner": "ideal-city",
+      "candidates": 19,
+      "winner_unchanged_under_weight_draws": 0.68,
+      "random_candidates": 16,
+      "winner_with_random_candidates": "ideal-city",
+      "winner_unchanged_with_random_candidates": true,
+      "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-city"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 8,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-city"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-city"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "status-quo"
+        }
+      },
+      "residents_winner_by_jnd": {
+        "0.0": "blend-developer-residents",
+        "0.005": "blend-developer-residents",
+        "0.01": "blend-developer-residents",
+        "0.05": "blend-developer-residents",
+        "0.1": "blend-developer-residents"
+      },
+      "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
+      "winner_by_seats": {
+        "equal": "ideal-city",
+        "developer x3": "blend-developer-city",
+        "residents x3": "blend-developer-residents",
+        "environment x3": "ideal-city",
+        "city x3": "ideal-city",
+        "business x3": "ideal-business"
+      },
+      "share_of_seat_allocations_with_same_winner": 0.5
     },
     {
       "scope": "cd:104",
       "winner": "blend-residents-city",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.31,
-      "random_candidates": 10,
+      "winner_unchanged_under_weight_draws": 0.505,
+      "random_candidates": 16,
       "winner_with_random_candidates": "blend-residents-city",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 18,
+          "schulze_winner": "blend-residents-city"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-developer"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 18,
+          "schulze_winner": "blend-residents-city"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 1,
+          "rules_with_modal_winner": 9,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-5"
+        }
+      },
       "residents_winner_by_jnd": {
-        "0.0": "ideal-residents",
-        "0.005": "ideal-residents",
-        "0.01": "ideal-residents",
-        "0.05": "ideal-residents",
-        "0.1": "ideal-residents"
+        "0.0": "blend-developer-residents",
+        "0.005": "blend-developer-residents",
+        "0.01": "blend-developer-residents",
+        "0.05": "blend-developer-residents",
+        "0.1": "blend-developer-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
         "equal": "blend-residents-city",
         "developer x3": "ideal-developer",
-        "residents x3": "ideal-residents",
+        "residents x3": "blend-residents-city",
         "environment x3": "blend-developer-environment",
         "city x3": "blend-developer-business",
-        "business x3": "blend-developer-business"
+        "business x3": "ideal-business"
+      },
+      "share_of_seat_allocations_with_same_winner": 0.333
+    },
+    {
+      "scope": "cd:105",
+      "winner": "balanced",
+      "candidates": 19,
+      "winner_unchanged_under_weight_draws": 0.72,
+      "random_candidates": 16,
+      "winner_with_random_candidates": "balanced",
+      "winner_unchanged_with_random_candidates": true,
+      "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 18,
+          "schulze_winner": "balanced"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-residents"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 33,
+          "schulze_winner": "balanced"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 1,
+          "rules_with_modal_winner": 9,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-8"
+        }
+      },
+      "residents_winner_by_jnd": {
+        "0.0": "balanced",
+        "0.005": "balanced",
+        "0.01": "balanced",
+        "0.05": "balanced",
+        "0.1": "balanced"
+      },
+      "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
+      "winner_by_seats": {
+        "equal": "balanced",
+        "developer x3": "blend-city-business",
+        "residents x3": "blend-residents-business",
+        "environment x3": "ideal-environment",
+        "city x3": "blend-city-business",
+        "business x3": "ideal-environment"
       },
       "share_of_seat_allocations_with_same_winner": 0.167
     },
     {
-      "scope": "cd:105",
-      "winner": "blend-residents-business",
-      "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.995,
-      "random_candidates": 10,
-      "winner_with_random_candidates": "blend-residents-business",
-      "winner_unchanged_with_random_candidates": true,
-      "winner_beats_every_random_plan": true,
-      "residents_winner_by_jnd": {
-        "0.0": "blend-residents-business",
-        "0.005": "blend-residents-business",
-        "0.01": "blend-residents-business",
-        "0.05": "blend-residents-business",
-        "0.1": "blend-residents-business"
-      },
-      "residents_winner_stable_across_jnd": true,
-      "winner_by_seats": {
-        "equal": "blend-residents-business",
-        "developer x3": "blend-residents-business",
-        "residents x3": "blend-residents-business",
-        "environment x3": "ideal-environment",
-        "city x3": "blend-residents-business",
-        "business x3": "ideal-business"
-      },
-      "share_of_seat_allocations_with_same_winner": 0.667
-    },
-    {
       "scope": "cd:106",
-      "winner": "blend-residents-business",
+      "winner": "ideal-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.66,
-      "random_candidates": 10,
-      "winner_with_random_candidates": "blend-residents-business",
+      "winner_unchanged_under_weight_draws": 0.295,
+      "random_candidates": 16,
+      "winner_with_random_candidates": "ideal-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 5,
+          "rules_with_modal_winner": 4,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 14,
+          "schulze_winner": "ideal-business"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 14,
+          "schulze_winner": "ideal-business"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 4,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 4,
+          "schulze_winner": "random-5"
+        }
+      },
       "residents_winner_by_jnd": {
         "0.0": "ideal-residents",
         "0.005": "ideal-residents",
@@ -161,8 +401,9 @@
         "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
-        "equal": "blend-residents-business",
+        "equal": "ideal-business",
         "developer x3": "ideal-developer",
         "residents x3": "blend-residents-business",
         "environment x3": "blend-developer-environment",
@@ -176,10 +417,44 @@
       "winner": "blend-developer-residents",
       "candidates": 19,
       "winner_unchanged_under_weight_draws": 0.995,
-      "random_candidates": 10,
+      "random_candidates": 16,
       "winner_with_random_candidates": "blend-developer-residents",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-residents"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-residents"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-6"
+        }
+      },
       "residents_winner_by_jnd": {
         "0.0": "ideal-residents",
         "0.005": "ideal-residents",
@@ -188,6 +463,7 @@
         "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
         "equal": "blend-developer-residents",
         "developer x3": "ideal-developer",
@@ -202,11 +478,45 @@
       "scope": "cd:108",
       "winner": "blend-developer-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.365,
-      "random_candidates": 10,
+      "winner_unchanged_under_weight_draws": 0.535,
+      "random_candidates": 16,
       "winner_with_random_candidates": "blend-developer-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-business"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-city"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-developer-business"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 1,
+          "rules_with_modal_winner": 9,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-3"
+        }
+      },
       "residents_winner_by_jnd": {
         "0.0": "ideal-residents",
         "0.005": "ideal-residents",
@@ -215,25 +525,60 @@
         "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
         "equal": "blend-developer-business",
-        "developer x3": "blend-developer-city",
+        "developer x3": "blend-developer-business",
         "residents x3": "blend-developer-residents",
-        "environment x3": "blend-environment-city",
-        "city x3": "blend-city-business",
+        "environment x3": "blend-environment-business",
+        "city x3": "blend-developer-business",
         "business x3": "ideal-business"
       },
-      "share_of_seat_allocations_with_same_winner": 0.167
+      "share_of_seat_allocations_with_same_winner": 0.5
     },
     {
       "scope": "cd:109",
-      "winner": "ideal-business",
+      "winner": "blend-residents-city",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.435,
-      "random_candidates": 10,
-      "winner_with_random_candidates": "ideal-business",
+      "winner_unchanged_under_weight_draws": 0.465,
+      "random_candidates": 16,
+      "winner_with_random_candidates": "blend-residents-city",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 4,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 10,
+          "schulze_winner": "blend-residents-city"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 3,
+          "schulze_winner": "ideal-developer"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 5,
+          "rules_with_modal_winner": 3,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 10,
+          "schulze_winner": "blend-residents-city"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-0"
+        }
+      },
       "residents_winner_by_jnd": {
         "0.0": "ideal-residents",
         "0.005": "ideal-residents",
@@ -242,38 +587,74 @@
         "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
-        "equal": "ideal-business",
+        "equal": "blend-residents-city",
         "developer x3": "blend-developer-city",
         "residents x3": "blend-residents-city",
-        "environment x3": "blend-environment-business",
+        "environment x3": "blend-residents-city",
         "city x3": "ideal-city",
         "business x3": "ideal-business"
       },
-      "share_of_seat_allocations_with_same_winner": 0.333
+      "share_of_seat_allocations_with_same_winner": 0.5
     },
     {
       "scope": "cd:110",
       "winner": "blend-city-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.8,
-      "random_candidates": 10,
+      "winner_unchanged_under_weight_draws": 0.885,
+      "random_candidates": 16,
       "winner_with_random_candidates": "blend-city-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-city-business"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 4,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "blend-city-business"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 1,
+          "rules_with_modal_winner": 9,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-0"
+        }
+      },
       "residents_winner_by_jnd": {
-        "0.0": "ideal-residents",
-        "0.005": "ideal-residents",
-        "0.01": "ideal-residents",
-        "0.05": "ideal-residents",
-        "0.1": "ideal-residents"
+        "0.0": "blend-developer-residents",
+        "0.005": "blend-developer-residents",
+        "0.01": "blend-developer-residents",
+        "0.05": "blend-developer-residents",
+        "0.1": "blend-developer-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 0.47,
       "winner_by_seats": {
         "equal": "blend-city-business",
         "developer x3": "blend-city-business",
-        "residents x3": "blend-developer-residents",
-        "environment x3": "blend-developer-environment",
+        "residents x3": "blend-residents-city",
+        "environment x3": "blend-environment-city",
         "city x3": "blend-city-business",
         "business x3": "blend-city-business"
       },
@@ -283,24 +664,59 @@
       "scope": "cd:111",
       "winner": "blend-developer-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.245,
-      "random_candidates": 10,
+      "winner_unchanged_under_weight_draws": 0.3,
+      "random_candidates": 16,
       "winner_with_random_candidates": "blend-developer-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 5,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 6,
+          "schulze_winner": "blend-developer-business"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 3,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-city"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 5,
+          "rules_with_modal_winner": 4,
+          "condorcet_winner_exists": false,
+          "smith_set_size": 6,
+          "schulze_winner": "blend-developer-business"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 5,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "random-13"
+        }
+      },
       "residents_winner_by_jnd": {
-        "0.0": "ideal-residents",
-        "0.005": "ideal-residents",
-        "0.01": "ideal-residents",
-        "0.05": "ideal-residents",
+        "0.0": "blend-developer-residents",
+        "0.005": "blend-developer-residents",
+        "0.01": "blend-developer-residents",
+        "0.05": "blend-developer-residents",
         "0.1": "ideal-residents"
       },
-      "residents_winner_stable_across_jnd": true,
+      "residents_winner_stable_across_jnd": false,
+      "residents_winner_unchanged_with_heterogeneous_weights": 0.97,
       "winner_by_seats": {
         "equal": "blend-developer-business",
         "developer x3": "blend-developer-business",
         "residents x3": "blend-developer-residents",
-        "environment x3": "blend-environment-business",
+        "environment x3": "balanced",
         "city x3": "blend-city-business",
         "business x3": "ideal-business"
       },
@@ -310,11 +726,45 @@
       "scope": "cd:112",
       "winner": "ideal-business",
       "candidates": 19,
-      "winner_unchanged_under_weight_draws": 0.635,
-      "random_candidates": 10,
+      "winner_unchanged_under_weight_draws": 0.625,
+      "random_candidates": 16,
       "winner_with_random_candidates": "ideal-business",
       "winner_unchanged_with_random_candidates": true,
       "winner_beats_every_random_plan": true,
+      "rule_disagreement_by_candidate_set": {
+        "generated": {
+          "candidates": 19,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 3,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "ideal plans only": {
+          "candidates": 6,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 6,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "generated + random": {
+          "candidates": 35,
+          "distinct_winners": 4,
+          "rules_with_modal_winner": 3,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "ideal-business"
+        },
+        "random only": {
+          "candidates": 17,
+          "distinct_winners": 2,
+          "rules_with_modal_winner": 7,
+          "condorcet_winner_exists": true,
+          "smith_set_size": 1,
+          "schulze_winner": "status-quo"
+        }
+      },
       "residents_winner_by_jnd": {
         "0.0": "ideal-residents",
         "0.005": "ideal-residents",
@@ -323,12 +773,13 @@
         "0.1": "ideal-residents"
       },
       "residents_winner_stable_across_jnd": true,
+      "residents_winner_unchanged_with_heterogeneous_weights": 1.0,
       "winner_by_seats": {
         "equal": "ideal-business",
-        "developer x3": "blend-developer-business",
+        "developer x3": "ideal-city",
         "residents x3": "blend-residents-city",
         "environment x3": "blend-environment-city",
-        "city x3": "blend-developer-business",
+        "city x3": "ideal-city",
         "business x3": "ideal-business"
       },
       "share_of_seat_allocations_with_same_winner": 0.333

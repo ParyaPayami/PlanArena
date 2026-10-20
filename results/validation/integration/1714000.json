@@ -221,6 +221,136 @@
     },
     "scenario_model": "E+C+Z",
     "scenario": null,
+    "calibration": {
+      "E": {
+        "bins": 10,
+        "reliability": [
+          {
+            "mean_predicted": 5.5271303951921805e-05,
+            "observed_rate": 9.896091044037604e-05,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.0001468747250426707,
+            "observed_rate": 0.0002638957611743361,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.0002924331785724196,
+            "observed_rate": 0.0003793501566881082,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.0004528602369267364,
+            "observed_rate": 0.00046181758205508826,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.0007026063471575962,
+            "observed_rate": 0.0008906628840983688,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0011831994052861558,
+            "observed_rate": 0.0011050817265664946,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0019029601378768614,
+            "observed_rate": 0.001880288310874334,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0031929484776261267,
+            "observed_rate": 0.003084332580118425,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.006303060695325672,
+            "observed_rate": 0.005113064705009154,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.017603156224488197,
+            "observed_rate": 0.012254861534909038,
+            "n": 60629
+          }
+        ],
+        "ece": 0.0007192294366798058,
+        "observed_over_predicted": 0.8020111872626693,
+        "calibration_intercept": -1.081067831644337,
+        "calibration_slope": 0.8243290967147149,
+        "brier": 0.0025460512946759127,
+        "brier_prevalence": 0.0025472447068184364,
+        "brier_skill": 0.00046851099124056717,
+        "prevalence_train": 0.003292720911414601,
+        "prevalence_test": 0.002553216756227177
+      },
+      "E+C+Z": {
+        "bins": 10,
+        "reliability": [
+          {
+            "mean_predicted": 6.546869996867984e-05,
+            "observed_rate": 9.896091044037604e-05,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.00012232199335172626,
+            "observed_rate": 0.0001814283358073561,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.00018166559606331548,
+            "observed_rate": 0.00011545439551377207,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.00026517168805386825,
+            "observed_rate": 0.00023090879102754413,
+            "n": 60630
+          },
+          {
+            "mean_predicted": 0.0004070558317336439,
+            "observed_rate": 0.00024740635669399133,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0006567772065798682,
+            "observed_rate": 0.0007257253129690412,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0010918701822682432,
+            "observed_rate": 0.001072094212340629,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0018793396119325472,
+            "observed_rate": 0.0018637945537614013,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.0035968884418223607,
+            "observed_rate": 0.003760576621748668,
+            "n": 60629
+          },
+          {
+            "mean_predicted": 0.02135385918679978,
+            "observed_rate": 0.01723597618301473,
+            "n": 60629
+          }
+        ],
+        "ece": 0.0004738534365741581,
+        "observed_over_predicted": 0.8619840074520536,
+        "calibration_intercept": -0.7137928904202276,
+        "calibration_slope": 0.8718141825427492,
+        "brier": 0.0025662332497800575,
+        "brier_prevalence": 0.0025472447068184364,
+        "brier_skill": -0.007454542121843488,
+        "prevalence_train": 0.003292720911414601,
+        "prevalence_test": 0.002553216756227177
+      }
+    },
     "scenario_existing_only": null,
     "destination": {
       "n": 0,
@@ -339,5 +469,5 @@
       }
     }
   },
-  "seconds": 1184.2
+  "seconds": 1205.5
 }

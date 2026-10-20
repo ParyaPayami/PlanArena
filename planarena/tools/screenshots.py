@@ -9,8 +9,8 @@ saves PNGs at twice screen resolution to docs/figures/:
                     for homes or mixed use (existing use, plan, zoning, what each new use would yield)
   ui_optimizer.png  Manhattan: the optimizer's recommended plan for a district
   ui_vote.png       Manhattan: the simulated stakeholders' vote on the candidate plans
-and two crops that stay legible in print: ui_inspector.png (map and inspector) and ui_optimizer_vote.png (the
-optimizer and vote panels side by side).
+and three crops that stay legible in print: ui_impact_crop.png (map and scoreboard), ui_inspector.png (map and
+inspector) and ui_optimizer_vote.png (the optimizer and vote panels side by side).
 
 Run:  python -I -m planarena.tools.screenshots      (needs Google Chrome)
 """
@@ -32,7 +32,8 @@ from planarena.config import ROOT
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 OUT = ROOT / "docs" / "figures"
-W, H, SCALE = 1600, 1000, 2
+W, H, SCALE = 1200, 820, 3  # a narrower viewport than a desktop screen, so the interface text stays legible in print
+LEFT, RIGHT, TOP = 250, 410, 58  # Studio column widths and top bar height (web/src/styles.css, CSS px)
 
 
 def _port() -> int:
@@ -174,22 +175,24 @@ async def run(base: str, chrome_port: int) -> None:
 
 
 def crops() -> None:
-    """Figure crops that stay legible at print size: the map with the parcel inspector, and the optimizer and vote
-    panels side by side (fractions of the 1600 x 1000 layout)."""
+    """Figure crops that stay legible at print size, cut along the Studio's columns: the map and scoreboard of the
+    impact view, the map with the parcel inspector, and the optimizer and vote panels side by side."""
     from PIL import Image
 
+    k = SCALE
+    im = Image.open(OUT / "ui_impact.png")
+    im.crop((LEFT * k, 0, W * k, H * k)).save(OUT / "ui_impact_crop.png")
     im = Image.open(OUT / "ui_layers.png")
-    w, h = im.size
-    im.crop((int(0.158 * w), int(0.043 * h), int(0.745 * w), h)).save(OUT / "ui_inspector.png")
+    im.crop((LEFT * k, TOP * k, (W - RIGHT) * k, H * k)).save(OUT / "ui_inspector.png")
     a, b = Image.open(OUT / "ui_optimizer.png"), Image.open(OUT / "ui_vote.png")
-    box = (int(0.745 * w), int(0.057 * h), w, h)
+    box = ((W - RIGHT) * k, TOP * k, W * k, H * k)
     pa, pb = a.crop(box), b.crop(box)
-    gap = 24
+    gap = 12 * k
     both = Image.new("RGB", (pa.width + pb.width + gap, pa.height), "white")
     both.paste(pa, (0, 0))
     both.paste(pb, (pa.width + gap, 0))
     both.save(OUT / "ui_optimizer_vote.png")
-    print("written docs/figures/ui_inspector.png, docs/figures/ui_optimizer_vote.png")
+    print("written docs/figures/ui_impact_crop.png, ui_inspector.png, ui_optimizer_vote.png")
 
 
 def main() -> None:
@@ -197,7 +200,7 @@ def main() -> None:
     port, cport = _port(), _port()
     server = subprocess.Popen([sys.executable, "-I", "-m", "planarena.api", "--port", str(port)],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    with tempfile.TemporaryDirectory() as profile:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as profile:
         chrome = subprocess.Popen([CHROME, "--headless=new", f"--remote-debugging-port={cport}",
                                    f"--user-data-dir={profile}", f"--window-size={W},{H}", "--hide-scrollbars",
                                    "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--no-first-run",
@@ -209,6 +212,7 @@ def main() -> None:
         finally:
             chrome.terminate()
             server.terminate()
+            chrome.wait(timeout=30)  # let Chrome release its profile before the directory is removed
     crops()
 
 

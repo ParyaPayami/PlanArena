@@ -128,17 +128,26 @@ def _integration() -> list[str]:
          "closer to what was built than capacity-based analysis? Sites come from PlanArena's development-site screen "
          "under the adopted FAR; probabilities come from the redevelopment model trained only on outcomes known by the "
          "adoption year, scored with the adopted zoning (`planarena/models/replay.py`).", "",
-         "| Rezoning | Sites | Built by 2025 (homes on the sites) | Capacity | Capacity pro-rated to 2025 | Likelihood-weighted (model 95% range) | Sites redeveloped: observed / expected |",
-         "|---|---:|---:|---:|---:|---:|---:|"]
+         "| Rezoning | Sites | Built by 2025 (homes on the sites) | Capacity | Capacity pro-rated to 2025 | Probability × capacity (95% range) | Probability × empirical yield (95% range) | Sites redeveloped: observed / expected |",
+         "|---|---:|---:|---:|---:|---:|---:|---:|"]
     for n, r in ir["rezonings"].items():
         a, s = r["homes_added_by_2025"], r["sites_redeveloped_by_2025"]
         lo, hi = a["likelihood_weighted_95pct"]
+        ylo, yhi = a["likelihood_x_yield_95pct"]
         L.append(f"| {n} | {r['sites']} | {num(a['observed'])} | {num(a['capacity'])} | {num(a['capacity_prorated_to_2025'])} | "
-                 f"{num(a['likelihood_weighted'])} ({num(lo)} to {num(hi)}) | {s['observed']} / {s['expected_from_probabilities']} |")
+                 f"{num(a['likelihood_weighted'])} ({num(lo)} to {num(hi)}) | {num(a['likelihood_x_yield'])} ({num(ylo)} to {num(yhi)}) | "
+                 f"{s['observed']} / {s['expected_from_probabilities']} |")
     t = ir["total_three_rezonings"]
-    L.append(f"| **All three** | | {num(t['observed'])} | {num(t['capacity'])} | {num(t['capacity_prorated_to_2025'])} | {num(t['likelihood_weighted'])} | |")
+    L.append(f"| **All three** | | {num(t['observed'])} | {num(t['capacity'])} | {num(t['capacity_prorated_to_2025'])} | "
+             f"{num(t['likelihood_weighted'])} | {num(t['likelihood_x_yield'])} | |")
+    sae = ir["sum_of_absolute_errors"]
+    L.append(f"| **Sum of absolute errors** | | | {num(sae['capacity'])} | {num(sae['capacity_prorated_to_2025'])} | "
+             f"{num(sae['likelihood_weighted'])} | {num(sae['likelihood_x_yield'])} | |")
     inside = sum(ir["observed_within_model_interval"].values())
-    L += ["", f"Observed homes fall inside the model's 95% range in {inside} of {len(ir['rezonings'])} rezonings.", "",
+    inside_y = sum(ir["observed_within_yield_interval"].values())
+    L += ["", f"Observed homes fall inside the 95% range in {inside} of {len(ir['rezonings'])} rezonings (probability × "
+          f"capacity) and {inside_y} (probability × yield). The ranges are conditional on the model's probabilities. "
+          "Close totals can come from errors that cancel across rezonings; the sum of absolute errors shows them.", "",
           "Model used for each rezoning (training pairs known by the adoption year; extended to 2025 with a constant hazard): "
           + "; ".join(f"{n}: {r['model']['horizon_years']}-year model on {', '.join(r['model']['training_pairs'])}, "
                       f"mean site probability {r['mean_probability_adopted_vs_prior_zoning'][0]:.3f} with the adopted zoning vs "
@@ -150,17 +159,21 @@ def _integration() -> list[str]:
         L += ["", f"**Realism layers in the optimizer** (`planarena/models/ablate_recs.py`): plans for every district on the "
               f"{ra['snapshot']} snapshot, compared with what happened by {ra['outcome_year']}. This tests plausibility, not "
               "desirability.", "",
-              "| Setting | Recommended parcels | Without precedent | Redeveloped by 2025 | Redeveloped into the recommended use | Median district plan score |",
-              "|---|---:|---:|---:|---:|---:|"]
-        for n, s in ra["settings"].items():
-            L.append(f"| {n} | {num(s['recommended_parcels'])} | {pct(s['share_without_precedent'], 1)} | "
-                     f"{pct(s['share_redeveloped_by_2025'], 1)} | {pct(s['share_redeveloped_into_recommended_use'], 1)} | "
-                     f"{s['median_district_plan_score']} |")
+              "| Setting | Budget | Recommended parcels | Without precedent | Redeveloped by 2025 | Eligible parcels redeveloped | Redeveloped into the recommended use | Objective (sum over districts) |",
+              "|---|---|---:|---:|---:|---:|---:|---:|"]
+        for budget, block in (("full", ra["settings"]), ("equal counts", ra["equal_counts"])):
+            for n, s in block.items():
+                if not isinstance(s, dict) or "recommended_parcels" not in s:
+                    continue
+                L.append(f"| {n} | {budget} | {num(s['recommended_parcels'])} | {pct(s['share_without_precedent'], 1)} | "
+                         f"{pct(s['share_redeveloped_by_2025'], 1)} | {pct(s['share_of_eligible_redeveloped'], 1)} | "
+                         f"{pct(s['share_redeveloped_into_recommended_use'], 1)} | {s['sum_district_objective']} |")
         ref = ra["reference"]
         L += ["", f"For reference, {pct(ref['share_of_all_lots_redeveloped'], 1)} of all lots and "
-              f"{pct(ref['share_of_likely_fifth_redeveloped'], 1)} of the likeliest fifth were redeveloped. The plan score "
-              "is the optimizer's own objective; search is heuristic, so a constraint can change the plan found in "
-              "either direction."]
+              f"{pct(ref['share_of_likely_fifth_redeveloped'], 1)} of the likeliest fifth were redeveloped. The objective "
+              "is the overall score minus the conversion penalty, the same for every setting; at equal counts each "
+              "setting recommends, in each district, the smallest number any setting recommended there. Search is "
+              "heuristic, so a constraint can change the plan found in either direction."]
     return L
 
 
@@ -369,6 +382,19 @@ def render_validation() -> str:
                   + "; ".join(f"{m} r {r3(x.get('pearson_r'))}" for m, x in jobs.items())
                   + ". No method has useful skill at block level."]
         L += ["", "**Not validated:** " + "; ".join(cp["unvalidated"]) + ".", ""]
+    ih = load("impact_heldout")
+    if ih:
+        L += ["**Held-out test** (`planarena/models/impact_test.py`): coefficients from 2015 data; delta form, unit-size "
+              f"rule and scale chosen on {num(ih['selection_events'])} lots in two of five spatial folds; metrics on the "
+              f"other {num(ih['evaluation_events'])}. Baselines are fitted on the selection lots with the same information.", "",
+              "| Method | Homes r | Homes MAE | Homes bias | Homes total ratio | Value r | Value total ratio | Emissions r | Emissions total ratio |",
+              "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        for mth, v in ih["methods"].items():
+            a = v["all"]
+            L.append(f"| {mth} | {r3(a['homes'].get('pearson_r'))} | {num(a['homes']['mae'], 1)} | {num(a['homes']['bias'], 1)} | "
+                     f"{times(a['homes'].get('total_ratio'))} | {r3(a['value'].get('pearson_r'))} | {times(a['value'].get('total_ratio'))} | "
+                     f"{r3(a['ghg'].get('pearson_r'))} | {times(a['ghg'].get('total_ratio'))} |")
+        L += ["", f"Job change by block (evaluation blocks only): r {r3(ih['jobs_by_block']['pearson_r'])}.", ""]
     if df:
         L += ["**Do baseline residuals change the recommendations?** Optimizer recommendations in 12 districts, with and "
               "without synthetic log-normal error on the observed baseline (Jaccard overlap of recommended parcels; 1 = identical):", "",

@@ -59,7 +59,8 @@ The form with the smaller bias and error on observed change is the default. Its 
 **Unit and labels.**
 - **Unit:** a lot in the start snapshot (year t₀).
 - **Matching:** each lot is matched to the lot of the end snapshot (t₁) that contains its representative point. This follows splits and mergers.
-- **"Redeveloped"** if the matched t₁ lot has a building completed in the period (year built ≥ t₀), or its floor area grew by more than 25% and 2,000 sq ft over the t₀ lots inside it.
+- **"Redeveloped"** if the matched t₁ lot has a building completed in the period (year built ≥ t₀ and not already on the t₀ record with such a year), or its floor area grew by more than 25% and 2,000 sq ft over the t₀ lots inside it.
+- **New-building rule (corrected October 2026).** The December 2020 release (20v8) already lists about 50 buildings completed in 2020; the earlier rule counted them as developed in every pair starting in 2020 (76% of the 2020–2021 positives). The same rule now applies to the Los Angeles, Dallas and Milwaukee panels. `planarena/models/leakage_audit.py` counts the labels removed and the mergers and splits per pair.
 - **Destination** is the matched lot's land use.
 - **Label audit** (`planarena/models/rolling.py`): labels are compared with DOB certificates of occupancy for new buildings and alteration type 1 jobs, matched by BBL within the same window.
 
@@ -76,7 +77,7 @@ The form with the smaller bias and error on observed change is the default. Its 
 **Protocols.**
 - **Temporal holdout.** Train on pairs (t₀ → t₀ + h) whose outcome is known by the decision year t (t₀ + h ≤ t). Test on (t → t + h).
 - **Rolling origin.** Horizons of 1, 3 and 5 years over the annual snapshots, 2015–2025.
-- **Calibration.** Isotonic regression fitted on the most recent training pair, predicted by a model trained on the pairs before it. Reported as ECE and reliability bins, before and after.
+- **Calibration** (`planarena/models/calibration_report.py`). Per origin and horizon: reliability in ten equal-count bins, ECE, observed over predicted events, calibration intercept and slope (logistic regression of the outcome on logit p), and the Brier score against a constant forecast of the training-period rate. The same after isotonic regression fitted on the most recent training pair, predicted by a model trained on the pairs before it. The cross-city panels report the same metrics for their test windows.
 - **Uncertainty.** 600 m tile block bootstrap for AUC and average precision; three seeds.
 - **Spatial-within-period cross-validation** of the test pair is reported only to show the optimism of non-temporal tests.
 
@@ -102,7 +103,9 @@ The form with the smaller bias and error on observed change is the default. Its 
 **Sensitivity** (`voting.sensitivity`):
 - utility weights drawn from a Dirichlet centred on the assumed weights;
 - random feasible plans added to the ballot (a candidate generator not built from the utilities);
+- rule disagreement (distinct winners among the nine rules, Condorcet winner) on the generated ballot, on the agents' ideal plans only, on the generated ballot plus random plans, and on random plans only;
 - the residents' indifference threshold swept;
+- heterogeneous residents: each block's weights drawn independently around the residents' profile;
 - seat allocations varied.
 
 **What it is not.** These are simulated preference scenarios. They say nothing about public support or political feasibility.
@@ -119,7 +122,13 @@ The form with the smaller bias and error on observed change is the default. Its 
 - best of random feasible plans;
 - the exact optimum of the linear first-order surrogate (top moves of distinct parcels).
 
+**First-order gains** (`Suggester._access_gain`). Exact for additive indicators. For park, services and facility access, land-use mix and green cover: the first-order change for residents within the radius by raster convolution (added open space where residents lack a park; added floor area for under-served residents; dilution when residents are added; the entropy gradient of the five land groups for mix; the open-space share gradient for green cover), plus the change in who is counted when a parcel's residents change. Mix, green cover and the counting term were added in October 2026 after the exhaustive test of the NSGA-III explorer showed the first version ignored them.
+
 **Small cases.** Exhaustive search on single-block areas with up to two changes.
+
+**NSGA-III explorer test** (`planarena/optimize/pareto_test.py`). Every combination of options is enumerated on random tax blocks; small blocks are also scored exactly. The explorer's front (all evaluated plans archived, non-dominated ones re-scored exactly) is compared with the true front by hypervolume share, against random search with the same evaluations.
+
+**Realism at equal counts** (`planarena/models/ablate_recs.py`). The three realism settings are rerun with, in each district, the smallest count any setting recommended there, and scored with one objective.
 
 **What none of this shows.** A global optimum at district or city scale. Results are "best plan found".
 
@@ -218,7 +227,7 @@ Milwaukee regulates bulk with height, setback and density rules rather than one 
 
 **San Diego** uses SANDAG's Land Use 2025 (104 codes) over the county assessor's parcels in the city (`adapters/sandiego.py`), with the city's General Plan land use (community plan designations; residential by the designation's highest density) and base zoning. Assessor unit counts split housing and give the homes; living area gives residential floor area; other floor area and floors come from Overture (estimated). Districts: the community planning areas.
 
-**Classes.** The three official layers use 16 classes, so the plan and zoning comparisons keep their detail. Impacts are computed for the nine analysis groups each class maps to (`planarena/taxonomy.py`). The impact coefficients are calibrated and validated for these nine groups; finer classes would add coefficients that no local data validate.
+**Classes.** The three official layers use 16 classes, so the plan and zoning comparisons keep their detail. Impacts are computed for the nine analysis groups each class maps to (`planarena/taxonomy.py`). The impact coefficients are calibrated and tested for these nine groups; finer classes would add coefficients that no local data test.
 
 **Ingestion report.** `planarena/cities/ingestion.py` writes `docs/ingestion/<city>.md` for review before a city is used: the parcel count, each layer's coverage, the 16-class distributions of existing use, plan and zoning, how often the existing use matches the plan (class and analysis group), the share of existing uses the zoning screen allows, homes against Census 2020 housing units, and the fitted floor area per worker.
 

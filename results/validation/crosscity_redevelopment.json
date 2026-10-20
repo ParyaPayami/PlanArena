@@ -10,15 +10,15 @@
       "models": {
         "same city": {
           "auc": 0.903,
-          "average_precision": 0.122,
-          "precision_top1pct": 0.178,
+          "average_precision": 0.129,
+          "precision_top1pct": 0.176,
           "auc_95ci": [
-            0.879,
+            0.88,
             0.925
           ],
           "ap_95ci": [
-            0.089,
-            0.163
+            0.092,
+            0.169
           ],
           "training_pairs": {
             "manhattan": [
@@ -31,16 +31,16 @@
           }
         },
         "other city only": {
-          "auc": 0.774,
-          "average_precision": 0.05,
-          "precision_top1pct": 0.05,
+          "auc": 0.83,
+          "average_precision": 0.033,
+          "precision_top1pct": 0.048,
           "auc_95ci": [
-            0.725,
-            0.822
+            0.799,
+            0.863
           ],
           "ap_95ci": [
-            0.018,
-            0.124
+            0.021,
+            0.054
           ],
           "training_pairs": {
             "milwaukee": [
@@ -52,16 +52,16 @@
           }
         },
         "both cities": {
-          "auc": 0.905,
-          "average_precision": 0.113,
-          "precision_top1pct": 0.15,
+          "auc": 0.903,
+          "average_precision": 0.109,
+          "precision_top1pct": 0.147,
           "auc_95ci": [
-            0.884,
-            0.925
+            0.882,
+            0.922
           ],
           "ap_95ci": [
-            0.082,
-            0.156
+            0.079,
+            0.15
           ],
           "training_pairs": {
             "manhattan": [
@@ -81,15 +81,15 @@
         },
         "same city, full feature set": {
           "auc": 0.922,
-          "average_precision": 0.123,
-          "precision_top1pct": 0.154,
+          "average_precision": 0.131,
+          "precision_top1pct": 0.162,
           "auc_95ci": [
-            0.901,
-            0.94
+            0.902,
+            0.941
           ],
           "ap_95ci": [
-            0.089,
-            0.17
+            0.097,
+            0.179
           ]
         }
       },
@@ -138,21 +138,21 @@
     },
     "milwaukee": {
       "test_pair": "2023->2026",
-      "parcels": 146945,
-      "redeveloped": 121,
-      "base_rate": 0.0008,
+      "parcels": 146976,
+      "redeveloped": 129,
+      "base_rate": 0.0009,
       "models": {
         "same city": {
-          "auc": 0.946,
-          "average_precision": 0.02,
-          "precision_top1pct": 0.023,
+          "auc": 0.92,
+          "average_precision": 0.023,
+          "precision_top1pct": 0.027,
           "auc_95ci": [
-            0.915,
-            0.971
+            0.883,
+            0.953
           ],
           "ap_95ci": [
             0.014,
-            0.031
+            0.041
           ],
           "training_pairs": {
             "milwaukee": [
@@ -165,16 +165,16 @@
           }
         },
         "other city only": {
-          "auc": 0.951,
-          "average_precision": 0.022,
-          "precision_top1pct": 0.017,
+          "auc": 0.946,
+          "average_precision": 0.02,
+          "precision_top1pct": 0.022,
           "auc_95ci": [
-            0.926,
-            0.972
+            0.919,
+            0.968
           ],
           "ap_95ci": [
             0.011,
-            0.043
+            0.03
           ],
           "training_pairs": {
             "manhattan": [
@@ -188,16 +188,16 @@
           }
         },
         "both cities": {
-          "auc": 0.968,
-          "average_precision": 0.032,
-          "precision_top1pct": 0.026,
+          "auc": 0.964,
+          "average_precision": 0.056,
+          "precision_top1pct": 0.028,
           "auc_95ci": [
-            0.953,
-            0.981
+            0.944,
+            0.979
           ],
           "ap_95ci": [
-            0.017,
-            0.055
+            0.019,
+            0.105
           ],
           "training_pairs": {
             "milwaukee": [
@@ -218,53 +218,53 @@
           }
         },
         "same city, full feature set": {
-          "auc": 0.943,
-          "average_precision": 0.028,
-          "precision_top1pct": 0.029,
+          "auc": 0.937,
+          "average_precision": 0.05,
+          "precision_top1pct": 0.031,
           "auc_95ci": [
-            0.902,
-            0.967
+            0.908,
+            0.961
           ],
           "ap_95ci": [
-            0.018,
-            0.041
+            0.021,
+            0.09
           ]
         }
       },
       "baselines": {
         "Land-value share of assessed value": {
-          "auc": 0.782,
-          "average_precision": 0.008,
-          "precision_top1pct": 0.009,
+          "auc": 0.811,
+          "average_precision": 0.012,
+          "precision_top1pct": 0.013,
           "auc_95ci": [
-            0.686,
-            0.847
+            0.71,
+            0.875
           ],
           "ap_95ci": [
-            0.005,
-            0.017
+            0.007,
+            0.019
           ]
         },
         "Built FAR below nearby lots": {
-          "auc": 0.855,
-          "average_precision": 0.008,
-          "precision_top1pct": 0.008,
+          "auc": 0.878,
+          "average_precision": 0.009,
+          "precision_top1pct": 0.01,
           "auc_95ci": [
-            0.76,
-            0.914
+            0.785,
+            0.929
           ],
           "ap_95ci": [
-            0.006,
-            0.016
+            0.007,
+            0.017
           ]
         },
         "Building age": {
-          "auc": 0.482,
+          "auc": 0.5,
           "average_precision": 0.001,
           "precision_top1pct": 0.001,
           "auc_95ci": [
-            0.438,
-            0.529
+            0.459,
+            0.542
           ],
           "ap_95ci": [
             0.001,
