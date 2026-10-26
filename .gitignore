@@ -23,3 +23,8 @@ paper/*.log
 paper/*.blg
 paper/*.aux
 paper/*.bbl
+paper/cus/*.log
+paper/cus/*.aux
+paper/cus/*.blg
+paper/cus/*.bbl
+paper/cus/fig1_architecture.pdf

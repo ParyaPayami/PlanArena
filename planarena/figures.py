@@ -26,11 +26,33 @@ def _load(name):
     return json.loads(f.read_text()) if f.exists() else None
 
 
+# Journal style (Computational Urban Science): lettering of at least 8 pt in Arial, no titles inside figures, markers
+# and hatching as well as colour, and separate vector files named as the journal asks (Fig5, ESM_Fig1, ...).
+JOURNAL = {"on": False, "names": {}, "out": ROOT / "paper" / "cus" / "figures"}
+MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
+HATCHES = ["", "///", "...", "xx"]
+
+
+def _fs(x: float) -> float:
+    return max(x, 8) if JOURNAL["on"] else x
+
+
+def _title(ax, text: str, **kw) -> None:
+    if not JOURNAL["on"]:
+        ax.set_title(text, **kw)
+
+
 def _save(fig, name):
-    OUT.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    for ext in ("png", "svg"):
-        fig.savefig(OUT / f"{name}.{ext}", bbox_inches="tight")
+    if JOURNAL["on"]:
+        out, name = JOURNAL["out"], JOURNAL["names"].get(name, name)
+        out.mkdir(parents=True, exist_ok=True)
+        for ext in ("pdf", "eps"):
+            fig.savefig(out / f"{name}.{ext}", bbox_inches="tight")
+    else:
+        OUT.mkdir(parents=True, exist_ok=True)
+        for ext in ("png", "svg"):
+            fig.savefig(OUT / f"{name}.{ext}", bbox_inches="tight")
     plt.close(fig)
     return name
 
@@ -47,20 +69,22 @@ def integration():
     w = 0.2
     for k, (key, label, col) in enumerate(keys):
         v = [max(r["rezonings"][n]["homes_added_by_2025"][key], 1) for n in names]
-        bars = ax.bar(x + (k - 1.5) * w, v, w, label=label, color=col)
+        bars = ax.bar(x + (k - 1.5) * w, v, w, label=label, color=col,
+                      hatch=HATCHES[k] if JOURNAL["on"] else None, edgecolor="white" if JOURNAL["on"] else None)
         if key == "likelihood_weighted":
             lo = [r["rezonings"][n]["homes_added_by_2025"]["likelihood_weighted_95pct"][0] for n in names]
             hi = [r["rezonings"][n]["homes_added_by_2025"]["likelihood_weighted_95pct"][1] for n in names]
             ax.errorbar(x + (k - 1.5) * w, v, yerr=[np.maximum(np.array(v) - np.maximum(lo, 1), 0), np.array(hi) - np.array(v)],
                         fmt="none", ecolor=INK, elinewidth=0.8, capsize=2)
         for b_, val in zip(bars, v):
-            ax.annotate(f"{val:,.0f}", (b_.get_x() + b_.get_width() / 2, val), ha="center", va="bottom", fontsize=6.5,
+            ax.annotate(f"{val:,.0f}", (b_.get_x() + b_.get_width() / 2, val), ha="center", va="bottom", fontsize=_fs(6.5),
                         xytext=(0, 1), textcoords="offset points")
     ax.set_yscale("log")
     ax.set_xticks(x, names)
     ax.set_ylabel("Homes added on development sites")
-    ax.legend(frameon=False, fontsize=7, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.12))
-    ax.set_title("Projected and built homes after three Manhattan rezonings (bars: model 95% range)", fontsize=9, loc="left")
+    ax.legend(frameon=False, fontsize=_fs(7), ncol=4 if not JOURNAL["on"] else 2, loc="upper center",
+              bbox_to_anchor=(0.5, -0.12))
+    _title(ax, "Projected and built homes after three Manhattan rezonings (bars: model 95% range)", fontsize=9, loc="left")
     return _save(fig, "integration_replay")
 
 
@@ -132,7 +156,8 @@ def layers():
                 continue
             v, (lo, hi) = gains[key]["auc"]
             y = i + (k - 1) * 0.22
-            ax.errorbar(v, y, xerr=[[v - lo], [hi - v]], fmt="o", ms=3.5, color=col, ecolor=col, capsize=2,
+            ax.errorbar(v, y, xerr=[[v - lo], [hi - v]], fmt=MARKERS[k] if JOURNAL["on"] else "o", ms=3.5, color=col,
+                        ecolor=col, capsize=2,
                         label=label if i == 0 or not ax.get_legend_handles_labels()[1].count(label) else None)
     ax.axvline(0, color=MUTED, lw=0.8)
     ax.set_yticks(range(len(cities)), [CITY_NAMES[g] for g in cities])
@@ -140,8 +165,9 @@ def layers():
     ax.set_xlabel("Gain in AUC, out-of-time test window (95% bootstrap over 2 km tiles)")
     handles, labels = ax.get_legend_handles_labels()
     seen = dict(zip(labels, handles))
-    ax.legend(seen.values(), seen.keys(), frameon=False, fontsize=7, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.18))
-    ax.set_title("What each layer adds to predicting where development happens", fontsize=9, loc="left")
+    ax.legend(seen.values(), seen.keys(), frameon=False, fontsize=_fs(7), ncol=3, loc="upper center",
+              bbox_to_anchor=(0.5, -0.18))
+    _title(ax, "What each layer adds to predicting where development happens", fontsize=9, loc="left")
     return _save(fig, "integration_layers")
 
 
@@ -158,7 +184,10 @@ def impact_scatter():
     for ax, (k, title, unit, th, dec) in zip(axes, panels):
         pr, ob = np.array(r[k]["predicted"]), np.array(r[k]["observed"])
         lim = float(np.percentile(np.abs(np.r_[pr, ob]), 99.5)) * 1.1 or 1.0
-        ax.scatter(pr, ob, s=4, alpha=0.35, color=A, linewidths=0)
+        if JOURNAL["on"]:  # EPS has no transparency: small opaque points in a light tint
+            ax.scatter(pr, ob, s=2.5, color="#8fb3d9", linewidths=0, rasterized=False)
+        else:
+            ax.scatter(pr, ob, s=4, alpha=0.35, color=A, linewidths=0)
         ax.plot([-lim, lim], [-lim, lim], color=MUTED, lw=0.8, ls="--")
         ticks = [-d for d in dec[::-1]] + [0] + dec
         lab = [("$-$" if t < 0 else "") + (f"{abs(t):g}" if abs(t) < 1e4 else f"$10^{{{int(np.log10(abs(t)))}}}$")
@@ -167,10 +196,11 @@ def impact_scatter():
             getattr(ax, f"set_{axis}scale")("symlog", linthresh=th)
             getattr(ax, f"set_{axis}lim")(-lim, lim)
             getattr(ax, f"set_{axis}ticks")(ticks, lab)
-        ax.set_title(f"{title} (n = {len(pr):,})", fontsize=8, loc="left")
-        ax.set_xlabel(f"predicted change ({unit})", fontsize=7)
-        ax.tick_params(labelsize=6)
-    axes[0].set_ylabel("observed change", fontsize=7)
+        letter = "abc"[[p[0] for p in panels].index(k)]
+        ax.set_title((f"{letter}  " if JOURNAL["on"] else "") + f"{title} (n = {len(pr):,})", fontsize=8, loc="left")
+        ax.set_xlabel(f"predicted change ({unit})", fontsize=_fs(7))
+        ax.tick_params(labelsize=_fs(6))
+    axes[0].set_ylabel("observed change", fontsize=_fs(7))
     return _save(fig, "impact_scatter")
 
 
@@ -181,29 +211,31 @@ def reliability():
         return None
     fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.7))
     ax = axes[0]
-    for h, col in ((1, A), (3, B), (5, C)):
+    for n_h, (h, col) in enumerate(((1, A), (3, B), (5, C))):
         rows = [o for o in m["origins"] if o["horizon"] == h]
         if not rows:
             continue
         o = rows[-1]
         rel = o["raw"]["reliability"]
-        ax.plot([b["mean_predicted"] for b in rel], [max(b["observed_rate"], 1e-4) for b in rel], marker="o", ms=3,
+        ax.plot([b["mean_predicted"] for b in rel], [max(b["observed_rate"], 1e-4) for b in rel],
+                marker=MARKERS[n_h] if JOURNAL["on"] else "o", ms=3,
                 color=col, lw=1, label=f"{h}-year, {o['test'].replace('->', '–')}")
-    ax.set_title("Manhattan (latest origin per horizon)", fontsize=8, loc="left")
+    ax.set_title(("a  " if JOURNAL["on"] else "") + "Manhattan (latest origin per horizon)", fontsize=8, loc="left")
     ax = axes[1]
     cols = [A, B, C, D, MUTED, INK, "#8e6bbf"]
     names = {"0644000": "Los Angeles", "4819000": "Dallas", "3651000": "New York", "5553000": "Milwaukee",
              "0455000": "Phoenix", "0666000": "San Diego", "1714000": "Chicago"}
     if c:
-        for (g, name), col in zip(names.items(), cols):
+        for n_c, ((g, name), col) in enumerate(zip(names.items(), cols)):
             cal = c.get(g)
             if not cal:
                 continue
             k = next(x for x in cal if x not in ("E", "train", "test"))
             rel = cal[k]["raw"]["reliability"]
-            ax.plot([b["mean_predicted"] for b in rel], [max(b["observed_rate"], 1e-4) for b in rel], marker="o",
+            ax.plot([b["mean_predicted"] for b in rel], [max(b["observed_rate"], 1e-4) for b in rel],
+                    marker=MARKERS[n_c % len(MARKERS)] if JOURNAL["on"] else "o",
                     ms=2.5, color=col, lw=0.9, label=name)
-    ax.set_title("Seven cities, all blocks (test window)", fontsize=8, loc="left")
+    ax.set_title(("b  " if JOURNAL["on"] else "") + "Seven cities, all blocks (test window)", fontsize=8, loc="left")
     for ax in axes:
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -211,11 +243,27 @@ def reliability():
         ax.plot([lo, hi], [lo, hi], color=MUTED, lw=0.8, ls="--")
         ax.set_xlim(lo, hi)
         ax.set_ylim(lo, hi)
-        ax.set_xlabel("mean predicted probability (decile; observed 0 drawn at 0.0001)", fontsize=7)
-        ax.tick_params(labelsize=6)
-        ax.legend(frameon=False, fontsize=6, loc="upper left")
-    axes[0].set_ylabel("observed rate", fontsize=7)
+        ax.set_xlabel("mean predicted probability (decile; observed 0 drawn at 0.0001)", fontsize=_fs(7))
+        ax.tick_params(labelsize=_fs(6))
+        ax.legend(frameon=False, fontsize=_fs(6), loc="upper left")
+    axes[0].set_ylabel("observed rate", fontsize=_fs(7))
     return _save(fig, "reliability")
+
+
+def journal() -> list[str]:
+    """The figures of the Computational Urban Science version, in the journal's style, to paper/cus/figures/."""
+    JOURNAL.update(on=True, names={"integration_layers": "Fig5", "integration_replay": "Fig6",
+                                   "impact_scatter": "ESM_Fig1", "reliability": "ESM_Fig2"})
+    saved = dict(plt.rcParams)
+    plt.rcParams.update({"font.family": "sans-serif", "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+                         "font.size": 8, "axes.titlesize": 8, "axes.labelsize": 8, "legend.fontsize": 8,
+                         "xtick.labelsize": 8, "ytick.labelsize": 8, "lines.linewidth": 1.0, "axes.linewidth": 0.6,
+                         "ps.fonttype": 42, "pdf.fonttype": 42})
+    try:
+        return [f() for f in (layers, integration, impact_scatter, reliability)]
+    finally:
+        plt.rcParams.update(saved)
+        JOURNAL.update(on=False, names={})
 
 
 def main():

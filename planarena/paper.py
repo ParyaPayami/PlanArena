@@ -967,6 +967,94 @@ def supplement_tables() -> dict[str, str]:
     return out
 
 
+# ----------------------------------------------------------------------------- Computational Urban Science version
+CUS = PAPER / "cus"
+CUS_DOCS = ("manuscript", "online_resource_1", "title_page")
+DEMO_URL = "https://planarena-manhattan.onrender.com"
+DEMO_RELEASE = "v1.0.0-rc.1"  # the release the online demonstration runs
+PUBLIC_REPO = "https://github.com/ParyaPayami/PlanArena"
+ANON_REPO = "https://anonymous.4open.science/r/planarena-cus"  # Anonymous GitHub mirror for double-blind review
+FT_M, SQFT_M2 = 0.3048, 0.09290304
+CITY_DATA = {"3651000": "data_mappluto", "0644000": "data_scag", "1714000": "data_cmap", "4835000": "data_houston",
+             "0455000": "data_maricopa", "4260000": "data_opa", "4865000": "data_bexar", "0666000": "data_sandag",
+             "4819000": "data_dallas", "5553000": "data_mprop"}
+SI_TEXT = [  # the journal asks for SI units; US units stay in parentheses where they are a source's threshold
+    ("Floor area +25\\% also requires +2,000 sq ft.", "Floor area +25\\% also requires +186 m$^2$ (2,000 sq ft)."),
+    ("homes per acre", "homes per hectare"),
+    ("(sq ft)", "(m$^2$)"),
+    ("$<$10k sq ft", "$<$929 m$^2$"), (" 10k-50k ", " 929--4,645 m$^2$ "), (" 50k-200k ", " 4,645--18,581 m$^2$ "),
+    ("$\\geq$200k", "$\\geq$18,581 m$^2$"),
+    (" & impervious-equiv. acres & ", " & impervious-equivalent ha & "), (" & acres & ", " & ha & "),
+]
+
+
+def cus_values() -> dict[str, str]:
+    V = {**values(), **supplement_values()}
+    for k in ("phl_err_lo", "phl_err_hi", "phl_err_median"):
+        V[k + "_m"] = _f(float(V[k]) * FT_M, 1)
+    V["sqm_unit"] = _n(_load("latency")["twins"]["Manhattan"]["derived"]["sqft_per_unit"] * SQFT_M2)
+    V["park_ha"] = _f(_code_settings()["park_sqft"] * SQFT_M2 / 1e4, 1)
+    V.update(demo_url=DEMO_URL, game_url=DEMO_URL + "/play", demo_release=DEMO_RELEASE, anon_repo=ANON_REPO,
+             public_repo=PUBLIC_REPO)
+    return V
+
+
+def cus_tables() -> dict[str, str]:
+    T = {**tables(), **supplement_tables()}
+    for k in T:
+        for a, b in SI_TEXT:
+            T[k] = T[k].replace(a, b)
+    T["table_indicators"] = T["table_indicators"].replace(
+        "but have no observed after-change data to test against.",
+        "but have no observed after-change data to test against. The Studio reports areas in acres (1 acre = 0.405 ha).")
+    T["table_design"] = (T["table_design"].replace("FEIS site tables (two rezonings)",
+                                                   "Environmental impact statements (two rezonings)")
+                         .replace("LL84 energy, LODES jobs, recorded homes", "LL84 energy, LEHD jobs, recorded homes"))
+    src = "; ".join(f"{TEN[g][0]} \\citep{{{k}}}" for g, k in CITY_DATA.items())
+    T["table_cities"] = T["table_cities"].replace(
+        "could not be downloaded by script.", f"could not be downloaded by script. Sources: {src}.")
+    return T
+
+
+def _esm_numbers(esm: str) -> dict[str, str]:
+    """'S12' etc. for each table label of Online Resource 1, in the order the tables appear."""
+    labels = re.findall(r"\\begin\{table\}.*?\\label\{([^}]+)\}", esm, flags=re.S)
+    return {l: f"S{i + 1}" for i, l in enumerate(labels)}
+
+
+def _with_bibliography(text: str) -> str:
+    from planarena import apa
+
+    keys = citations(text)
+    return text.replace("@@bibliography@@", apa.bibliography(keys) if keys else "")
+
+
+def render_cus() -> dict:
+    fill = {**cus_values(), **cus_tables(), "bibliography": "@@bibliography@@"}
+    esm = _with_bibliography(_fill(CUS / "online_resource_1.tex.in", fill))
+    num = _esm_numbers(esm)
+    for name in ("panels", "auc", "transfer", "ap"):
+        fill[f"esm_tab_{name}"] = num[f"tab:{name}"]
+    man = _with_bibliography(_fill(CUS / "manuscript.tex.in", fill))
+    return {CUS / "manuscript.tex": man, CUS / "online_resource_1.tex": esm,
+            CUS / "title_page.tex": _fill(CUS / "title_page.tex.in", fill)}
+
+
+def cus_figures() -> None:
+    """Separate figure files as the journal asks: Fig1 (vector, from fig1_architecture.tex), Fig2-4 (Studio
+    screenshots) and the charts in the journal's style (planarena.figures.journal)."""
+    from planarena import figures
+
+    out = CUS / "figures"
+    out.mkdir(parents=True, exist_ok=True)
+    if shutil.which("tectonic"):
+        subprocess.run(["tectonic", "fig1_architecture.tex"], cwd=CUS, capture_output=True, check=True)
+        shutil.copy(CUS / "fig1_architecture.pdf", out / "Fig1.pdf")
+    for i, src in ((2, "ui_impact_crop.png"), (3, "ui_inspector.png"), (4, "ui_optimizer_vote.png")):
+        shutil.copy(ROOT / "docs" / "figures" / src, out / f"Fig{i}.png")
+    figures.journal()
+
+
 # ----------------------------------------------------------------------------- render
 def _fill(template, fill: dict) -> str:
     def sub(m):
@@ -986,7 +1074,7 @@ def render_supplement() -> str:
 
 
 def outputs() -> dict:
-    return {OUT: render(), SUPP_OUT: render_supplement()}
+    return {OUT: render(), SUPP_OUT: render_supplement(), **render_cus()}
 
 
 def citations(text: str) -> set[str]:
@@ -1004,6 +1092,10 @@ def main() -> None:
         for f in (OUT, SUPP_OUT):
             r = subprocess.run(["tectonic", "--keep-logs", f.name], cwd=PAPER, capture_output=True, text=True)
             print(f.with_suffix(".pdf").name if r.returncode == 0 else r.stderr[-3000:])
+        cus_figures()
+        for name in CUS_DOCS:
+            r = subprocess.run(["tectonic", "--keep-logs", f"{name}.tex"], cwd=CUS, capture_output=True, text=True)
+            print(f"cus/{name}.pdf" if r.returncode == 0 else r.stderr[-3000:])
 
 
 if __name__ == "__main__":

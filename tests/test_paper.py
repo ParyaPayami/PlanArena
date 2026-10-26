@@ -31,3 +31,27 @@ def test_supplement_is_current():
     assert paper.SUPP_OUT.read_text() == text, "run: python -I -m planarena.paper"
     keys = {e["key"] for e in parse_bib((ROOT / "docs" / "refs.bib").read_text())}
     assert paper.citations(paper.SUPP_TEMPLATE.read_text()) <= keys
+
+
+IDENTIFYING = ("payami", "ppayami", "wisconsin", "uwm", "schermer", "github.com/parya")
+
+
+def test_cus_version_is_current_and_anonymous():
+    """The Computational Urban Science files are current, and the manuscript and Online Resource 1 reveal no author
+    (double-blind review); only the title page names the author."""
+    for path, text in paper.render_cus().items():
+        assert "@@" not in text
+        assert path.read_text() == text, f"run: python -I -m planarena.paper ({path.name})"
+        if path.name != "title_page.tex":
+            assert not [w for w in IDENTIFYING if w in text.lower()], path.name
+
+
+def test_cus_tables_and_figures_are_cited_in_order():
+    text = (paper.CUS / "manuscript.tex").read_text().split("\\begin{document}")[1]
+    for kind in ("tab", "fig"):
+        labels = re.findall(r"\\label\{(%s:[^}]+)\}" % kind, text)
+        first = []
+        for k in re.findall(r"\\ref\{(%s:[^}]+)\}" % kind, text):
+            if k not in first:
+                first.append(k)
+        assert first == labels, (kind, first, labels)
