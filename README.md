@@ -22,6 +22,11 @@ It also does four further things:
 Demo city: Manhattan, 42,075 parcels from NYC DCP MapPLUTO 25v3.1, downloaded from DCP by `planarena.twin.fetch`. The archive's and the extract's SHA-256 are recorded in `twin_meta.json` and in every export. 11 indicators across three pillars.
 <!-- END GENERATED: header -->
 
+## Try it
+
+- **Online demo:** [huggingface.co/spaces/ParyaPayami/PlanArena](https://huggingface.co/spaces/ParyaPayami/PlanArena). All ten cities; pick one at the top left. It is a shared demo, so anything saved is visible to others and wiped on restart.
+- **Paper and technical supplement:** [paper/paper.pdf](paper/paper.pdf), [paper/supplement.pdf](paper/supplement.pdf).
+
 ## Quick start
 
 Double-click **Start PlanArena.command** in this folder. Your browser opens the Studio at http://localhost:8787; the phone game is at /play. **Start PlanArena (phone).command** also serves the game to a phone on the same Wi-Fi. See [TESTING.md](TESTING.md) for what to try.
@@ -250,3 +255,7 @@ Ballots are computed from assumed stakeholder utilities, not elicited preference
 3. **Roof share** is estimated as floor area / floors.
 4. **Inwood** is replayed for the whole area only; Mandatory Inclusionary Housing bonus floor area is not modelled.
 5. **Large cities** (over 100,000 parcels) are drawn as points when zoomed out and as vector tiles cut on demand when zoomed in (`planarena/cities/tiles.py`); the first view of each area takes a moment while its tiles are made.
+
+## Licence
+
+The code is released under the [MIT License](LICENSE). The city data it downloads keep their sources' terms; see `results/data_manifest.json` for each source.
