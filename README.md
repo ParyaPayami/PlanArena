@@ -24,7 +24,7 @@ Demo city: Manhattan, 42,075 parcels from NYC DCP MapPLUTO 25v3.1, downloaded fr
 
 ## Try it
 
-- **Online demo:** [huggingface.co/spaces/ParyaPayami/PlanArena](https://huggingface.co/spaces/ParyaPayami/PlanArena). All ten cities; pick one at the top left. It is a shared demo, so anything saved is visible to others and wiped on restart.
+- **Online demo (Manhattan):** [planarena-manhattan.onrender.com](https://planarena-manhattan.onrender.com). It runs on a free plan that sleeps when idle, so the first visit can take a minute. It is a shared demo: anything saved is visible to others and wiped on restart. The other nine cities run locally (see Quick start).
 - **Paper and technical supplement:** [paper/paper.pdf](paper/paper.pdf), [paper/supplement.pdf](paper/supplement.pdf).
 
 ## Quick start
