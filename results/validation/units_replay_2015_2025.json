@@ -1,0 +1,14 @@
+{
+  "test": "Parcels developed 2015-2025 (>= 5 new homes and > 20% more floor area). Inputs: the 2025 use and the observed 2025 floor area. Output: homes, compared with homes recorded in MapPLUTO 25v3.1.",
+  "parcels": 295,
+  "observed_homes": 20516,
+  "modelled_homes": 21307,
+  "aggregate_ratio": 1.039,
+  "log_log_r": 0.903,
+  "median_abs_pct_error": 0.271,
+  "reference_ceqr_900sf_on_observed_residential_area": {
+    "aggregate_ratio": 1.099,
+    "median_abs_pct_error": 0.213
+  },
+  "note": "PlanArena does not know the residential share of a new building; the reference uses the observed one."
+}

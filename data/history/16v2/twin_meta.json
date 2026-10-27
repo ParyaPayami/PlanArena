@@ -1,0 +1,70 @@
+{
+  "city": "Manhattan, New York City",
+  "source": "NYC DCP MapPLUTO 16V2",
+  "source_path": "data/raw/pluto_16v2/mn_mappluto_16v2.gpkg",
+  "source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change",
+  "source_archive": {
+    "release": "16v2",
+    "url": "https://www.nyc.gov/assets/planning/download/zip/data-maps/open-data/mn_mappluto_16v2.zip",
+    "archive_sha256": "558b5a5ec8e42cb91bb297bfff13f930769bcb53a9e73b171b926734621c353d",
+    "extract": "mn_mappluto_16v2.gpkg",
+    "extract_sha256": "16d31af47dd2393f0a49329768a9b6d73ecfc6cf54db3095d10b0185b51d05d9",
+    "lots": 42686
+  },
+  "source_sha256": "16d31af47dd2393f0a49329768a9b6d73ecfc6cf54db3095d10b0185b51d05d9",
+  "data_quality": {
+    "missing_land_use": 162,
+    "zero_lot_area_filled_from_geometry": 172,
+    "zero_building_area": 2198,
+    "duplicate_bbl": 0
+  },
+  "n_parcels": 42686,
+  "use_counts": {
+    "unknown": 162,
+    "res": 20736,
+    "mix": 11329,
+    "com": 4554,
+    "ind": 796,
+    "tra": 390,
+    "pub": 2472,
+    "opn": 402,
+    "prk": 684,
+    "vac": 1161
+  },
+  "bbox_wgs84": [
+    -74.04761491202682,
+    40.68391884879649,
+    -73.90679123867503,
+    40.879103772518384
+  ],
+  "grid": {
+    "cell_m": 50.0,
+    "cell_ft": 164.04199475000001,
+    "x0": 971581.0316577749,
+    "y0": 189997.12930525144,
+    "nx": 234,
+    "ny": 424
+  },
+  "graph_edges": {
+    "adjacent": 159480,
+    "near": 341488,
+    "same_zoning": 170728
+  },
+  "zoning_rules": "NYC Zoning Resolution district purposes and use groups, simplified by PlanArena; provisional, verify against ZR Articles II-IV.",
+  "floor_height_m": 3.5,
+  "levels": {
+    "101": "Financial District & Tribeca",
+    "102": "Greenwich Village & SoHo",
+    "103": "Lower East Side & Chinatown",
+    "104": "Chelsea & Hell's Kitchen",
+    "105": "Midtown",
+    "106": "Murray Hill, Gramercy & Stuy Town",
+    "107": "Upper West Side",
+    "108": "Upper East Side",
+    "109": "Morningside & Hamilton Heights",
+    "110": "Central Harlem",
+    "111": "East Harlem",
+    "112": "Washington Heights & Inwood"
+  },
+  "build_seconds": 1.1
+}

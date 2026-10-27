@@ -1,0 +1,493 @@
+{
+  "test": "Every district, budget 10 changes, objective = overall score - conversion penalty x changes (GNN term off). Exact-evaluation heuristics search the 150 best first-order moves. No method guarantees a global optimum; 'share of best found' compares each method with the best plan any method found.",
+  "summary": {
+    "surrogate_top_moves": {
+      "median_share_of_best_found": 0.91,
+      "districts_where_best": 0,
+      "median_seconds": 0.02
+    },
+    "first_order": {
+      "median_share_of_best_found": 0.941,
+      "districts_where_best": 0,
+      "median_seconds": 0.25
+    },
+    "first_order_plus_exact_polish": {
+      "median_share_of_best_found": 0.957,
+      "districts_where_best": 1,
+      "median_seconds": 1.88
+    },
+    "greedy_exact": {
+      "median_share_of_best_found": 1.0,
+      "districts_where_best": 12,
+      "median_seconds": 36.15
+    },
+    "simulated_annealing": {
+      "median_share_of_best_found": 0.936,
+      "districts_where_best": 0,
+      "median_seconds": 10.65
+    },
+    "random_restarts_50": {
+      "median_share_of_best_found": 0.655,
+      "districts_where_best": 0,
+      "median_seconds": 1.31
+    }
+  },
+  "districts": [
+    {
+      "district": 101,
+      "eligible": 645,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 6.061267680726227,
+        "s": 0.07,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 6.215656690250503,
+        "s": 0.24,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 6.215656690250503,
+        "s": 1.22,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 6.663778275235106,
+        "s": 37.22,
+        "evals": 1414
+      },
+      "simulated_annealing": {
+        "J_mean": 6.395452508189649,
+        "J_sd": 0.13901617945143166,
+        "s_mean": 10.36,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 5.093076770615164,
+        "s": 1.34,
+        "evals": 50
+      }
+    },
+    {
+      "district": 102,
+      "eligible": 1179,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 9.404040029903388,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 9.531034717183324,
+        "s": 0.3,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 9.744773835294776,
+        "s": 2.14,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 9.81859145394114,
+        "s": 37.87,
+        "evals": 1391
+      },
+      "simulated_annealing": {
+        "J_mean": 8.5125955184264,
+        "J_sd": 1.0622117346406361,
+        "s_mean": 10.58,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 7.214467299204141,
+        "s": 1.6,
+        "evals": 50
+      }
+    },
+    {
+      "district": 103,
+      "eligible": 3382,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 2.701027813192875,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 2.6308826191745176,
+        "s": 0.31,
+        "changes": 9
+      },
+      "first_order_plus_exact_polish": {
+        "J": 2.76606288513452,
+        "s": 2.27,
+        "changes": 9
+      },
+      "greedy_exact": {
+        "J": 3.7604346832759696,
+        "s": 35.83,
+        "evals": 1342
+      },
+      "simulated_annealing": {
+        "J_mean": 3.315837777411495,
+        "J_sd": 0.2824149496416832,
+        "s_mean": 11.86,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 2.380618354237076,
+        "s": 1.39,
+        "evals": 50
+      }
+    },
+    {
+      "district": 104,
+      "eligible": 2782,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 9.539388668168964,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 9.560906624538525,
+        "s": 0.59,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 9.989884241595806,
+        "s": 2.58,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 10.474273115599992,
+        "s": 34.93,
+        "evals": 1325
+      },
+      "simulated_annealing": {
+        "J_mean": 10.328708537592709,
+        "J_sd": 0.20487893000583193,
+        "s_mean": 11.48,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 8.40156371544579,
+        "s": 1.2,
+        "evals": 50
+      }
+    },
+    {
+      "district": 105,
+      "eligible": 2179,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 3.863306637985007,
+        "s": 0.03,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 3.659441126318782,
+        "s": 0.29,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 3.659441126318782,
+        "s": 1.41,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 4.2218034440893,
+        "s": 38.69,
+        "evals": 1413
+      },
+      "simulated_annealing": {
+        "J_mean": 4.006646832830909,
+        "J_sd": 0.10176500182834063,
+        "s_mean": 10.41,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 2.7911614843308716,
+        "s": 1.22,
+        "evals": 50
+      }
+    },
+    {
+      "district": 106,
+      "eligible": 2217,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 5.3970453435696335,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 5.737978346083399,
+        "s": 0.24,
+        "changes": 8
+      },
+      "first_order_plus_exact_polish": {
+        "J": 6.015336817886315,
+        "s": 2.14,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 6.015336817886315,
+        "s": 36.47,
+        "evals": 1334
+      },
+      "simulated_annealing": {
+        "J_mean": 5.222766636672876,
+        "J_sd": 0.4127943601995832,
+        "s_mean": 11.47,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 3.7249213369263474,
+        "s": 1.28,
+        "evals": 50
+      }
+    },
+    {
+      "district": 107,
+      "eligible": 1159,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 11.101804067230162,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 11.052702698738022,
+        "s": 0.24,
+        "changes": 9
+      },
+      "first_order_plus_exact_polish": {
+        "J": 18.874940164536333,
+        "s": 2.06,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 19.021532101476275,
+        "s": 37.85,
+        "evals": 1381
+      },
+      "simulated_annealing": {
+        "J_mean": 16.743755665948456,
+        "J_sd": 3.1141434053188597,
+        "s_mean": 10.72,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 17.374043414974146,
+        "s": 1.37,
+        "evals": 50
+      }
+    },
+    {
+      "district": 108,
+      "eligible": 3486,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 4.224547216874399,
+        "s": 0.06,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 4.301285733363941,
+        "s": 0.33,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 4.301285733363941,
+        "s": 1.26,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 4.483473920028274,
+        "s": 36.65,
+        "evals": 1380
+      },
+      "simulated_annealing": {
+        "J_mean": 4.348405839878171,
+        "J_sd": 0.05786277031427527,
+        "s_mean": 11.39,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 3.332172571650948,
+        "s": 1.14,
+        "evals": 50
+      }
+    },
+    {
+      "district": 109,
+      "eligible": 1567,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 2.4970418272982537,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 2.5459976150494428,
+        "s": 0.26,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 2.5459976150494428,
+        "s": 1.61,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 2.579190476929479,
+        "s": 33.28,
+        "evals": 1383
+      },
+      "simulated_annealing": {
+        "J_mean": 2.255375575311614,
+        "J_sd": 0.3868191230375276,
+        "s_mean": 10.3,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 1.3993737272275617,
+        "s": 1.33,
+        "evals": 50
+      }
+    },
+    {
+      "district": 110,
+      "eligible": 2867,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 4.2460523311492135,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 4.278550473994379,
+        "s": 0.23,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 4.278550473994379,
+        "s": 1.35,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 4.406311858175189,
+        "s": 33.68,
+        "evals": 1394
+      },
+      "simulated_annealing": {
+        "J_mean": 4.13309501528716,
+        "J_sd": 0.2248288669743048,
+        "s_mean": 9.8,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 2.4004393093830085,
+        "s": 1.43,
+        "evals": 50
+      }
+    },
+    {
+      "district": 111,
+      "eligible": 2663,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 2.4604222336375483,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 2.961641205322045,
+        "s": 0.24,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 2.970681739713936,
+        "s": 1.98,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 3.1198054367906836,
+        "s": 34.49,
+        "evals": 1374
+      },
+      "simulated_annealing": {
+        "J_mean": 2.9123819751361855,
+        "J_sd": 0.07873480092692825,
+        "s_mean": 10.72,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 2.0090779121397033,
+        "s": 1.19,
+        "evals": 50
+      }
+    },
+    {
+      "district": 112,
+      "eligible": 2348,
+      "moves_shortlisted": 150,
+      "budget": 10,
+      "surrogate_top_moves": {
+        "J": 4.358049475001712,
+        "s": 0.02,
+        "evals": 1
+      },
+      "first_order": {
+        "J": 4.4689837984984155,
+        "s": 0.24,
+        "changes": 10
+      },
+      "first_order_plus_exact_polish": {
+        "J": 4.4975240982969105,
+        "s": 1.78,
+        "changes": 10
+      },
+      "greedy_exact": {
+        "J": 5.2553669560157426,
+        "s": 33.45,
+        "evals": 1376
+      },
+      "simulated_annealing": {
+        "J_mean": 4.984398381052105,
+        "J_sd": 0.05079977192350788,
+        "s_mean": 9.68,
+        "evals": 400,
+        "seeds": 3
+      },
+      "random_restarts_50": {
+        "J": 3.4136773289718865,
+        "s": 1.21,
+        "evals": 50
+      }
+    }
+  ]
+}

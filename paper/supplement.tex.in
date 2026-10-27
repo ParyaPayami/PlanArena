@@ -1,0 +1,390 @@
+% PlanArena technical supplement. Filled from results/ and from the code's own settings by planarena/paper.py:
+%   python -I -m planarena.paper      (writes supplement.tex and, with tectonic, supplement.pdf). Do not edit supplement.tex.
+\documentclass[10pt]{article}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{fontspec}
+\setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{placeins}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\captionsetup{font=footnotesize,labelfont=bf,skip=3pt}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\usepackage[compact]{titlesec}
+\titlespacing*{\section}{0pt}{8pt}{3pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+\titlespacing*{\paragraph}{0pt}{3pt}{0.6em}
+\setlength{\parskip}{0.15em}
+\setlength{\emergencystretch}{1.5em}
+\graphicspath{{../docs/figures/}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\theequation}{S\arabic{equation}}
+
+\title{\vspace{-2em}\large\textbf{PlanArena: technical supplement}\\[0.2em]
+\normalsize Model specification, test protocols and additional results}
+\author{\normalsize Anonymous author (withheld for double-blind review)}
+\date{\footnotesize Draft, \today}
+
+\begin{document}
+\maketitle
+\vspace{-1.5em}
+
+\noindent This supplement specifies every model in the paper and the protocol of every test, so that each result can
+be reproduced from the code and the public data. Settings marked $\dagger$ are read from the code when this document is
+built. Section numbers refer to the paper unless prefixed with S.
+
+\section{Types of evidence}\label{s:evidence}
+
+The paper uses four kinds of evidence, which support different claims (Table~\ref{tab:s-evidence}).
+\begin{itemize}
+\item \textbf{Empirical predictive validation}: a prediction made with information available before an outcome,
+compared with that outcome, on observations not used to build or select the model.
+\item \textbf{Accounting check}: the model reproduces recorded quantities it was built from or calibrated to (for
+example the baseline twin against assessor records). It shows the bookkeeping is right, not that predictions are.
+\item \textbf{Algorithmic verification}: a search or rule is checked against a known answer (exhaustive enumeration,
+exact re-scoring), independent of whether its objective is right.
+\item \textbf{Illustrative simulation}: outputs that follow from stated assumptions (stakeholder utilities, seats) and
+show how a decision depends on them. They have no observed counterpart.
+\end{itemize}
+
+@@table_evidence@@
+
+\section{Data timing and leakage audit}\label{s:leakage}
+
+\paragraph{Feature timestamps.} Table~\ref{tab:s-timing} lists the source and date of every feature family for each
+panel. In Manhattan every feature comes from the MapPLUTO release of the decision year $t_0$. In the cross-city panels,
+zoning and plan layers are current layers in some cities; lots whose zoning or plan dates from $t_0$ or later are
+flagged where the layer carries dates, and the conservative variant drops them. Dallas's zoning and plan are undated
+current layers (the plan was adopted in 2024, after its $t_0$ of 2022), so its zoning and plan results may contain
+post-decision information and are not unbiased estimates of what those layers add.
+
+@@table_timing@@
+
+\paragraph{Following lots over time.} Each $t_0$ lot is followed to the $t_1$ lot that contains its representative
+point. When several $t_0$ lots fall in one $t_1$ lot (a merger), their $t_0$ floor area is summed before growth is
+measured, and each of them takes the merged lot's outcome. When one $t_0$ lot contains several $t_1$ lots (a split),
+growth is measured on the piece that contains the $t_0$ point. Table~\ref{tab:s-identity} counts both. Lots with no
+$t_1$ lot are left out.
+
+@@table_identity@@
+
+\paragraph{A label error found and corrected.} A building counts as new in $(t_0, t_1]$ only if it is not already on
+the $t_0$ record with a year built of $t_0$ or later. The December 2020 MapPLUTO release (20v8) already lists
+@@leak_2020_lots@@ buildings completed in 2020; without this rule they were counted as developed in every pair starting
+in 2020 (@@leak_2020_1_share@@ of the 2020--2021 positives and @@leak_2020_5_share@@ of the 2020--2025 positives).
+Earlier releases are dated early in the year and are unaffected. The same rule was added to the Los Angeles and Dallas
+panels (@@leak_cross_max@@ of positives at most). All results in the paper use the corrected labels.
+
+\paragraph{Separate observations.} In the held-out impact test (Section~\ref{s:impact-test}), the delta form, the
+unit-size rule and the scale factors are chosen on lots in two of five spatial folds, and all metrics are computed on
+the other three. Coefficients are fitted on data from before the changes (benchmarking and LEHD counts of 2015). In
+the likelihood tests the model is fitted only on pairs whose outcome was known at the decision year. Hyperparameters
+are fixed in the code and were not tuned on test periods; the graph neural network's configuration was selected on a
+validation split of the training period.
+
+\section{Impact engine}\label{s:engine}
+
+\paragraph{Notation.} Parcel $i$ has lot area $A_i$, existing use $u^0_i$ in one of nine analysis groups (residential,
+mixed, commercial, industrial, public facility, open space, parking, vacant, transportation and utility), floor area
+$F^0_i$, homes $H^0_i$, assessed value $V^0_i$ and floor-area components $c^0_{ik}$ for $k \in$ \{residential, office,
+retail, other commercial, factory, storage, public facility, transport facility\}, all from the assessor or city record.
+A plan sets new uses $u_i$ and, optionally, floor-area ratios $f_i$.
+
+\paragraph{Floor area of a changed parcel.}
+\begin{equation}
+F_i = \begin{cases} A_i f_i & \text{if the planner sets a FAR,}\\
+F^0_i & \text{if a building exists and the new use is built (reuse),}\\
+A_i\,\bar f_{iu}\,\rho & \text{if the lot is unbuilt,} \end{cases}
+\end{equation}
+where $\bar f_{iu}$ is the zoning maximum FAR for the use and $\rho = @@util@@^\dagger$ the build-out utilisation (range
+@@util_lo@@--@@util_hi@@). Modelled components $m_{ik}(u, F)$ split $F$ by use: mixed use by the median residential
+share of mixed-use buildings, commercial by the city's office/retail/other shares, industrial by its factory/storage
+shares.
+
+\paragraph{Delta forms.} Unchanged parcels keep their recorded values, so the baseline reproduces the records. For a
+changed parcel, three forms were tested:
+\begin{align}
+\text{replacement:}\quad & c_{ik} = m_{ik}(u_i, F_i),\qquad H_i = m_{i,\mathrm{res}}/q_i;\\
+\text{difference:}\quad & c_{ik} = \max\{0,\ c^0_{ik} + m_{ik}(u_i, F_i) - m_{ik}(u^0_i, F^0_i)\};\\
+\text{hybrid:}\quad & c_{ik} = c^0_{ik} F_i / F^0_i,\ H_i = H^0_i F_i / F^0_i \ \text{if } u_i = u^0_i \text{ and the record
+is consistent; else replacement.}
+\end{align}
+A record is consistent if $F^0_i \geq 1{,}000$ sq ft and, if it has homes, $250 \leq F^0_i/H^0_i \leq 5{,}000$. The unit
+size $q_i$ is the parcel's own floor area per home when it lies in that range, and otherwise the city median
+($@@sqft_unit@@^\dagger$ sq ft in Manhattan). The deployed engine uses the hybrid form.
+
+\paragraph{Derived quantities.}
+\begin{align}
+\text{jobs:}\quad & J_i = \textstyle\sum_k c_{ik}/\phi_k,\\
+\text{emissions:}\quad & G_i = F_i\,\mathrm{EUI}_{u_i}\,\mathrm{EF}_{u_i},\\
+\text{runoff:}\quad & R_i = A_i\,[\kappa_i C_\mathrm{roof} + (1-\kappa_i)\,C_{u_i}],\\
+\text{value:}\quad & V_i = \max\{0,\ V^0_i + v(u_i, F_i) - v(u^0_i, F^0_i)\},\quad v(u,F) = A_i\,\ell_d + F\,b_{u,d},
+\end{align}
+with floor area per worker $\phi_k$ scaled so that baseline jobs match the LEHD total; energy-use intensity and emission
+factor by use from New York's benchmarking data (Local Law 84) and emission limits (Local Law 97); roof share
+$\kappa_i$ from floor area over floors; rational-method coefficients $C$; and median land value per square foot
+$\ell_d$ and building value per square foot $b_{u,d}$ of the community district. Green space is the lot area of open
+space. Residents are homes times @@pph@@$^\dagger$ persons per household.
+
+\paragraph{Access, mix and green cover.} Parcels are rasterised on a @@cell_m@@ m$^\dagger$ grid. Access uses
+Euclidean disks, not walking routes: radius @@walk_m@@ m$^\dagger$ (about five minutes) and @@fac_m@@ m$^\dagger$ (about
+ten). Each indicator is a mean over residents in the scope:
+\begin{itemize}
+\item \textbf{park access}: share of residents with at least @@park_acres@@ acre$^\dagger$ of open space within the
+short radius;
+\item \textbf{services and facility adequacy}: $\min\{1, S_i/(P_i\,t)\}$, where $S_i$ is retail and other commercial
+(or public-facility) floor area within the radius, $P_i$ the residents within it, and $t$ the city's median per-resident
+value at baseline;
+\item \textbf{land-use mix}: normalised entropy of the lot area of five land groups within the short radius;
+\item \textbf{green cover}: the open-space share of that land.
+\end{itemize}
+
+\paragraph{Scores, pillars and overall score.} Let $b_k$ and $s_k$ be indicator $k$'s baseline and scenario values in the
+scope (the ten-minute disk around the changed parcels, a district or the city), and $\delta_k = \pm 1$ its direction.
+\begin{equation}
+\mathrm{score}_k = \mathrm{clip}_{[-100,100]}\begin{cases} 100\,\delta_k (s_k - b_k)/|b_k| & \text{totals (per cent change)}\\
+100\,\delta_k (s_k - b_k) & \text{shares (percentage points)} \end{cases}
+\end{equation}
+A pillar score is the mean of its indicators' scores (economic: homes, jobs, value; social: park, services, facility
+access and mix; environmental: green space, runoff, emissions and green cover). The overall score is
+$\sum_p w_p\,\mathrm{pillar}_p / \sum_p w_p$ with planner-set weights $w_p$, equal by default. Because totals are scored
+relative to the scope's baseline, a change scores higher in a smaller scope; comparisons are made within one scope.
+
+\paragraph{Sensitivity ranges.} Each coefficient has a central value and a low and high value from its source (sources
+and status are recorded with each coefficient in \texttt{planarena/indicators/coefficients.yaml}). Two variants set every ranged coefficient to the end that lowers (variant a)
+or raises (variant b) the quantity, together with the 25th and 75th percentiles of building value per square foot and
+of floor area per home. The range shown for an indicator is the minimum and maximum of the three deltas (central, a,
+b). It is a sensitivity range: it has no probability attached and does not include model error, so it is not a
+prediction interval.
+
+\paragraph{Consistency checks} (tests in the repository): the baseline scenario gives zero deltas on every indicator;
+undoing an edit restores the baseline exactly; scores stay in $[-100, 100]$; baseline jobs equal the calibration total.
+
+\section{Held-out test of the impact engine}\label{s:impact-test}
+
+\paragraph{Design.} @@ih_events@@ Manhattan lots changed use or floor area substantially between 2015 and 2025 (new
+buildings and use changes of at least 2,000 sq ft). Each is given its 2015 state and its observed 2025 use and floor
+area, and the engine predicts the change in homes, assessed value and emissions; observed changes come from the 2025
+record (homes, value) and from benchmarked buildings in both years (emissions). The test is conditional: it measures
+the engine's arithmetic given what was built, not whether the change would happen. The lots are split into five
+spatial folds. On folds 0--1 (@@ih_sel@@ lots) the delta form and unit-size rule are chosen by mean normalised absolute
+error over the three indicators, and one scale factor per indicator (total observed over total predicted) is fitted.
+Folds 2--4 (@@ih_eval@@ lots) are used only for evaluation. Coefficients come from 2015 data (benchmarking 2015, LEHD
+2015), before the changes.
+
+\paragraph{Baselines,} fitted on the selection folds with the same information (old and new use, floor area, lot
+area, old homes and value): the mean change of the same transition and size class, and gradient-boosted regression.
+
+@@table_ih_main@@
+
+@@table_ih_size@@
+
+@@table_ih_type@@
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\linewidth]{impact_scatter.png}
+\caption{Observed against predicted change on the evaluation lots (symmetric log axes; dashed line: equality).}
+\label{fig:s-scatter}
+\end{figure}
+
+\paragraph{Direction of change.} Among lots where both changes are non-zero, the predicted change has the observed
+sign for @@ih_sign_homes@@ of homes, @@ih_sign_value@@ of assessed-value changes and @@ih_sign_ghg@@ of emissions
+changes (Figure~\ref{fig:s-scatter}). The correlation for value is carried by large lots; for a single lot, the
+direction of the value change is unreliable.
+
+\paragraph{Jobs.} Job change was tested by 2020 census block (LEHD 2015 and 2023, adjusted for citywide growth), on
+blocks with no selection-fold lot: $r = @@ih_jobs_r@@$ over @@ih_jobs_n@@ blocks. The engine has no skill for job
+change at this scale, and the Studio marks job change as not validated.
+
+\section{Likelihood, yield and calibration}\label{s:likely}
+
+\paragraph{Outcome.} A lot is developed in $(t_0, t_1]$ if a new building appears on it (Section~\ref{s:leakage}) or
+its floor area grows by more than 25\% and 2,000 sq ft. Cross-city definitions follow each source (paper, Section 4).
+
+\paragraph{Manhattan model.} LightGBM (500 trees, learning rate 0.03, 31 leaves, at least 40 lots per leaf, row and
+column subsampling 0.8), fitted on all pairs $(a, a+h)$ with $a + h \leq t_0$, on @@n_features@@ features from the
+$t_0$ record: lot and floor area, floors, age, built and permitted FARs, overlay, landmark and historic status, zoning
+family, existing use, unused permitted floor area, land share of value, value per square foot, soft-site flag, homes,
+neighbour use composition on the parcel graph, and the share of neighbours built in the five years before $t_0$.
+
+\paragraph{Cross-city model.} LightGBM (400 trees, learning rate 0.04, 31 leaves, at least 50 lots per leaf,
+subsampling 0.8) on the blocks E, C, Z, P (paper, Section 4), fitted on the first window and tested on the second.
+
+\paragraph{Calibration metrics.} For probabilities $p$ and outcomes $y$ in a test window: reliability in ten
+equal-count bins; expected calibration error (bin-weighted absolute gap); observed over predicted events
+$\sum y/\sum p$; calibration intercept and slope from a logistic regression of $y$ on $\mathrm{logit}(p)$ (ideal 0 and
+1; a slope below 1 means the probabilities are too spread out); and the Brier score against a constant forecast of the
+training-period rate, as skill $1 - \mathrm{Brier}/\mathrm{Brier}_\mathrm{prevalence}$.
+
+\paragraph{Recalibration,} using training data only, in two ways: \emph{isotonic}, fitted on the latest training pair
+as predicted by a model trained on the earlier pairs (Manhattan, where several pairs exist); and \emph{logistic}
+(intercept and slope on $\mathrm{logit}\,p$), fitted on out-of-fold probabilities of the training data from five
+spatial folds. Neither uses the test window.
+
+@@table_cal_mn@@
+
+@@table_cal_cities@@
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.85\linewidth]{reliability.png}
+\caption{Reliability of redevelopment probabilities (log axes; dashed line: perfect calibration).}
+\label{fig:s-reliability}
+\end{figure}
+
+\paragraph{From probability to homes.} Three projections are compared with homes built.
+\begin{itemize}
+\item \textbf{Capacity}: each site built to the permitted floor area at utilisation $\rho$, homes $K_i$.
+\item \textbf{Probability $\times$ capacity}: $\sum_i p_i K_i$, where $p_i$ is the probability of redevelopment by the
+end of the window. In the rezoning replays the model's horizon $h$ is extended to the $T$ years to 2025 with a
+constant hazard, $p_T = 1 - (1-p_h)^{T/h}$.
+\item \textbf{Probability $\times$ empirical yield}: redeveloped lots seldom reach capacity. In the cross-city test the
+expected yield of a developed lot is the mean homes added by developed lots of the same zoning class (existing class
+where zoning is missing) and lot-size bin in the training window (at least 20 lots, else the class, else all lots), so $E[\text{homes}] = \sum_i p_i\,\hat y_i$. In the
+rezoning replays it is $\sum_i p_{T,i}\,\bar s\,K_i$, with $\bar s$ the mean share of capacity homes added by soft sites
+redeveloped in the training pairs.
+\end{itemize}
+Probability $\times$ capacity and probability $\times$ yield are expected values of gross homes added (removals are not
+subtracted). Their 95\% ranges come from 20,000 draws in which each site is redeveloped independently with its
+probability and, for the yield version, takes a share drawn from the training sites. These ranges are conditional on
+the model's probabilities: they omit model error and correlation between sites, and are narrower than a full
+prediction interval.
+
+\paragraph{Build-out proxy.} In the cross-city test, zoning and plan build-out are not legal capacity (most cities do
+not publish maximum FAR as data). Each lot's build-out is the homes per acre that lots whose existing use is in the class its zoning (or
+plan) designates reach in the city today (90th percentile among those with homes, at least 30 lots), times its lot
+area, minus its homes. It measures what a class's dense lots hold today, not what the rules allow.
+
+\section{Optimizer}\label{s:optimizer}
+
+\paragraph{Objective and constraints.} For a plan $u$ in scope $S$, maximise
+\begin{equation}
+J(u) = \mathrm{overall}_S(u) - \lambda\,|\{i : u_i \neq u^0_i\}|,\qquad \lambda = @@pen@@^\dagger,
+\end{equation}
+subject to at most $B = \max\{1, \lfloor @@share@@^\dagger\, n_\mathrm{eligible}\rfloor\}$ changes. Eligible parcels exclude
+landmarks and historic districts, parks, public facilities, transportation and utility lots, and lots without a
+known use. Allowed uses on a parcel are those its zoning permits (Section~\ref{s:zoning}); homes may only become
+residential or mixed use; built lots may not become open space, parking or vacant land; and converting an existing
+building is allowed only if that conversion was observed in Manhattan at that building size or larger (precedent).
+
+\paragraph{First-order gains.} For each parcel and use, the change in $J$ is estimated as
+\begin{equation}
+g_{iu} = \sum_k a_k\,\Delta x_{iuk} + w_\mathrm{fit}\,[\log P(u\mid\text{context}) - \log P(u^0_i\mid\text{context})] - \lambda,
+\end{equation}
+where $a_k = 100\,\delta_k\,\omega_k/|b_k|$ for totals and $100\,\delta_k\,\omega_k$ for shares, $\omega_k$ the
+indicator's weight in the overall score (pillar weight over the number of indicators in the pillar),
+$w_\mathrm{fit} = @@wfit@@^\dagger$, and $\Delta x_{iuk}$ the change in indicator $k$:
+\begin{itemize}
+\item exact for the additive indicators (homes, jobs, value, green space, runoff, emissions);
+\item for access, mix and green cover, the first-order effect on residents within the radius, computed by
+convolution on the raster: added open space for residents lacking a park, added floor area for residents in
+under-served cells, residents added to under-served cells (dilution), the entropy gradient
+$-(\log s_g + H \log 5)/(T\log 5)$ of land-group shares $s_g$ for mix, and the open-space share gradient for green
+cover;
+\item plus the change in who is counted: a parcel's added residents enter each resident-weighted mean with that
+parcel's own value.
+\end{itemize}
+The gains are exact for additive indicators and first order for the rest, which saturate.
+
+\paragraph{Search.} Iterated best response over @@rounds@@$^\dagger$ rounds: in round $r$ the
+$\lceil(B - \text{changes so far})/(R - r)\rceil$ parcels with the largest positive gain switch to their best use, then
+access and gains are recomputed. Because $J$ is the potential function of the game in which each parcel chooses its use,
+each round can only improve the estimate. Polishing re-scores exactly the @@polish@@$^\dagger$ best moves (add a move,
+swap it with the weakest change, or drop a change) for up to two passes. The Studio uses polishing; the candidate plans
+for votes do not. The result is the best plan found, not a proven optimum.
+
+\paragraph{Likelihood layer.} When on, candidates are restricted to the fifth of parcels with the highest five-year
+probability of redevelopment. Probabilities restrict the candidate set; they do not weight moves.
+
+\paragraph{NSGA-III explorer.} For a selection of parcels, three objectives (the first-order social, economic and
+environmental gains) are searched by NSGA-III \citep{deb2014} in pymoo: @@nsga_refdirs@@ Das--Dennis reference
+directions (eight partitions), population @@nsga_pop@@, @@nsga_gen@@ generations, simulated binary crossover
+(probability 0.9, $\eta = 15$) and polynomial mutation ($\eta = 20$) with integer rounding, a fixed seed. Every plan
+evaluated is archived; the non-dominated plans of the archive are re-scored exactly, plans that another re-scored
+plan beats on every pillar are dropped, and at most @@nsga_show@@ plans are shown (the best per pillar, then evenly
+spaced by total gain).
+
+\paragraph{Test of the explorer.} On Manhattan tax blocks drawn at random, every combination of options was enumerated
+(Table~\ref{tab:s-nsga}). On @@pt_small_n@@ small blocks (@@pt_small_plans@@ plans) every plan was also scored exactly;
+on @@pt_med_n@@ medium blocks (@@pt_med_plans@@ plans) the first-order front is known. Quality is the hypervolume of a
+front as a share of that of the true front.
+
+@@table_nsga@@
+
+\paragraph{A defect found by this test.} The first version of the first-order model omitted mix and green cover and
+the change in who is counted. On small blocks its rank correlation with exact pillar scores fell to
+@@pt_old_env_min@@ (environmental), and on one block the explorer's front covered @@pt_old_hv_min@@ of the exact
+front's hypervolume. With the terms above, the rank correlation is at least @@pt_new_rho_min@@ on every pillar.
+
+\section{Decision module}\label{s:decision}
+
+\paragraph{Stakeholders and utilities.} Five agents stand for parties that commonly testify or decide at land-use
+hearings: developers (the applicant), residents (community boards and civic associations), environmental advocates,
+the city's budget office, and local business associations. Each agent's utility for plan $a$ is
+$U_{va} = \sum_k w_{vk}\,\mathrm{score}_k(a)$ with the weights of Table~\ref{tab:s-weights}, so the status quo is worth
+zero to everyone. The weights are editable assumptions, not elicited preferences. Each agent holds one seat. One
+agent per interest does not represent the variety within it; the residents' referendum below and the sensitivity
+tests show how much that matters.
+
+@@table_weights@@
+
+\paragraph{Candidate plans.} The status quo; each agent's ideal plan (the optimizer with that agent's weights); ten
+pairwise compromises (the optimizer with the mean of two agents' weights); a balanced plan (equal pillars); a
+consensus plan (only moves that improve every agent's first-order utility); and a parcel-by-parcel ballot (on each
+eligible parcel the council ranks the allowed uses by weighted Borda and a change passes with an absolute majority of
+seats). All use the same change budget. Identical plans are merged, and every candidate is re-scored exactly.
+
+\paragraph{Rules.} With weighted voters and ties allowed: plurality; Borda; instant runoff; Copeland; Schulze (the
+headline rule: Condorcet-consistent, monotone and independent of clones); Kemeny--Young (exact integer program, 10 s
+limit); approval (plans better than the status quo); score (utilities rescaled to 0--10 per voter); and majority
+judgment (seven grades from utility). Ties are broken by Borda score. Also reported: the Condorcet winner and loser, the
+Smith set, whether one voter can change the Schulze result by misreporting, and the Nash bargaining solution with the
+status quo as disagreement point.
+
+\paragraph{Residents' referendum.} Today's residents vote by tax block, weighted by population. A block's utility for a
+plan is the residents' weights applied to the change in its own access, mix and green cover, plus homes in the study
+area; differences below @@jnd@@$^\dagger$ points are ties (just-noticeable difference, an assumption). Future residents
+and other areas do not vote.
+
+\paragraph{Robustness and sensitivity.} The winner's Schulze win probability is estimated over @@rob_samples@@$^\dagger$
+draws in which each indicator's delta is drawn from a triangular distribution over its sensitivity range (one quantile
+per indicator, shared by all plans, because a coefficient that is higher than assumed is higher for every plan) and
+seats from a Dirichlet distribution centred on the seats (concentration @@rob_conc@@$^\dagger$). The sensitivity tests
+redraw each agent's weights (Dirichlet, concentration 20), add random feasible plans to the ballot, sweep the
+threshold, triple each agent's seats in turn, and draw each block's resident weights independently.
+
+@@table_vote_sets@@
+
+\section{Zoning and access as represented}\label{s:zoning}
+
+\begin{itemize}
+\item \textbf{Represented}: which of the nine use groups each zoning district permits (simplified rules for New York;
+crosswalks of district classes elsewhere), maximum FAR by residential, commercial and community-facility use where the
+city publishes it, landmarks and historic districts as protections.
+\item \textbf{Not represented}: height and setback limits, lot coverage, parking requirements, inclusionary and other
+bonuses, special-district rules, discretionary approvals and building codes. A plan that passes the screen may still
+be infeasible.
+\item \textbf{Access} uses Euclidean disks on a raster, not walking routes, so barriers such as highways, rail yards
+and rivers are ignored and access near them may be overstated.
+\end{itemize}
+
+\section{Reproducibility}\label{s:repro}
+
+The code, the result file behind every number, and a manifest of every input (URL, retrieval date, SHA-256) are in the
+PlanArena repository; this version is tagged \texttt{@@release@@}. \texttt{make reproduce} rebuilds the data and every
+result from public sources, and \texttt{python -I -m planarena.paper} rebuilds the paper and this supplement from the
+result files.
+
+\bibliographystyle{unsrtnat}
+\bibliography{../docs/refs}
+
+\end{document}

@@ -1,0 +1,36 @@
+{
+  "test": "East Harlem Rezoning FEIS (CEQR 17DCP048M, 2017), Appendix A-3 projected development sites. PlanArena is run on the same sites: (a) with the FEIS site FAR and use, (b) from zoning alone (max FAR x build-out utilization). Built outcome: homes recorded in MapPLUTO 25v3.1 on the same land.",
+  "sites_parsed": 68,
+  "sites_matched_2015": 68,
+  "feis_with_action_du": 5959.0,
+  "feis_no_action_du": 2475.0,
+  "feis_increment_du": 3484.0,
+  "planarena_du_same_far": 5117,
+  "planarena_du_zoning_rule": 4793,
+  "ratio_same_far_to_feis": 0.859,
+  "ratio_zoning_rule_to_feis": 0.804,
+  "site_log_r_same_far": 0.94,
+  "existing_du_2015": 606.0,
+  "du_2025": 1013.0,
+  "built_increment_2015_2025": 407.0,
+  "share_of_feis_increment_built_by_2025": 0.117,
+  "feis_analysis_year": 2027,
+  "parse_check": {
+    "feis_table_totals": {
+      "with_action_du": 5960,
+      "with_action_bldg_sf": 6433375,
+      "no_action_du": 2472,
+      "no_action_bldg_sf": 2978556
+    },
+    "parsed": {
+      "with_action_du": 5959.0,
+      "with_action_bldg_sf": 6433375.0,
+      "no_action_du": 2475.0,
+      "no_action_bldg_sf": 2978556.0
+    },
+    "note": "Floor areas match the FEIS totals exactly; dwelling units differ by 1-3 because the FEIS rounds each row."
+  },
+  "source": "https://www.nyc.gov/assets/planning/download/pdf/applicants/env-review/east-harlem/appenda_feis.pdf",
+  "source_sha256": "ac5730f877570087d5f3c4a27822872586f320f89ca52ab78b2cbc5fca346bec",
+  "planarena_baseline_units_on_sites_2015": 606
+}

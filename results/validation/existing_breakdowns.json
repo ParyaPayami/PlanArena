@@ -1,0 +1,203 @@
+{
+  "test": "Existing conditions in detail: where the aggregate agreement hides local error.\n\nEmissions: errors by land use, building size and district; buildings present in both LL84 years vs one;\nheld-out buildings (EUIs refitted on a random half of LL84 2024 buildings, tested on the other half);\na citywide single-EUI baseline. Jobs: a citywide jobs-per-floor-area baseline, and errors by district.",
+  "emissions_2023": {
+    "all": {
+      "n": 6234,
+      "median_abs_pct_error": 0.306,
+      "log_r": 0.807,
+      "total_ratio": 1.036
+    },
+    "by_use": {
+      "com": {
+        "n": 1240,
+        "median_abs_pct_error": 0.329,
+        "log_r": 0.85,
+        "total_ratio": 1.033
+      },
+      "ind": {
+        "n": 50,
+        "median_abs_pct_error": 0.687,
+        "log_r": 0.62,
+        "total_ratio": 1.047
+      },
+      "mix": {
+        "n": 1773,
+        "median_abs_pct_error": 0.258,
+        "log_r": 0.855,
+        "total_ratio": 0.963
+      },
+      "pub": {
+        "n": 636,
+        "median_abs_pct_error": 0.553,
+        "log_r": 0.675,
+        "total_ratio": 1.132
+      },
+      "res": {
+        "n": 2512,
+        "median_abs_pct_error": 0.3,
+        "log_r": 0.796,
+        "total_ratio": 1.057
+      },
+      "tra": {
+        "n": 23,
+        "median_abs_pct_error": 0.562,
+        "log_r": 0.555,
+        "total_ratio": 1.026
+      }
+    },
+    "by_size": {
+      "100k-500k": {
+        "n": 1838,
+        "median_abs_pct_error": 0.317,
+        "log_r": 0.611,
+        "total_ratio": 1.051
+      },
+      "20k-100k": {
+        "n": 3995,
+        "median_abs_pct_error": 0.301,
+        "log_r": 0.501,
+        "total_ratio": 1.07
+      },
+      "<20k": {
+        "n": 125,
+        "median_abs_pct_error": 0.383,
+        "log_r": 0.279,
+        "total_ratio": 0.63
+      },
+      ">500k": {
+        "n": 276,
+        "median_abs_pct_error": 0.297,
+        "log_r": 0.344,
+        "total_ratio": 0.998
+      }
+    },
+    "by_district": {
+      "101": {
+        "n": 348,
+        "median_abs_pct_error": 0.334,
+        "log_r": 0.827,
+        "total_ratio": 1.149
+      },
+      "102": {
+        "n": 581,
+        "median_abs_pct_error": 0.321,
+        "log_r": 0.658,
+        "total_ratio": 1.168
+      },
+      "103": {
+        "n": 311,
+        "median_abs_pct_error": 0.353,
+        "log_r": 0.736,
+        "total_ratio": 1.002
+      },
+      "104": {
+        "n": 456,
+        "median_abs_pct_error": 0.323,
+        "log_r": 0.856,
+        "total_ratio": 0.895
+      },
+      "105": {
+        "n": 858,
+        "median_abs_pct_error": 0.321,
+        "log_r": 0.879,
+        "total_ratio": 1.024
+      },
+      "106": {
+        "n": 472,
+        "median_abs_pct_error": 0.288,
+        "log_r": 0.885,
+        "total_ratio": 1.023
+      },
+      "107": {
+        "n": 676,
+        "median_abs_pct_error": 0.298,
+        "log_r": 0.816,
+        "total_ratio": 1.168
+      },
+      "108": {
+        "n": 809,
+        "median_abs_pct_error": 0.295,
+        "log_r": 0.829,
+        "total_ratio": 1.148
+      },
+      "109": {
+        "n": 437,
+        "median_abs_pct_error": 0.366,
+        "log_r": 0.634,
+        "total_ratio": 1.206
+      },
+      "110": {
+        "n": 324,
+        "median_abs_pct_error": 0.313,
+        "log_r": 0.747,
+        "total_ratio": 1.044
+      },
+      "111": {
+        "n": 236,
+        "median_abs_pct_error": 0.359,
+        "log_r": 0.832,
+        "total_ratio": 0.635
+      },
+      "112": {
+        "n": 726,
+        "median_abs_pct_error": 0.26,
+        "log_r": 0.639,
+        "total_ratio": 1.015
+      }
+    },
+    "by_overlap": {
+      "2023 only": {
+        "n": 259,
+        "median_abs_pct_error": 0.384,
+        "log_r": 0.777,
+        "total_ratio": 0.888
+      },
+      "in 2023 and 2024": {
+        "n": 5975,
+        "median_abs_pct_error": 0.304,
+        "log_r": 0.808,
+        "total_ratio": 1.043
+      }
+    },
+    "baseline_single_citywide_eui": {
+      "n": 6234,
+      "median_abs_pct_error": 0.294,
+      "log_r": 0.807,
+      "total_ratio": 0.962
+    },
+    "held_out_buildings": {
+      "n": 3271,
+      "median_abs_pct_error": 0.297,
+      "log_r": 0.797,
+      "total_ratio": 0.979,
+      "note": "EUIs refitted on a random half of LL84 2024 buildings; tested on 2023 buildings not in that half"
+    }
+  },
+  "jobs_2023": {
+    "blocks_with_100_jobs_or_more": {
+      "model": {
+        "n": 1942,
+        "median_abs_pct_error": 0.454
+      },
+      "baseline_floor_area_only": {
+        "n": 1942,
+        "median_abs_pct_error": 0.483
+      }
+    },
+    "by_district_median_error": {
+      "101": 0.456,
+      "102": 0.463,
+      "103": 0.434,
+      "104": 0.538,
+      "105": 0.308,
+      "106": 0.476,
+      "107": 0.487,
+      "108": 0.387,
+      "109": 0.564,
+      "110": 0.577,
+      "111": 0.537,
+      "112": 0.548
+    }
+  },
+  "citywide_eui_kbtu_sqft": 80.4
+}

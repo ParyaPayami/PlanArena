@@ -1,0 +1,368 @@
+{
+ "3651000": {
+  "city": "New York, NY",
+  "parcels": 856634,
+  "existing": 0.997009224476264,
+  "plan": 0.0,
+  "zoning": 0.9999848243240403,
+  "floor_area": 0.952423088506877,
+  "homes_twin": 3728671.0,
+  "homes_census_2020": 3618622,
+  "plan_matches_existing_group": null
+ },
+ "0644000": {
+  "city": "Los Angeles, CA",
+  "parcels": 672444,
+  "existing": 0.9993709513357246,
+  "plan": 0.99971298725247,
+  "zoning": 0.9991597813349513,
+  "floor_area": 0.942017476548233,
+  "homes_twin": 1476275.0,
+  "homes_census_2020": 1496435,
+  "plan_matches_existing_group": 0.9164105533090342,
+  "plan_matches_existing_class": 0.7539629976350753
+ },
+ "1714000": {
+  "city": "Chicago, IL",
+  "parcels": 606894,
+  "existing": 0.9990113594795796,
+  "plan": 0.0,
+  "zoning": 0.9618170553671647,
+  "floor_area": 0.8207397008373786,
+  "homes_twin": 1323154.0,
+  "homes_census_2020": 1262610,
+  "plan_matches_existing_group": null
+ },
+ "4835000": {
+  "city": "Houston, TX",
+  "parcels": 630525,
+  "existing": 0.9734744855477578,
+  "plan": 0.0,
+  "zoning": 0.0,
+  "floor_area": 0.8294659212560961,
+  "homes_twin": 943712.0,
+  "homes_census_2020": 998258,
+  "plan_matches_existing_group": null
+ },
+ "0455000": {
+  "city": "Phoenix, AZ",
+  "parcels": 510871,
+  "existing": 1.0,
+  "plan": 0.9998903832865831,
+  "zoning": 0.9900053046659528,
+  "floor_area": 0.8195806769223541,
+  "homes_twin": 624794.0,
+  "homes_census_2020": 630784,
+  "plan_matches_existing_group": 0.8750624002819024,
+  "plan_matches_existing_class": 0.6951381615653417
+ },
+ "4260000": {
+  "city": "Philadelphia, PA",
+  "parcels": 547410,
+  "existing": 0.999008056118814,
+  "plan": 0.8323048537659159,
+  "zoning": 0.9963446045925357,
+  "floor_area": 0.923430335580278,
+  "homes_twin": 716425.0,
+  "homes_census_2020": 726795,
+  "plan_matches_existing_group": 0.9033307557797247,
+  "plan_matches_existing_class": 0.811538360148678,
+  "plan_digitised": {
+   "Central": {
+    "used": true,
+    "pages": [
+     90,
+     91
+    ],
+    "coverage": 0.9184,
+    "median_error_ft": 3.37,
+    "p90_error_ft": 29.3,
+    "scale_ft_per_pt": 34.268,
+    "rotation_deg": -9.2,
+    "shapes_visible": 28290,
+    "shapes_drawn": 28396,
+    "agreement_with_existing": 0.746,
+    "agreement_if_shifted_300ft": 0.465
+   },
+   "Central Northeast": {
+    "used": true,
+    "pages": [
+     70,
+     71
+    ],
+    "coverage": 0.9988,
+    "median_error_ft": 4.02,
+    "p90_error_ft": 15.7,
+    "scale_ft_per_pt": 43.415,
+    "rotation_deg": -1.7,
+    "shapes_visible": 23897,
+    "shapes_drawn": 56114,
+    "agreement_with_existing": 0.858,
+    "agreement_if_shifted_300ft": 0.453
+   },
+   "Lower Far Northeast + Upper Far Northeast": {
+    "used": true,
+    "pages": [
+     78,
+     79
+    ],
+    "coverage": 0.9938,
+    "median_error_ft": 3.73,
+    "p90_error_ft": 20.8,
+    "scale_ft_per_pt": 60.713,
+    "rotation_deg": -1.7,
+    "shapes_visible": 80552,
+    "shapes_drawn": 134084,
+    "agreement_with_existing": 0.894,
+    "agreement_if_shifted_300ft": 0.574
+   },
+   "Lower North": {
+    "used": true,
+    "pages": [
+     78,
+     79
+    ],
+    "coverage": 0.936,
+    "median_error_ft": 1.43,
+    "p90_error_ft": 26.7,
+    "scale_ft_per_pt": 23.293,
+    "rotation_deg": -9.6,
+    "shapes_visible": 78429,
+    "shapes_drawn": 79301,
+    "agreement_with_existing": 0.603,
+    "agreement_if_shifted_300ft": 0.422
+   },
+   "Lower Northeast": {
+    "used": true,
+    "pages": [
+     64,
+     65
+    ],
+    "coverage": 0.9987,
+    "median_error_ft": 3.22,
+    "p90_error_ft": 14.4,
+    "scale_ft_per_pt": 30.246,
+    "rotation_deg": -1.7,
+    "shapes_visible": 32536,
+    "shapes_drawn": 43721,
+    "agreement_with_existing": 0.859,
+    "agreement_if_shifted_300ft": 0.451
+   },
+   "Lower Northwest": {
+    "used": true,
+    "pages": [
+     78,
+     79
+    ],
+    "coverage": 0.9752,
+    "median_error_ft": 3.85,
+    "p90_error_ft": 28.5,
+    "scale_ft_per_pt": 37.611,
+    "rotation_deg": -1.7,
+    "shapes_visible": 18358,
+    "shapes_drawn": 19679,
+    "agreement_with_existing": 0.854,
+    "agreement_if_shifted_300ft": 0.636
+   },
+   "Lower South": {
+    "used": true,
+    "pages": [
+     68,
+     69
+    ],
+    "coverage": 0.9347,
+    "median_error_ft": 3.98,
+    "p90_error_ft": 171.7,
+    "scale_ft_per_pt": 43.903,
+    "rotation_deg": -1.71,
+    "shapes_visible": 1963,
+    "shapes_drawn": 2243,
+    "agreement_with_existing": 0.861,
+    "agreement_if_shifted_300ft": 0.659
+   },
+   "Lower Southwest": {
+    "used": true,
+    "pages": [
+     68,
+     69
+    ],
+    "coverage": 0.9518,
+    "median_error_ft": 2.34,
+    "p90_error_ft": 15.5,
+    "scale_ft_per_pt": 36.169,
+    "rotation_deg": -9.3,
+    "shapes_visible": 15379,
+    "shapes_drawn": 24002,
+    "agreement_with_existing": 0.903,
+    "agreement_if_shifted_300ft": 0.551
+   },
+   "North": {
+    "used": true,
+    "pages": [
+     82,
+     83
+    ],
+    "coverage": 0.8778,
+    "median_error_ft": 1.43,
+    "p90_error_ft": 16.9,
+    "scale_ft_per_pt": 30.706,
+    "rotation_deg": -9.5,
+    "shapes_visible": 49972,
+    "shapes_drawn": 55831,
+    "agreement_with_existing": 0.749,
+    "agreement_if_shifted_300ft": 0.526
+   },
+   "North Delaware": {
+    "used": true,
+    "pages": [
+     70,
+     71
+    ],
+    "coverage": 0.9949,
+    "median_error_ft": 3.56,
+    "p90_error_ft": 17.1,
+    "scale_ft_per_pt": 37.823,
+    "rotation_deg": -9.5,
+    "shapes_visible": 62627,
+    "shapes_drawn": 67501,
+    "agreement_with_existing": 0.86,
+    "agreement_if_shifted_300ft": 0.428
+   },
+   "River Wards": {
+    "used": true,
+    "pages": [
+     98,
+     99
+    ],
+    "coverage": 0.9193,
+    "median_error_ft": 1.49,
+    "p90_error_ft": 37.6,
+    "scale_ft_per_pt": 27.688,
+    "rotation_deg": -1.7,
+    "shapes_visible": 28835,
+    "shapes_drawn": 36693,
+    "agreement_with_existing": 0.818,
+    "agreement_if_shifted_300ft": 0.43
+   },
+   "South": {
+    "used": false,
+    "reason": "no Proposed Land Use map registered"
+   },
+   "University Southwest": {
+    "used": true,
+    "pages": [
+     72,
+     73
+    ],
+    "coverage": 0.9984,
+    "median_error_ft": 1.2,
+    "p90_error_ft": 10.5,
+    "scale_ft_per_pt": 22.224,
+    "rotation_deg": -9.5,
+    "shapes_visible": 21070,
+    "shapes_drawn": 21215,
+    "agreement_with_existing": 0.754,
+    "agreement_if_shifted_300ft": 0.509
+   },
+   "Upper North": {
+    "used": true,
+    "pages": [
+     76,
+     77
+    ],
+    "coverage": 0.9828,
+    "median_error_ft": 1.62,
+    "p90_error_ft": 14.2,
+    "scale_ft_per_pt": 33.623,
+    "rotation_deg": -7.51,
+    "shapes_visible": 99284,
+    "shapes_drawn": 144530,
+    "agreement_with_existing": 0.892,
+    "agreement_if_shifted_300ft": 0.619
+   },
+   "Upper Northwest": {
+    "used": true,
+    "pages": [
+     92,
+     93
+    ],
+    "coverage": 0.9657,
+    "median_error_ft": 7.25,
+    "p90_error_ft": 26.2,
+    "scale_ft_per_pt": 39.248,
+    "rotation_deg": -1.65,
+    "shapes_visible": 26926,
+    "shapes_drawn": 29509,
+    "agreement_with_existing": 0.838,
+    "agreement_if_shifted_300ft": 0.584
+   },
+   "West": {
+    "used": true,
+    "pages": [
+     80,
+     81
+    ],
+    "coverage": 0.9735,
+    "median_error_ft": 1.13,
+    "p90_error_ft": 10.5,
+    "scale_ft_per_pt": 25.113,
+    "rotation_deg": -9.5,
+    "shapes_visible": 49808,
+    "shapes_drawn": 87272,
+    "agreement_with_existing": 0.818,
+    "agreement_if_shifted_300ft": 0.646
+   },
+   "West Park": {
+    "used": false,
+    "reason": "median error 47.0 ft"
+   }
+  }
+ },
+ "4865000": {
+  "city": "San Antonio, TX",
+  "parcels": 438009,
+  "existing": 0.9997260330267186,
+  "plan": 0.6066861639829318,
+  "zoning": 0.8239077279233988,
+  "floor_area": 0.9123739466540642,
+  "homes_twin": 589068.0,
+  "homes_census_2020": 592481,
+  "plan_matches_existing_group": 0.8560109011928826,
+  "plan_matches_existing_class": 0.6777598349764171
+ },
+ "0666000": {
+  "city": "San Diego, CA",
+  "parcels": 272948,
+  "existing": 0.9999926725969782,
+  "plan": 0.9996592757594853,
+  "zoning": 0.9393767310989639,
+  "floor_area": 0.9415896068115539,
+  "homes_twin": 561089.0,
+  "homes_census_2020": 548931,
+  "plan_matches_existing_group": 0.9177252303429673,
+  "plan_matches_existing_class": 0.624179964376553
+ },
+ "4819000": {
+  "city": "Dallas, TX",
+  "parcels": 311431,
+  "existing": 1.0,
+  "plan": 0.9925762046809726,
+  "zoning": 0.7932607864984539,
+  "floor_area": 0.8935333990514753,
+  "homes_twin": 562029.0,
+  "homes_census_2020": 572121,
+  "plan_matches_existing_group": 0.8277912389726934,
+  "plan_matches_existing_class": 0.7794312222800928
+ },
+ "5553000": {
+  "city": "Milwaukee, WI",
+  "parcels": 148042,
+  "existing": 0.9990137933829589,
+  "plan": 0.0,
+  "zoning": 0.9904891855014117,
+  "floor_area": 0.9365382796773889,
+  "homes_twin": 272087.0,
+  "homes_census_2020": 257723,
+  "plan_matches_existing_group": null
+ }
+}

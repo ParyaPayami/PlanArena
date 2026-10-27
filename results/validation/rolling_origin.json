@@ -1,0 +1,1995 @@
+{
+  "protocol": "Uses the annual Manhattan snapshots built by planarena.models.history (MapPLUTO 2015-2025).",
+  "origins": [
+    {
+      "horizon": 1,
+      "decision_year": 2016,
+      "test": "2016->2017",
+      "train_pairs": [
+        "2015->2016"
+      ],
+      "n_test": 42524,
+      "positives": 183,
+      "base_rate": 0.0043,
+      "lightgbm": {
+        "auc": 0.897,
+        "average_precision": 0.114,
+        "auc_sd_over_seeds": 0.0012,
+        "ap_sd_over_seeds": 0.0017,
+        "auc_95ci": [
+          0.868,
+          0.923
+        ],
+        "ap_95ci": [
+          0.073,
+          0.168
+        ],
+        "ece_raw": 0.0013,
+        "mean_predicted": 0.0044,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0,
+            "n": 4253
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0002,
+            "n": 4252
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0,
+            "n": 4252
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0009,
+            "n": 4253
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0009,
+            "n": 4252
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0014,
+            "n": 4252
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0019,
+            "n": 4253
+          },
+          {
+            "mean_predicted": 0.001,
+            "observed_rate": 0.0024,
+            "n": 4252
+          },
+          {
+            "mean_predicted": 0.0023,
+            "observed_rate": 0.0033,
+            "n": 4252
+          },
+          {
+            "mean_predicted": 0.0388,
+            "observed_rate": 0.032,
+            "n": 4253
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.852,
+          "average_precision": 0.048
+        },
+        "land-value share": {
+          "auc": 0.817,
+          "average_precision": 0.042
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.883,
+        "average_precision": 0.116
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2017,
+      "test": "2017->2018",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017"
+      ],
+      "n_test": 42491,
+      "positives": 204,
+      "base_rate": 0.0048,
+      "lightgbm": {
+        "auc": 0.89,
+        "average_precision": 0.21,
+        "auc_sd_over_seeds": 0.0021,
+        "ap_sd_over_seeds": 0.0051,
+        "auc_95ci": [
+          0.864,
+          0.921
+        ],
+        "ap_95ci": [
+          0.153,
+          0.278
+        ],
+        "ece_raw": 0.0011,
+        "mean_predicted": 0.0037,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0002,
+            "n": 4249
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0,
+            "n": 4249
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0002,
+            "n": 4250
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0014,
+            "n": 4248
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0016,
+            "n": 4249
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0009,
+            "n": 4250
+          },
+          {
+            "mean_predicted": 0.0008,
+            "observed_rate": 0.0016,
+            "n": 4249
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0026,
+            "n": 4248
+          },
+          {
+            "mean_predicted": 0.0026,
+            "observed_rate": 0.0049,
+            "n": 4249
+          },
+          {
+            "mean_predicted": 0.0314,
+            "observed_rate": 0.0344,
+            "n": 4250
+          }
+        ],
+        "ece_isotonic": 0.001,
+        "mean_predicted_isotonic": 0.0041,
+        "calibrated_on": "2016->2017",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0005,
+            "n": 2212
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0001,
+            "n": 8636
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0012,
+            "n": 10110
+          },
+          {
+            "mean_predicted": 0.002,
+            "observed_rate": 0.0014,
+            "n": 7697
+          },
+          {
+            "mean_predicted": 0.0021,
+            "observed_rate": 0.0016,
+            "n": 1867
+          },
+          {
+            "mean_predicted": 0.003,
+            "observed_rate": 0.0031,
+            "n": 7008
+          },
+          {
+            "mean_predicted": 0.0244,
+            "observed_rate": 0.031,
+            "n": 4961
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.847,
+          "average_precision": 0.033
+        },
+        "land-value share": {
+          "auc": 0.722,
+          "average_precision": 0.028
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.872,
+        "average_precision": 0.182
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2018,
+      "test": "2018->2019",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018"
+      ],
+      "n_test": 42431,
+      "positives": 267,
+      "base_rate": 0.0063,
+      "lightgbm": {
+        "auc": 0.896,
+        "average_precision": 0.266,
+        "auc_sd_over_seeds": 0.0017,
+        "ap_sd_over_seeds": 0.0024,
+        "auc_95ci": [
+          0.871,
+          0.915
+        ],
+        "ap_95ci": [
+          0.207,
+          0.32
+        ],
+        "ece_raw": 0.0014,
+        "mean_predicted": 0.0049,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0005,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0007,
+            "n": 4244
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0009,
+            "n": 4242
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0016,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0016,
+            "n": 4244
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0024,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0015,
+            "observed_rate": 0.0033,
+            "n": 4242
+          },
+          {
+            "mean_predicted": 0.0031,
+            "observed_rate": 0.0066,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0421,
+            "observed_rate": 0.0452,
+            "n": 4244
+          }
+        ],
+        "ece_isotonic": 0.0003,
+        "mean_predicted_isotonic": 0.006,
+        "calibrated_on": "2017->2018",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0,
+            "n": 721
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0004,
+            "n": 10232
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0009,
+            "n": 5300
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0015,
+            "n": 8803
+          },
+          {
+            "mean_predicted": 0.0021,
+            "observed_rate": 0.0027,
+            "n": 7465
+          },
+          {
+            "mean_predicted": 0.0043,
+            "observed_rate": 0.0047,
+            "n": 4492
+          },
+          {
+            "mean_predicted": 0.0373,
+            "observed_rate": 0.0377,
+            "n": 5418
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.781,
+          "average_precision": 0.033
+        },
+        "land-value share": {
+          "auc": 0.618,
+          "average_precision": 0.023
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.866,
+        "average_precision": 0.311
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2019,
+      "test": "2019->2020",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018",
+        "2018->2019"
+      ],
+      "n_test": 42307,
+      "positives": 313,
+      "base_rate": 0.0074,
+      "lightgbm": {
+        "auc": 0.883,
+        "average_precision": 0.199,
+        "auc_sd_over_seeds": 0.0019,
+        "ap_sd_over_seeds": 0.0025,
+        "auc_95ci": [
+          0.856,
+          0.906
+        ],
+        "ap_95ci": [
+          0.136,
+          0.263
+        ],
+        "ece_raw": 0.0031,
+        "mean_predicted": 0.0044,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0005,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0009,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0002,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0014,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0019,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0012,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0024,
+            "n": 4232
+          },
+          {
+            "mean_predicted": 0.0021,
+            "observed_rate": 0.0059,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.004,
+            "observed_rate": 0.0102,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0332,
+            "observed_rate": 0.0494,
+            "n": 4231
+          }
+        ],
+        "ece_isotonic": 0.0017,
+        "mean_predicted_isotonic": 0.0062,
+        "calibrated_on": "2018->2019",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0,
+            "n": 1990
+          },
+          {
+            "mean_predicted": 0.0008,
+            "observed_rate": 0.0007,
+            "n": 4169
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0006,
+            "n": 6209
+          },
+          {
+            "mean_predicted": 0.0019,
+            "observed_rate": 0.0016,
+            "n": 7696
+          },
+          {
+            "mean_predicted": 0.0025,
+            "observed_rate": 0.0017,
+            "n": 7633
+          },
+          {
+            "mean_predicted": 0.0035,
+            "observed_rate": 0.0045,
+            "n": 5965
+          },
+          {
+            "mean_predicted": 0.0082,
+            "observed_rate": 0.0106,
+            "n": 3028
+          },
+          {
+            "mean_predicted": 0.0311,
+            "observed_rate": 0.0395,
+            "n": 5617
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.787,
+          "average_precision": 0.041
+        },
+        "land-value share": {
+          "auc": 0.742,
+          "average_precision": 0.04
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.863,
+        "average_precision": 0.14
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2020,
+      "test": "2020->2021",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018",
+        "2018->2019",
+        "2019->2020"
+      ],
+      "n_test": 42171,
+      "positives": 14,
+      "base_rate": 0.0003,
+      "lightgbm": {
+        "auc": 0.902,
+        "average_precision": 0.011,
+        "auc_sd_over_seeds": 0.0017,
+        "ap_sd_over_seeds": 0.0008,
+        "auc_95ci": [
+          0.78,
+          0.986
+        ],
+        "ap_95ci": [
+          0.003,
+          0.025
+        ],
+        "ece_raw": 0.0042,
+        "mean_predicted": 0.0045,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0002,
+            "n": 4216
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.001,
+            "observed_rate": 0.0,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0014,
+            "observed_rate": 0.0002,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0023,
+            "observed_rate": 0.0,
+            "n": 4216
+          },
+          {
+            "mean_predicted": 0.0046,
+            "observed_rate": 0.0002,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.034,
+            "observed_rate": 0.0026,
+            "n": 4218
+          }
+        ],
+        "ece_isotonic": 0.0076,
+        "mean_predicted_isotonic": 0.0079,
+        "calibrated_on": "2019->2020",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0,
+            "n": 2642
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0,
+            "n": 9767
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0,
+            "n": 1632
+          },
+          {
+            "mean_predicted": 0.0019,
+            "observed_rate": 0.0001,
+            "n": 14806
+          },
+          {
+            "mean_predicted": 0.0053,
+            "observed_rate": 0.0,
+            "n": 3862
+          },
+          {
+            "mean_predicted": 0.0102,
+            "observed_rate": 0.0002,
+            "n": 5240
+          },
+          {
+            "mean_predicted": 0.0524,
+            "observed_rate": 0.0026,
+            "n": 4222
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.689,
+          "average_precision": 0.004
+        },
+        "land-value share": {
+          "auc": 0.818,
+          "average_precision": 0.004
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.653,
+        "average_precision": 0.002
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2021,
+      "test": "2021->2022",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018",
+        "2018->2019",
+        "2019->2020",
+        "2020->2021"
+      ],
+      "n_test": 42176,
+      "positives": 128,
+      "base_rate": 0.003,
+      "lightgbm": {
+        "auc": 0.89,
+        "average_precision": 0.107,
+        "auc_sd_over_seeds": 0.0039,
+        "ap_sd_over_seeds": 0.0107,
+        "auc_95ci": [
+          0.855,
+          0.925
+        ],
+        "ap_95ci": [
+          0.065,
+          0.167
+        ],
+        "ece_raw": 0.0007,
+        "mean_predicted": 0.0033,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0002,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0005,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0007,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0014,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0009,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0017,
+            "observed_rate": 0.0026,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0034,
+            "observed_rate": 0.0028,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0248,
+            "observed_rate": 0.0211,
+            "n": 4218
+          }
+        ],
+        "ece_isotonic": 0.0028,
+        "mean_predicted_isotonic": 0.0002,
+        "calibrated_on": "2020->2021",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0002,
+            "n": 19465
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0011,
+            "n": 9741
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0028,
+            "n": 8090
+          },
+          {
+            "mean_predicted": 0.0017,
+            "observed_rate": 0.0184,
+            "n": 4880
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.756,
+          "average_precision": 0.026
+        },
+        "land-value share": {
+          "auc": 0.759,
+          "average_precision": 0.024
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.802,
+        "average_precision": 0.035
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2022,
+      "test": "2022->2023",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018",
+        "2018->2019",
+        "2019->2020",
+        "2020->2021",
+        "2021->2022"
+      ],
+      "n_test": 42100,
+      "positives": 73,
+      "base_rate": 0.0017,
+      "lightgbm": {
+        "auc": 0.853,
+        "average_precision": 0.116,
+        "auc_sd_over_seeds": 0.0012,
+        "ap_sd_over_seeds": 0.0014,
+        "auc_95ci": [
+          0.775,
+          0.903
+        ],
+        "ap_95ci": [
+          0.061,
+          0.187
+        ],
+        "ece_raw": 0.0015,
+        "mean_predicted": 0.0031,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0005,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0002,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0007,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0007,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0012,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0017,
+            "observed_rate": 0.0007,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0033,
+            "observed_rate": 0.0024,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0228,
+            "observed_rate": 0.0109,
+            "n": 4210
+          }
+        ],
+        "ece_isotonic": 0.0012,
+        "mean_predicted_isotonic": 0.0028,
+        "calibrated_on": "2021->2022",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0003,
+            "n": 7080
+          },
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0002,
+            "n": 6646
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0005,
+            "n": 5496
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0004,
+            "n": 4602
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0011,
+            "n": 5354
+          },
+          {
+            "mean_predicted": 0.0024,
+            "observed_rate": 0.0007,
+            "n": 4041
+          },
+          {
+            "mean_predicted": 0.003,
+            "observed_rate": 0.0021,
+            "n": 4668
+          },
+          {
+            "mean_predicted": 0.0192,
+            "observed_rate": 0.0109,
+            "n": 4213
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.735,
+          "average_precision": 0.011
+        },
+        "land-value share": {
+          "auc": 0.686,
+          "average_precision": 0.012
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.776,
+        "average_precision": 0.031
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2023,
+      "test": "2023->2024",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018",
+        "2018->2019",
+        "2019->2020",
+        "2020->2021",
+        "2021->2022",
+        "2022->2023"
+      ],
+      "n_test": 42054,
+      "positives": 139,
+      "base_rate": 0.0033,
+      "lightgbm": {
+        "auc": 0.851,
+        "average_precision": 0.097,
+        "auc_sd_over_seeds": 0.0008,
+        "ap_sd_over_seeds": 0.007,
+        "auc_95ci": [
+          0.808,
+          0.897
+        ],
+        "ap_95ci": [
+          0.06,
+          0.158
+        ],
+        "ece_raw": 0.0005,
+        "mean_predicted": 0.0029,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0005,
+            "n": 4206
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0002,
+            "n": 4205
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0012,
+            "n": 4205
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.001,
+            "n": 4206
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0007,
+            "n": 4205
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0012,
+            "n": 4205
+          },
+          {
+            "mean_predicted": 0.001,
+            "observed_rate": 0.001,
+            "n": 4206
+          },
+          {
+            "mean_predicted": 0.0016,
+            "observed_rate": 0.0024,
+            "n": 4205
+          },
+          {
+            "mean_predicted": 0.0032,
+            "observed_rate": 0.0031,
+            "n": 4205
+          },
+          {
+            "mean_predicted": 0.0207,
+            "observed_rate": 0.0219,
+            "n": 4206
+          }
+        ],
+        "ece_isotonic": 0.0017,
+        "mean_predicted_isotonic": 0.0016,
+        "calibrated_on": "2022->2023",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0005,
+            "n": 4091
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0008,
+            "n": 11520
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.001,
+            "n": 8009
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0008,
+            "n": 2448
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0018,
+            "n": 8429
+          },
+          {
+            "mean_predicted": 0.0066,
+            "observed_rate": 0.0136,
+            "n": 7557
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.833,
+          "average_precision": 0.025
+        },
+        "land-value share": {
+          "auc": 0.81,
+          "average_precision": 0.025
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.761,
+        "average_precision": 0.032
+      }
+    },
+    {
+      "horizon": 1,
+      "decision_year": 2024,
+      "test": "2024->2025",
+      "train_pairs": [
+        "2015->2016",
+        "2016->2017",
+        "2017->2018",
+        "2018->2019",
+        "2019->2020",
+        "2020->2021",
+        "2021->2022",
+        "2022->2023",
+        "2023->2024"
+      ],
+      "n_test": 42014,
+      "positives": 126,
+      "base_rate": 0.003,
+      "lightgbm": {
+        "auc": 0.856,
+        "average_precision": 0.087,
+        "auc_sd_over_seeds": 0.0041,
+        "ap_sd_over_seeds": 0.0061,
+        "auc_95ci": [
+          0.816,
+          0.891
+        ],
+        "ap_95ci": [
+          0.052,
+          0.138
+        ],
+        "ece_raw": 0.0007,
+        "mean_predicted": 0.0028,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0001,
+            "observed_rate": 0.0005,
+            "n": 4202
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0005,
+            "n": 4201
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0002,
+            "n": 4201
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0005,
+            "n": 4202
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0,
+            "n": 4201
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0019,
+            "n": 4201
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.001,
+            "n": 4202
+          },
+          {
+            "mean_predicted": 0.0017,
+            "observed_rate": 0.0026,
+            "n": 4201
+          },
+          {
+            "mean_predicted": 0.0032,
+            "observed_rate": 0.005,
+            "n": 4201
+          },
+          {
+            "mean_predicted": 0.02,
+            "observed_rate": 0.0178,
+            "n": 4202
+          }
+        ],
+        "ece_isotonic": 0.0006,
+        "mean_predicted_isotonic": 0.0033,
+        "calibrated_on": "2023->2024",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0019,
+            "n": 513
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0002,
+            "n": 6407
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0013,
+            "n": 1516
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0002,
+            "n": 12631
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0015,
+            "n": 7859
+          },
+          {
+            "mean_predicted": 0.0018,
+            "observed_rate": 0.0024,
+            "n": 1662
+          },
+          {
+            "mean_predicted": 0.0026,
+            "observed_rate": 0.0025,
+            "n": 3985
+          },
+          {
+            "mean_predicted": 0.0136,
+            "observed_rate": 0.0125,
+            "n": 7441
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.735,
+          "average_precision": 0.013
+        },
+        "land-value share": {
+          "auc": 0.725,
+          "average_precision": 0.014
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.754,
+        "average_precision": 0.025
+      }
+    },
+    {
+      "horizon": 3,
+      "decision_year": 2018,
+      "test": "2018->2021",
+      "train_pairs": [
+        "2015->2018"
+      ],
+      "n_test": 42430,
+      "positives": 570,
+      "base_rate": 0.0134,
+      "lightgbm": {
+        "auc": 0.881,
+        "average_precision": 0.152,
+        "auc_sd_over_seeds": 0.0008,
+        "ap_sd_over_seeds": 0.0029,
+        "auc_95ci": [
+          0.865,
+          0.895
+        ],
+        "ap_95ci": [
+          0.126,
+          0.185
+        ],
+        "ece_raw": 0.0068,
+        "mean_predicted": 0.0165,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0005,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0002,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0012,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0021,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0012,
+            "observed_rate": 0.0031,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0019,
+            "observed_rate": 0.0042,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0032,
+            "observed_rate": 0.0068,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0062,
+            "observed_rate": 0.009,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.0146,
+            "observed_rate": 0.0198,
+            "n": 4243
+          },
+          {
+            "mean_predicted": 0.1367,
+            "observed_rate": 0.0874,
+            "n": 4243
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.807,
+          "average_precision": 0.062
+        },
+        "land-value share": {
+          "auc": 0.691,
+          "average_precision": 0.049
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.863,
+        "average_precision": 0.244
+      }
+    },
+    {
+      "horizon": 3,
+      "decision_year": 2019,
+      "test": "2019->2022",
+      "train_pairs": [
+        "2015->2018",
+        "2016->2019"
+      ],
+      "n_test": 42307,
+      "positives": 461,
+      "base_rate": 0.0109,
+      "lightgbm": {
+        "auc": 0.86,
+        "average_precision": 0.176,
+        "auc_sd_over_seeds": 0.0005,
+        "ap_sd_over_seeds": 0.0017,
+        "auc_95ci": [
+          0.84,
+          0.881
+        ],
+        "ap_95ci": [
+          0.129,
+          0.237
+        ],
+        "ece_raw": 0.0035,
+        "mean_predicted": 0.0131,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.0005,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0007,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0009,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0021,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.002,
+            "observed_rate": 0.0026,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.003,
+            "observed_rate": 0.0057,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0048,
+            "observed_rate": 0.0061,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0082,
+            "observed_rate": 0.0087,
+            "n": 4230
+          },
+          {
+            "mean_predicted": 0.0166,
+            "observed_rate": 0.0168,
+            "n": 4231
+          },
+          {
+            "mean_predicted": 0.0935,
+            "observed_rate": 0.0648,
+            "n": 4231
+          }
+        ],
+        "ece_isotonic": 0.0051,
+        "mean_predicted_isotonic": 0.0141,
+        "calibrated_on": "2016->2019",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0,
+            "n": 2330
+          },
+          {
+            "mean_predicted": 0.0005,
+            "observed_rate": 0.0011,
+            "n": 4626
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0007,
+            "n": 5530
+          },
+          {
+            "mean_predicted": 0.0013,
+            "observed_rate": 0.0006,
+            "n": 1681
+          },
+          {
+            "mean_predicted": 0.0023,
+            "observed_rate": 0.003,
+            "n": 8205
+          },
+          {
+            "mean_predicted": 0.0031,
+            "observed_rate": 0.0058,
+            "n": 6528
+          },
+          {
+            "mean_predicted": 0.0091,
+            "observed_rate": 0.0085,
+            "n": 4706
+          },
+          {
+            "mean_predicted": 0.0123,
+            "observed_rate": 0.0166,
+            "n": 3261
+          },
+          {
+            "mean_predicted": 0.0852,
+            "observed_rate": 0.054,
+            "n": 5440
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.784,
+          "average_precision": 0.056
+        },
+        "land-value share": {
+          "auc": 0.736,
+          "average_precision": 0.055
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.862,
+        "average_precision": 0.152
+      }
+    },
+    {
+      "horizon": 3,
+      "decision_year": 2020,
+      "test": "2020->2023",
+      "train_pairs": [
+        "2015->2018",
+        "2016->2019",
+        "2017->2020"
+      ],
+      "n_test": 42171,
+      "positives": 208,
+      "base_rate": 0.0049,
+      "lightgbm": {
+        "auc": 0.87,
+        "average_precision": 0.117,
+        "auc_sd_over_seeds": 0.0008,
+        "ap_sd_over_seeds": 0.0038,
+        "auc_95ci": [
+          0.836,
+          0.893
+        ],
+        "ap_95ci": [
+          0.074,
+          0.181
+        ],
+        "ece_raw": 0.0086,
+        "mean_predicted": 0.0135,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0002,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0007,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.001,
+            "observed_rate": 0.0009,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0015,
+            "observed_rate": 0.0007,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0022,
+            "observed_rate": 0.0009,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0033,
+            "observed_rate": 0.0012,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0053,
+            "observed_rate": 0.0024,
+            "n": 4216
+          },
+          {
+            "mean_predicted": 0.0094,
+            "observed_rate": 0.004,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0189,
+            "observed_rate": 0.0062,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0926,
+            "observed_rate": 0.032,
+            "n": 4218
+          }
+        ],
+        "ece_isotonic": 0.0128,
+        "mean_predicted_isotonic": 0.0178,
+        "calibrated_on": "2017->2020",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0,
+            "n": 2122
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0006,
+            "n": 5112
+          },
+          {
+            "mean_predicted": 0.0012,
+            "observed_rate": 0.0008,
+            "n": 4809
+          },
+          {
+            "mean_predicted": 0.0017,
+            "observed_rate": 0.0009,
+            "n": 5557
+          },
+          {
+            "mean_predicted": 0.0047,
+            "observed_rate": 0.0011,
+            "n": 5512
+          },
+          {
+            "mean_predicted": 0.0071,
+            "observed_rate": 0.0028,
+            "n": 10462
+          },
+          {
+            "mean_predicted": 0.0217,
+            "observed_rate": 0.006,
+            "n": 3815
+          },
+          {
+            "mean_predicted": 0.1147,
+            "observed_rate": 0.0289,
+            "n": 4782
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.777,
+          "average_precision": 0.042
+        },
+        "land-value share": {
+          "auc": 0.725,
+          "average_precision": 0.034
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.834,
+        "average_precision": 0.053
+      }
+    },
+    {
+      "horizon": 3,
+      "decision_year": 2021,
+      "test": "2021->2024",
+      "train_pairs": [
+        "2015->2018",
+        "2016->2019",
+        "2017->2020",
+        "2018->2021"
+      ],
+      "n_test": 42175,
+      "positives": 355,
+      "base_rate": 0.0084,
+      "lightgbm": {
+        "auc": 0.877,
+        "average_precision": 0.148,
+        "auc_sd_over_seeds": 0.0005,
+        "ap_sd_over_seeds": 0.0058,
+        "auc_95ci": [
+          0.854,
+          0.897
+        ],
+        "ap_95ci": [
+          0.109,
+          0.195
+        ],
+        "ece_raw": 0.0034,
+        "mean_predicted": 0.0117,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0005,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0009,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.001,
+            "observed_rate": 0.0002,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0014,
+            "observed_rate": 0.0009,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0019,
+            "observed_rate": 0.0017,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0029,
+            "observed_rate": 0.0033,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0048,
+            "observed_rate": 0.004,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0084,
+            "observed_rate": 0.0076,
+            "n": 4218
+          },
+          {
+            "mean_predicted": 0.0169,
+            "observed_rate": 0.0104,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0787,
+            "observed_rate": 0.0545,
+            "n": 4218
+          }
+        ],
+        "ece_isotonic": 0.0039,
+        "mean_predicted_isotonic": 0.0091,
+        "calibrated_on": "2018->2021",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0007,
+            "n": 8703
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0002,
+            "n": 5071
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0013,
+            "n": 5956
+          },
+          {
+            "mean_predicted": 0.0008,
+            "observed_rate": 0.0035,
+            "n": 8502
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0069,
+            "n": 4655
+          },
+          {
+            "mean_predicted": 0.0045,
+            "observed_rate": 0.0074,
+            "n": 2426
+          },
+          {
+            "mean_predicted": 0.052,
+            "observed_rate": 0.0379,
+            "n": 6862
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.816,
+          "average_precision": 0.062
+        },
+        "land-value share": {
+          "auc": 0.779,
+          "average_precision": 0.057
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.838,
+        "average_precision": 0.105
+      }
+    },
+    {
+      "horizon": 3,
+      "decision_year": 2022,
+      "test": "2022->2025",
+      "train_pairs": [
+        "2015->2018",
+        "2016->2019",
+        "2017->2020",
+        "2018->2021",
+        "2019->2022"
+      ],
+      "n_test": 42099,
+      "positives": 350,
+      "base_rate": 0.0083,
+      "lightgbm": {
+        "auc": 0.866,
+        "average_precision": 0.119,
+        "auc_sd_over_seeds": 0.0012,
+        "ap_sd_over_seeds": 0.0017,
+        "auc_95ci": [
+          0.84,
+          0.889
+        ],
+        "ap_95ci": [
+          0.086,
+          0.162
+        ],
+        "ece_raw": 0.0023,
+        "mean_predicted": 0.0103,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0003,
+            "observed_rate": 0.001,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0005,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0009,
+            "observed_rate": 0.0005,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0012,
+            "observed_rate": 0.0012,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0017,
+            "observed_rate": 0.0026,
+            "n": 4209
+          },
+          {
+            "mean_predicted": 0.0026,
+            "observed_rate": 0.0021,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0042,
+            "observed_rate": 0.0038,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0074,
+            "observed_rate": 0.0074,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0149,
+            "observed_rate": 0.0124,
+            "n": 4210
+          },
+          {
+            "mean_predicted": 0.0695,
+            "observed_rate": 0.0518,
+            "n": 4210
+          }
+        ],
+        "ece_isotonic": 0.0026,
+        "mean_predicted_isotonic": 0.008,
+        "calibrated_on": "2019->2022",
+        "reliability_isotonic": [
+          {
+            "mean_predicted": 0.0,
+            "observed_rate": 0.0004,
+            "n": 2835
+          },
+          {
+            "mean_predicted": 0.0002,
+            "observed_rate": 0.0008,
+            "n": 7243
+          },
+          {
+            "mean_predicted": 0.0004,
+            "observed_rate": 0.0011,
+            "n": 5404
+          },
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0016,
+            "n": 4488
+          },
+          {
+            "mean_predicted": 0.0007,
+            "observed_rate": 0.0031,
+            "n": 1303
+          },
+          {
+            "mean_predicted": 0.0011,
+            "observed_rate": 0.0029,
+            "n": 8009
+          },
+          {
+            "mean_predicted": 0.0032,
+            "observed_rate": 0.0038,
+            "n": 1048
+          },
+          {
+            "mean_predicted": 0.0058,
+            "observed_rate": 0.01,
+            "n": 7114
+          },
+          {
+            "mean_predicted": 0.0589,
+            "observed_rate": 0.049,
+            "n": 4655
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.799,
+          "average_precision": 0.049
+        },
+        "land-value share": {
+          "auc": 0.75,
+          "average_precision": 0.041
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.827,
+        "average_precision": 0.085
+      }
+    },
+    {
+      "horizon": 5,
+      "decision_year": 2020,
+      "test": "2020->2025",
+      "train_pairs": [
+        "2015->2020"
+      ],
+      "n_test": 42170,
+      "positives": 520,
+      "base_rate": 0.0123,
+      "lightgbm": {
+        "auc": 0.855,
+        "average_precision": 0.146,
+        "auc_sd_over_seeds": 0.0017,
+        "ap_sd_over_seeds": 0.0008,
+        "auc_95ci": [
+          0.834,
+          0.874
+        ],
+        "ap_95ci": [
+          0.111,
+          0.192
+        ],
+        "ece_raw": 0.0125,
+        "mean_predicted": 0.0247,
+        "reliability_raw": [
+          {
+            "mean_predicted": 0.0006,
+            "observed_rate": 0.0014,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0012,
+            "observed_rate": 0.0005,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0019,
+            "observed_rate": 0.0012,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0028,
+            "observed_rate": 0.0017,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0043,
+            "observed_rate": 0.0028,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0069,
+            "observed_rate": 0.0052,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0116,
+            "observed_rate": 0.0078,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0206,
+            "observed_rate": 0.0138,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.0401,
+            "observed_rate": 0.018,
+            "n": 4217
+          },
+          {
+            "mean_predicted": 0.1568,
+            "observed_rate": 0.0709,
+            "n": 4217
+          }
+        ]
+      },
+      "baselines": {
+        "underbuilt share of zoning capacity": {
+          "auc": 0.802,
+          "average_precision": 0.073
+        },
+        "land-value share": {
+          "auc": 0.736,
+          "average_precision": 0.06
+        }
+      },
+      "spatial_cv_within_test_period": {
+        "auc": 0.85,
+        "average_precision": 0.138
+      }
+    }
+  ],
+  "label_audit": {
+    "2015->2020": {
+      "window": "2015-03-01 to 2020-12-01",
+      "labelled_developed": 1814,
+      "lots_with_new_building_certificate": 945,
+      "precision_vs_new_building_or_alteration_certificate": 0.469,
+      "precision_vs_new_building_certificate": 0.254,
+      "recall_of_new_building_certificates": 0.488,
+      "note": "Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound."
+    },
+    "2020->2025": {
+      "window": "2020-12-01 to 2025-09-01",
+      "labelled_developed": 520,
+      "lots_with_new_building_certificate": 789,
+      "precision_vs_new_building_or_alteration_certificate": 0.517,
+      "precision_vs_new_building_certificate": 0.41,
+      "recall_of_new_building_certificates": 0.27,
+      "note": "Certificates are matched by BBL (the lot or its 2015/2020 predecessor); condominium unit BBLs may be missed, so precision is a lower bound."
+    }
+  },
+  "verified_labels": [
+    {
+      "horizon": 5,
+      "test": "2020->2025",
+      "positives": 436,
+      "base_rate": 0.0103,
+      "auc": 0.887,
+      "average_precision": 0.149,
+      "best_baseline_auc": 0.831
+    },
+    {
+      "horizon": 3,
+      "test": "2022->2025",
+      "positives": 278,
+      "base_rate": 0.0066,
+      "auc": 0.891,
+      "average_precision": 0.126,
+      "best_baseline_auc": 0.835
+    },
+    {
+      "horizon": 1,
+      "test": "2024->2025",
+      "positives": 77,
+      "base_rate": 0.0018,
+      "auc": 0.896,
+      "average_precision": 0.095,
+      "best_baseline_auc": 0.806
+    }
+  ]
+}

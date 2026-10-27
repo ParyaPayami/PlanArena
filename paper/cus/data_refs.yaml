@@ -1,0 +1,86 @@
+# Datasets cited in the Computational Urban Science version (APA 7 "Data set" entries, formatted by planarena/apa.py).
+# Titles are the publishers' dataset names (NYC Open Data titles read from its catalogue API) or, for multi-source city
+# twins, the source description recorded in each twin's twin_meta.json; URLs are those the pipeline downloads from
+# (planarena/tools/fetch_open_data.py, planarena/cities/adapters/*, twin_meta.json source_url).
+data_mappluto:
+  author: "New York City Department of City Planning"
+  year: "2025"
+  title: "MapPLUTO, releases 15v1 to 25v3.1"
+  url: "https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change"
+data_lodes:
+  author: "U.S. Census Bureau"
+  year: "n.d."
+  title: "LEHD Origin-Destination Employment Statistics (LODES 8), workplace area characteristics, New York, 2015 and 2023"
+  url: "https://lehd.ces.census.gov/data/lodes/LODES8/ny/"
+data_ll84_2015:
+  author: "New York City Department of Buildings"
+  year: "2016"
+  title: "Energy and Water Data Disclosure for Local Law 84 2016 (Data for Calendar Year 2015)"
+  publisher: "NYC Open Data"
+  url: "https://data.cityofnewyork.us/d/77q4-nkfh"
+data_ll84_2023:
+  author: "New York City Department of Buildings"
+  year: "2023"
+  title: "NYC Building Energy and Water Data Disclosure for Local Law 84 2023 to Present (Data for Calendar Year 2022-Present)"
+  publisher: "NYC Open Data"
+  url: "https://data.cityofnewyork.us/d/5zyy-y8am"
+data_feis_eh:
+  author: "New York City Department of City Planning"
+  year: "2017"
+  title: "East Harlem Rezoning Final Environmental Impact Statement, Appendix A"
+  url: "https://www.nyc.gov/assets/planning/download/pdf/applicants/env-review/east-harlem/appenda_feis.pdf"
+data_feis_sn:
+  author: "New York City Department of City Planning"
+  year: "2021"
+  title: "SoHo/NoHo Neighborhood Plan Final Environmental Impact Statement, Appendix A"
+  url: "https://www.nyc.gov/assets/planning/download/pdf/applicants/env-review/soho-noho/appenda-feis.pdf"
+data_scag:
+  author: "Southern California Association of Governments"
+  year: "n.d."
+  title: "2020 Annual Land Use (existing use, General Plan and zoning as compiled in 2019); with Los Angeles County Assessor roll 2025"
+  url: "https://scag.ca.gov/data-tools-land-use"
+data_cmap:
+  author: "Chicago Metropolitan Agency for Planning"
+  year: "n.d."
+  title: "Land Use Inventory 2023; with Cook County parcels 2025 and Cook County Assessor records"
+  url: "https://www.cmap.illinois.gov/data/land-use/inventory"
+data_houston:
+  author: "City of Houston"
+  year: "n.d."
+  title: "Land Use (Grouped), from Harris Central Appraisal District records"
+  url: "https://mycity2.houstontx.gov/gisweb02/rest/services/HoustonMap/Landuse/MapServer/0"
+data_maricopa:
+  author: "Maricopa County Assessor"
+  year: "n.d."
+  title: "Parcels (property use codes); with MAG Existing Land Use 2026 and City of Phoenix General Plan and zoning"
+  url: "https://maps.phoenix.gov/pub/rest/services/Public/COUNTY_PARCELS/MapServer/3"
+data_opa:
+  author: "City of Philadelphia"
+  year: "n.d."
+  title: "Philadelphia Properties and Assessment History; with Philadelphia Water Department parcels (OpenDataPhilly)"
+  url: "https://opendataphilly.org/datasets/philadelphia-properties-and-assessment-history/"
+data_phila2035:
+  author: "Philadelphia City Planning Commission"
+  year: "n.d."
+  title: "Philadelphia2035 district plans"
+  url: "https://www.phila2035.org/plan"
+data_bexar:
+  author: "Bexar Appraisal District"
+  year: "2025"
+  title: "Parcels (December 2025); with City of San Antonio Future Land Use and zoning"
+  url: "https://gis.sara-tx.org/ags1/rest/services/FW_Bexar/BCAD_Parcels_PROD/FeatureServer/0"
+data_sandag:
+  author: "San Diego Association of Governments"
+  year: "2025"
+  title: "Land Use 2025; with San Diego County Assessor parcels (SanGIS) and City of San Diego General Plan and zoning"
+  url: "https://geo.sandag.org/server/rest/services/Hosted/Land_Use_2025/FeatureServer/0"
+data_dallas:
+  author: "City of Dallas"
+  year: "n.d."
+  title: "Existing Land Use (2026), forwardDallas! 2.0 placetypes (2024) and base zoning; with Dallas Central Appraisal District 2026 certified data"
+  url: "https://services2.arcgis.com/rwnOSbfKSwyTBcwN/arcgis/rest/services/Existing_Land_Use_Layer_2025/FeatureServer/5"
+data_mprop:
+  author: "City of Milwaukee"
+  year: "n.d."
+  title: "Master Property File (MPROP), assessment years 2015 to 2026, and parcel polygons"
+  url: "https://data.milwaukee.gov/dataset/mprop"

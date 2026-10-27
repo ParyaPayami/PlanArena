@@ -1,0 +1,94 @@
+{
+  "machine": "arm64 Darwin 25.6.0, Python 3.13.3",
+  "test": "ImpactEngine.evaluate with sensitivity ranges, after one warm-up; 20 repetitions",
+  "twins": {
+    "Manhattan": {
+      "parcels": 42075,
+      "one_change": {
+        "changes": 1,
+        "median_ms": 46.2,
+        "max_ms": 141.5
+      },
+      "fifty_changes": {
+        "changes": 50,
+        "median_ms": 46.5,
+        "max_ms": 50.6
+      },
+      "derived": {
+        "sqft_per_unit": 912.6,
+        "mixed_res_share": 0.801,
+        "commercial_mix": {
+          "office": 0.846,
+          "retail": 0.104,
+          "other": 0.05
+        },
+        "industrial_mix": {
+          "factory": 0.306,
+          "storage": 0.694
+        },
+        "median_building_value_psf": 93.7,
+        "median_land_value_psf": 93.6,
+        "services_sqft_per_resident_target": 40.1,
+        "facility_sqft_per_resident_target": 74.9,
+        "jobs_calibration_factor": 0.7911,
+        "median_roof_share_by_use": {
+          "res": 0.702,
+          "mix": 0.765,
+          "com": 0.904,
+          "ind": 0.939,
+          "tra": 0.519,
+          "pub": 0.722,
+          "opn": 0.027,
+          "prk": 0.967,
+          "vac": 0.844
+        },
+        "coefficients_calibrated_on": "2026-10-17",
+        "sqft_per_unit_new": 1095.5
+      }
+    },
+    "New York City": {
+      "parcels": 856634,
+      "one_change": {
+        "changes": 1,
+        "median_ms": 579.1,
+        "max_ms": 590.7
+      },
+      "fifty_changes": {
+        "changes": 50,
+        "median_ms": 580.6,
+        "max_ms": 589.1
+      },
+      "derived": {
+        "sqft_per_unit": 1116.0,
+        "mixed_res_share": 0.667,
+        "commercial_mix": {
+          "office": 0.711,
+          "retail": 0.207,
+          "other": 0.082
+        },
+        "industrial_mix": {
+          "factory": 0.586,
+          "storage": 0.414
+        },
+        "median_building_value_psf": 25.8,
+        "median_land_value_psf": 5.2,
+        "services_sqft_per_resident_target": 21.0,
+        "facility_sqft_per_resident_target": 38.8,
+        "jobs_calibration_factor": 0.5647,
+        "median_roof_share_by_use": {
+          "res": 0.35,
+          "mix": 0.686,
+          "com": 0.792,
+          "ind": 0.872,
+          "tra": 0.519,
+          "pub": 0.583,
+          "opn": 0.013,
+          "prk": 0.732,
+          "vac": 0.637
+        },
+        "coefficients_calibrated_on": "2026-10-18",
+        "sqft_per_unit_new": 1165.0
+      }
+    }
+  }
+}

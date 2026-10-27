@@ -1,0 +1,216 @@
+{
+  "test": "For each Manhattan rezoning (East Harlem 2017, Inwood 2018, SoHo/NoHo 2021):\n* Sites: PlanArena's CEQR-style development-site screen under the adopted maximum FAR, on the snapshot of the\n  adoption year (before adoption).\n* Capacity projection: each site built to the new FAR at the build-out utilisation (homes added per site); also\n  pro-rated linearly from the review's build year to 2025.\n* Likelihood-weighted projection: the same homes per site times the site's probability of redevelopment by 2025,\n  from the redevelopment model trained only on snapshot pairs whose outcome was known by the adoption year, scored on\n  the adoption-year snapshot with the adopted zoning (FARs and district) in place. The longest horizon with training\n  pairs (1, 3 or 5 years, at most the years to 2025) is used and extended to 2025 with a constant hazard.\n* Likelihood x empirical yield: a redeveloped site seldom reaches capacity. In the same training pairs, soft sites\n  under their existing zoning (the same screen without the FAR increase) that were redeveloped added a share of their\n  capacity homes; the projection multiplies each site's probability, its capacity and the mean of that share. Its 95%\n  range draws redevelopment from the probabilities and, for each redeveloped site, a share from the training sites.\n* Observed: homes added by 2025 on each site's land (2025 lots whose representative point lies inside the site) and\n  whether the site was redeveloped (the model's label definition).\n* Also reported: how well each ranking of sites (probability, or homes added) finds the sites that were redeveloped.",
+  "rezonings": {
+    "East Harlem (2017)": {
+      "adopted": 2017,
+      "years_to_2025": 8,
+      "sites": 127,
+      "rezoned_lots": 1042,
+      "model": {
+        "horizon_years": 1,
+        "training_pairs": [
+          "2015->2016",
+          "2016->2017"
+        ],
+        "extended_to_2025": true
+      },
+      "homes_added_by_2025": {
+        "observed": 288.0,
+        "capacity": 4117,
+        "capacity_prorated_to_2025": 3294,
+        "likelihood_weighted": 241,
+        "likelihood_weighted_95pct": [
+          82,
+          497
+        ],
+        "likelihood_x_yield": 91,
+        "likelihood_x_yield_95pct": [
+          0,
+          444
+        ]
+      },
+      "yield_share_of_capacity": {
+        "training_sites_redeveloped": 599,
+        "mean": 0.376,
+        "median": 0.0,
+        "share_with_no_homes": 0.781
+      },
+      "sites_redeveloped_by_2025": {
+        "observed": 7,
+        "expected_from_probabilities": 13.6
+      },
+      "mean_probability_adopted_vs_prior_zoning": [
+        0.019,
+        0.0125
+      ],
+      "ranking_auc": {
+        "probability": 0.69,
+        "homes_added": 0.603
+      },
+      "error_vs_observed_homes": {
+        "capacity": 3829,
+        "capacity_prorated_to_2025": 3006,
+        "likelihood_weighted": -47,
+        "likelihood_x_yield": -197
+      },
+      "ratio_to_observed": {
+        "capacity": 14.3,
+        "capacity_prorated_to_2025": 11.44,
+        "likelihood_weighted": 0.84,
+        "likelihood_x_yield": 0.32
+      }
+    },
+    "Inwood (2018)": {
+      "adopted": 2018,
+      "years_to_2025": 7,
+      "sites": 47,
+      "rezoned_lots": 492,
+      "model": {
+        "horizon_years": 3,
+        "training_pairs": [
+          "2015->2018"
+        ],
+        "extended_to_2025": true
+      },
+      "homes_added_by_2025": {
+        "observed": 270.0,
+        "capacity": 2859,
+        "capacity_prorated_to_2025": 1334,
+        "likelihood_weighted": 234,
+        "likelihood_weighted_95pct": [
+          0,
+          677
+        ],
+        "likelihood_x_yield": 127,
+        "likelihood_x_yield_95pct": [
+          0,
+          1033
+        ]
+      },
+      "yield_share_of_capacity": {
+        "training_sites_redeveloped": 678,
+        "mean": 0.543,
+        "median": 0.0,
+        "share_with_no_homes": 0.743
+      },
+      "sites_redeveloped_by_2025": {
+        "observed": 2,
+        "expected_from_probabilities": 2.5
+      },
+      "mean_probability_adopted_vs_prior_zoning": [
+        0.0234,
+        0.0073
+      ],
+      "ranking_auc": {
+        "probability": 0.589,
+        "homes_added": 0.561
+      },
+      "error_vs_observed_homes": {
+        "capacity": 2589,
+        "capacity_prorated_to_2025": 1064,
+        "likelihood_weighted": -36,
+        "likelihood_x_yield": -143
+      },
+      "ratio_to_observed": {
+        "capacity": 10.59,
+        "capacity_prorated_to_2025": 4.94,
+        "likelihood_weighted": 0.87,
+        "likelihood_x_yield": 0.47
+      }
+    },
+    "SoHo/NoHo (2021)": {
+      "adopted": 2021,
+      "years_to_2025": 4,
+      "sites": 77,
+      "rezoned_lots": 830,
+      "model": {
+        "horizon_years": 3,
+        "training_pairs": [
+          "2015->2018",
+          "2016->2019",
+          "2017->2020",
+          "2018->2021"
+        ],
+        "extended_to_2025": true
+      },
+      "homes_added_by_2025": {
+        "observed": 3.0,
+        "capacity": 1447,
+        "capacity_prorated_to_2025": 579,
+        "likelihood_weighted": 132,
+        "likelihood_weighted_95pct": [
+          8,
+          296
+        ],
+        "likelihood_x_yield": 134,
+        "likelihood_x_yield_95pct": [
+          0,
+          801
+        ]
+      },
+      "yield_share_of_capacity": {
+        "training_sites_redeveloped": 1454,
+        "mean": 1.017,
+        "median": 0.0,
+        "share_with_no_homes": 0.6
+      },
+      "sites_redeveloped_by_2025": {
+        "observed": 1,
+        "expected_from_probabilities": 4.1
+      },
+      "mean_probability_adopted_vs_prior_zoning": [
+        0.0403,
+        0.0273
+      ],
+      "ranking_auc": {
+        "probability": 0.987,
+        "homes_added": 0.934
+      },
+      "error_vs_observed_homes": {
+        "capacity": 1444,
+        "capacity_prorated_to_2025": 576,
+        "likelihood_weighted": 129,
+        "likelihood_x_yield": 131
+      },
+      "ratio_to_observed": {
+        "capacity": 482.33,
+        "capacity_prorated_to_2025": 193.0,
+        "likelihood_weighted": 44.0,
+        "likelihood_x_yield": 44.67
+      }
+    }
+  },
+  "sum_of_absolute_errors": {
+    "capacity": 7862,
+    "capacity_prorated_to_2025": 4646,
+    "likelihood_weighted": 212,
+    "likelihood_x_yield": 471
+  },
+  "observed_within_model_interval": {
+    "East Harlem (2017)": true,
+    "Inwood (2018)": true,
+    "SoHo/NoHo (2021)": false
+  },
+  "observed_within_yield_interval": {
+    "East Harlem (2017)": true,
+    "Inwood (2018)": true,
+    "SoHo/NoHo (2021)": true
+  },
+  "caveats": [
+    "Three rezonings; few sites were redeveloped by 2025, so site-level rankings are not informative where fewer than five were.",
+    "Capacity projections describe full build-out by the review's build year; the comparison is with what was built by 2025, which is the near-term question.",
+    "Homes are counted from MapPLUTO units on each site's land; Mandatory Inclusionary Housing bonus floor area is not modelled."
+  ],
+  "total_three_rezonings": {
+    "observed": 561.0,
+    "capacity": 8423,
+    "capacity_prorated_to_2025": 5207,
+    "likelihood_weighted": 607,
+    "likelihood_x_yield": 352
+  },
+  "closest_projection_by_rezoning": {
+    "East Harlem (2017)": "likelihood_weighted",
+    "Inwood (2018)": "likelihood_weighted",
+    "SoHo/NoHo (2021)": "likelihood_weighted"
+  }
+}

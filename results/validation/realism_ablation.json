@@ -1,0 +1,87 @@
+{
+  "test": "The optimizer is run on the 2020 Manhattan snapshot in every community district (balanced weights, 2% change\nbudget, exact re-scoring of the top 30 moves), under three settings:\n* no realism layer: conversions without precedent are allowed;\n* precedent filter (the default): conversions of existing buildings never observed before 2020 at that size are\n  skipped (precedent table as of 2020);\n* precedent filter + likelihood layer: candidates restricted to the fifth of parcels most likely to be redeveloped\n  within five years (redevelopment model trained on 2015->2020 only).\nRecommended parcels are then compared with what happened by 2025 (redevelopment label; 2025 land use). This tests\nplausibility, not desirability: a plan can be good without resembling the market.\n\nThe settings recommend different numbers of parcels, so they are also compared at equal counts: in each district\nevery setting is rerun with a budget equal to the smallest count any setting recommended there, and all plans are\nscored with one objective (the balanced overall score of the district minus the conversion penalty per change).\nThe share of each setting's eligible parcels that were redeveloped is the rate a random choice would reach.",
+  "snapshot": 2020,
+  "outcome_year": 2025,
+  "settings": {
+    "no realism layer": {
+      "recommended_parcels": 539,
+      "share_without_precedent": 0.174,
+      "share_redeveloped_by_2025": 0.1169,
+      "share_of_eligible_redeveloped": 0.0146,
+      "share_with_recommended_use_in_2025": 0.0186,
+      "share_redeveloped_into_recommended_use": 0.0056,
+      "median_district_objective": 7.829,
+      "sum_district_objective": 112.435
+    },
+    "precedent filter (default)": {
+      "recommended_parcels": 543,
+      "share_without_precedent": 0.0,
+      "share_redeveloped_by_2025": 0.1179,
+      "share_of_eligible_redeveloped": 0.0146,
+      "share_with_recommended_use_in_2025": 0.0203,
+      "share_redeveloped_into_recommended_use": 0.0055,
+      "median_district_objective": 8.2,
+      "sum_district_objective": 115.362
+    },
+    "precedent filter + likelihood layer": {
+      "recommended_parcels": 118,
+      "share_without_precedent": 0.0,
+      "share_redeveloped_by_2025": 0.2119,
+      "share_of_eligible_redeveloped": 0.0504,
+      "share_with_recommended_use_in_2025": 0.0169,
+      "share_redeveloped_into_recommended_use": 0.0,
+      "median_district_objective": 2.75,
+      "sum_district_objective": 43.429
+    }
+  },
+  "equal_counts": {
+    "budget_by_district": {
+      "101": 3,
+      "102": 7,
+      "103": 11,
+      "104": 18,
+      "105": 20,
+      "106": 11,
+      "107": 3,
+      "108": 14,
+      "109": 3,
+      "110": 8,
+      "111": 13,
+      "112": 7
+    },
+    "no realism layer": {
+      "recommended_parcels": 116,
+      "share_without_precedent": 0.164,
+      "share_redeveloped_by_2025": 0.1121,
+      "share_of_eligible_redeveloped": 0.0146,
+      "share_with_recommended_use_in_2025": 0.0086,
+      "share_redeveloped_into_recommended_use": 0.0,
+      "median_district_objective": 5.228,
+      "sum_district_objective": 83.674
+    },
+    "precedent filter (default)": {
+      "recommended_parcels": 117,
+      "share_without_precedent": 0.0,
+      "share_redeveloped_by_2025": 0.1538,
+      "share_of_eligible_redeveloped": 0.0146,
+      "share_with_recommended_use_in_2025": 0.0085,
+      "share_redeveloped_into_recommended_use": 0.0,
+      "median_district_objective": 5.0,
+      "sum_district_objective": 81.291
+    },
+    "precedent filter + likelihood layer": {
+      "recommended_parcels": 118,
+      "share_without_precedent": 0.0,
+      "share_redeveloped_by_2025": 0.2119,
+      "share_of_eligible_redeveloped": 0.0504,
+      "share_with_recommended_use_in_2025": 0.0169,
+      "share_redeveloped_into_recommended_use": 0.0,
+      "median_district_objective": 2.75,
+      "sum_district_objective": 43.429
+    }
+  },
+  "reference": {
+    "share_of_all_lots_redeveloped": 0.0123,
+    "share_of_likely_fifth_redeveloped": 0.0501
+  }
+}

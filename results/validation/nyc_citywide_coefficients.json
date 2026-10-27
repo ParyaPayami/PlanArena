@@ -1,0 +1,21 @@
+{
+  "test": "Pick the citywide energy and emission coefficients on buildings neither candidate was fitted on. Candidates: national (RECS/CBECS intensities, eGRID New York State and EPA hub factors), or the Manhattan calibration (LL84 2024 intensities by use, Local Law 97 factors). Both are scored against LL84 2023 emissions of buildings outside Manhattan (LL97 factors on reported fuel use); the one with the smaller median error is kept. Jobs rates stay the citywide LODES fit either way.",
+  "scores": {
+    "national": {
+      "buildings_outside_manhattan": 11580,
+      "median_abs_pct_error": 0.398,
+      "total_ratio": 0.543,
+      "log_r": 0.566,
+      "city_total_t": 20593658
+    },
+    "manhattan_ll84": {
+      "buildings_outside_manhattan": 11580,
+      "median_abs_pct_error": 0.317,
+      "total_ratio": 0.806,
+      "log_r": 0.56,
+      "city_total_t": 31291048
+    }
+  },
+  "records_excluded_implausible_eui": 185,
+  "chosen": "manhattan_ll84"
+}

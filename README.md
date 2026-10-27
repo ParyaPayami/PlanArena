@@ -1,0 +1,260 @@
+# PlanArena
+
+**PlanArena** is an open planning-support tool built on a parcel-level digital twin. A planner changes the use or density of one parcel or many, and PlanArena estimates the social, economic and environmental effects straight away, with sensitivity ranges.
+
+It also does four further things:
+- shows where redevelopment is likely to happen;
+- tests a rezoning with the development-site method city environmental reviews use;
+- recommends plans (the best plan found by its search, not a proven optimum);
+- puts candidate plans to a simulated stakeholder scenario: assumed priorities voting under nine voting rules.
+
+* **Desktop Studio** (`/`): the planner's workspace.
+  * Map with select, box, lasso, block and address/BBL search.
+  * Use and density (FAR) edits, a live scoreboard with ranges, and capacity.
+  * Recommended plans and a Pareto explorer.
+  * Simulated stakeholder scenario.
+  * Saved studies with status, checklist, hearing date and history.
+  * Desk tools: soft sites, notice radius, rezoning test, staff report.
+  * Plan import with review, exports with provenance.
+* **Phone game** (`/play`): neighbourhood levels with missions, tap/drag painting and stars. At the end, a simulated council votes between your plan, the recommended plan and no change.
+
+<!-- BEGIN GENERATED: header -->
+Demo city: Manhattan, 42,075 parcels from NYC DCP MapPLUTO 25v3.1, downloaded from DCP by `planarena.twin.fetch`. The archive's and the extract's SHA-256 are recorded in `twin_meta.json` and in every export. 11 indicators across three pillars.
+<!-- END GENERATED: header -->
+
+## Try it
+
+- **Online demo (Manhattan):** [planarena-manhattan.onrender.com](https://planarena-manhattan.onrender.com). It runs on a free plan that sleeps when idle, so the first visit can take a minute. It is a shared demo: anything saved is visible to others and wiped on restart. The other nine cities run locally (see Quick start).
+- **Paper:** this is the anonymised copy for double-blind review, without PDFs. `python -I -m planarena.paper` builds the manuscript and Online Resource 1 in `paper/cus/`.
+
+## Quick start
+
+Double-click **Start PlanArena.command** in this folder. Your browser opens the Studio at http://localhost:8787; the phone game is at /play. **Start PlanArena (phone).command** also serves the game to a phone on the same Wi-Fi. See [TESTING.md](TESTING.md) for what to try.
+
+## Run it
+
+```bash
+cd PlanArena   # first time: python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt (and poppler, e.g. brew install poppler)
+.venv/bin/python -I -m planarena.api          # then open http://localhost:8787  (phone game: /play)
+```
+
+To rebuild everything from public data (downloads about 17 GB; every input's URL and SHA-256 is recorded in `results/data_manifest.json`):
+
+```bash
+make reproduce   # or `make results` to rerun models and validation on data already downloaded
+```
+
+The individual steps:
+
+```bash
+.venv/bin/python -I -m planarena.twin.fetch  # official MapPLUTO release -> Manhattan extract + SOURCE.json
+.venv/bin/python -I -m planarena.tools.fetch_open_data  # LODES, LL84, DOB certificates, FEIS appendices + hashes
+.venv/bin/python -I -m planarena.twin.build     # digital twin: parcels, graph, raster, web layers
+.venv/bin/python -I -m planarena.calibrate      # coefficients from LL84/LL97/LODES/QCEW
+.venv/bin/python -I -m planarena.models.history  # annual MapPLUTO twins 2015-2024
+.venv/bin/python -I -m planarena.models.train   # baselines + GNN spatial CV + final model
+.venv/bin/python -I -m planarena.models.ablation all  # GNN vs LightGBM ablation, inductive CV
+.venv/bin/python -I -m planarena.models.transition all  # redevelopment-transition model + conversion precedents
+.venv/bin/python -I -m planarena.models.rolling  # rolling-origin evaluation, calibration, label audit
+.venv/bin/python -I -m planarena.agents.voting   # simulated stakeholder scenario in every district
+.venv/bin/python -I -m planarena.validate all  # validation against open data -> results/validation
+.venv/bin/python -I -m planarena.report      # writes docs/VALIDATION.md and the generated blocks in this README
+cd web && npm install && npx vite build      # web app -> web/dist (served by the API)
+.venv/bin/python -I -m pytest -q             # tests (implementation correctness; includes a docs-are-current check)
+```
+
+## What it does and where
+
+| Capability | Where |
+|---|---|
+| Digital twin | `planarena/twin`: parcels, 3D massing, parcel graph (adjacency, kNN, same zoning), 50 m access raster, zoning rules-as-code |
+| Effects of a change | `planarena/indicators/engine.py`. Unchanged parcels keep their observed values; the delta equations are in [docs/METHODS.md](docs/METHODS.md) |
+| Density edits | Each parcel can take a proposed FAR as well as a use. Capacity, soft sites and added zoning capacity are reported |
+| Redevelopment likelihood | `planarena/models/transition.py`: five-year likelihood and likely new use for every lot, from a model tested on a later period |
+| Rezoning test | `planarena/indicators/rwcds.py`: the development-site screen city environmental reviews use, applied to the FAR values in a plan |
+| Recommended plans | `planarena/optimize/suggest.py` (iterated best response with exact re-scoring of the top moves) and `pareto.py` (NSGA-III). The best plan found, not a proven optimum |
+| Pattern consistency | `planarena/models`: LightGBM with a GraphSAGE embedding (the best model in the ablation below), cross-fitted so no parcel sees its own use. It describes existing patterns, not what is desirable |
+| Simulated stakeholder scenario | `planarena/agents/voting.py`: ballots computed from assumed utilities, nine voting rules, compared with bargaining solutions. Not elicited preferences |
+| Realism | Conversions of existing buildings never observed at that size are flagged, and the optimizer skips them |
+| Plan upload, studies, outputs | `POST /api/import` with review; SQLite studies with a hash-chained audit log; staff report, CSV/GeoJSON, provenance JSON |
+| Requirements traceability | [docs/REQUIREMENTS_TRACEABILITY.md](docs/REQUIREMENTS_TRACEABILITY.md), from a de-identified municipal requirements catalogue |
+
+## Cities
+
+PlanArena opens with the Manhattan demo. The city name in the Studio's header lists the ten PlanArena cities:
+- New York, Los Angeles, Chicago, Houston, Phoenix, Philadelphia, San Antonio, San Diego and Dallas;
+- Milwaukee.
+
+Each city's **baseline is the land use its own government or regional planning agency publishes for every parcel**. The **adopted plan** (future land use) and **zoning** are kept as two separate layers. Nothing is estimated: a city whose official sources are still being added is listed but cannot be opened yet.
+
+| City | Existing land use (baseline) | Adopted plan | Zoning | Homes / Census 2020 |
+|---|---|---|---|---:|
+| New York | NYC DCP MapPLUTO | none citywide | Zoning Resolution (MapPLUTO) | 1.03 |
+| Los Angeles | SCAG 2020 Annual Land Use + LA County Assessor | General Plan (SCAG, 2019) | SCAG, 2019 | 0.99 |
+| Chicago | CMAP Land Use Inventory 2023 + Cook County Assessor | none citywide | City zoning districts | 1.05 |
+| Houston | City of Houston land use (HCAD) | none (no land-use map) | none (Houston has no zoning) | 0.95 |
+| Phoenix | Maricopa Assessor property use + MAG 2026 | General Plan (city code table) | City zoning | 0.99 |
+| Philadelphia | City Planning Commission land use + OPA | Philadelphia2035 district plans, digitised from the PDF maps (15 of 17 plans, 83% of parcels) | Zoning Code (OPA) | 0.99 |
+| San Antonio | Bexar Appraisal District property class | Future Land Use (adopted area plans, 61% of parcels) | City zoning | 0.99 |
+| San Diego | SANDAG Land Use 2025 + County Assessor | General Plan and community plans | City base zones | 1.02 |
+| Dallas | City existing land use (2026) + DCAD | forwardDallas! 2.0 placetypes (2024) | City base zoning | 0.98 |
+| Milwaukee | City of Milwaukee MPROP | none as data (area-plan PDFs; the city's website refuses scripted downloads) | Zoning Code (MPROP) | 1.06 |
+
+All ten are built. Each has an ingestion report in [docs/ingestion/](docs/ingestion/) (coverage of each layer, the 16-class distributions, how often the existing use matches the plan, homes against the Census, and what is estimated), with a cross-city summary in [docs/ingestion/README.md](docs/ingestion/README.md). In the Studio, the map switches between the plan you edit and the city's official existing use, adopted plan and zoning.
+
+Each city also gets its own coefficients:
+- energy from EIA RECS and CBECS;
+- emission factors from EPA eGRID and the EPA Emission Factors Hub (New York City: chosen on held-out LL84 buildings);
+- jobs rates fitted to the city's LODES blocks.
+
+```bash
+.venv/bin/python -I -m planarena.cities.build "New York"           # or any of the ten
+.venv/bin/python -I -m planarena.cities.ingestion "Los Angeles"    # the ingestion report
+```
+
+## ArcGIS Urban
+
+`planarena/integrations/urban_export.py` writes a city, or one district of it, as the data an ArcGIS Urban model imports:
+- space-use types (the nine groups);
+- zoning types and boundaries;
+- land-use types and boundaries;
+- parcels with existing use, plan, zoning, floor area, homes and jobs.
+
+Given a plan saved from the Studio, the parcels also carry its scenario. A README in the output lists the import order and field mapping. You upload the files to ArcGIS Online yourself; PlanArena sends nothing.
+
+```bash
+.venv/bin/python -I -m planarena.integrations.urban_export "Dallas" --district 14 --plan my_plan.csv   # -> exports/urban/dallas
+```
+
+## Coefficients: every value has a source and a range
+
+<!-- BEGIN GENERATED: coefficients -->
+| Coefficient | Source | Status |
+|---|---|---|
+| Building energy (site EUI by use) | NYC LL84 benchmarking, calendar 2024, Manhattan; floor-area-weighted mean, Q25–Q75 range | derived |
+| Emission factor | NYC LL97 §28-320.3.1.1 (2024–2029) weighted by LL84 Manhattan fuel shares | derived |
+| Floorspace per worker | EIA CBECS 2018 Table B2, scaled so the baseline equals BLS QCEW New York County employment (2,480,984) | calibrated |
+| Persons per household | Census QuickFacts, New York County: 2.00 | corroborated (page is bot-protected; confirm) |
+| Runoff C | NYC DEP surface coefficients (roof 1.00) weighted by each parcel's roof share; ground C by use | derived |
+| Build-out utilization | 0.8 (0.6–1.0) | assumption |
+<!-- END GENERATED: coefficients -->
+
+The Studio's Methods dialog (ⓘ) shows the full register, the provenance and the audit-chain check.
+
+## Validation
+
+All results are in [docs/VALIDATION.md](docs/VALIDATION.md), generated from `results/`. The checks fall into three classes:
+- **A. Existing conditions:** does the model reproduce what is there?
+- **B. Planning calculations:** given a city review's sites and floor area, does PlanArena reproduce its numbers?
+- **C. Prediction of change:** given a real change, does PlanArena predict its effect?
+
+Models are in D and the optimizer in E.
+
+<!-- BEGIN GENERATED: key_results -->
+| Class | What is tested | Result |
+|---|---|---|
+| A | Building emissions vs LL84 2023 (fitted on 2024; mostly the same buildings) | total 1.04×; log–log r 0.807; median building error 31% |
+| A | Jobs vs LODES 2023 | tract r 0.843, block r 0.727; median tract error 36% |
+| A | Homes from observed floor area (295 developed lots) | 1.039× recorded homes; median error 27% |
+| B | East Harlem FEIS sites, same floor area and use | 0.859× the FEIS homes (site r 0.940) |
+| B | SoHo/NoHo FEIS sites, same floor area and use | 1.003× (site r 0.956) |
+| C | Change in homes after real use changes (3,234) | r 0.872 (baseline 0.435); total 1.29× |
+| C | Change in emissions after real use changes (193 buildings) | r 0.857 (baseline 0.090); total 1.00× |
+| C | Change in jobs by census block | r 0.068: no useful skill |
+| D | Redevelopment within 5 years, temporal holdout 2020→2025 | LightGBM AUC 0.855, precision in top 1% 26% (base rate 1.2%); best baseline Underbuilt share of zoning capacity AUC 0.802 |
+| A | Building-level emissions error vs a single citywide intensity | median 31% vs 29% (totals 1.04× vs 0.96×) |
+| A | Jobs rates tested forward (fit 2015, test 2023), block median error | fitted rates 46%; CBECS 45%; flat rate 48% |
+| D | Redevelopment, rolling origin (15 tests, 1-, 3- and 5-year horizons) | AUC 0.851–0.902; above the best simple baseline in every test |
+| D | Labels vs DOB certificates of occupancy (2020→2025) | 52% of labelled lots have a certificate (a lower bound); labels are noisy |
+| C | Homes built by 2025 on the development sites of three rezonings (561) | likelihood-weighted projection 607; capacity 8,423 (pro-rated 5,207); three cases only |
+| D | Redevelopment model moved between cities (new buildings, 3 years) | Milwaukee: trained on Manhattan AUC 0.946 vs own city 0.920; Manhattan: trained on Milwaukee 0.830 vs own city 0.903 (best baseline 0.857) |
+| E | Optimizer vs exhaustive search (15 single-block areas, up to 2 changes) | optimum found in 100% with exact re-scoring; small cases only |
+<!-- END GENERATED: key_results -->
+
+**What this supports, and what it does not**
+
+* **Supported:**
+  * Effects on homes and on building emissions of real use changes are predicted far better than by a simple transition-type average.
+  * City environmental-review calculations are reproduced closely when PlanArena is given the same sites, floor area and use.
+* **Not supported (yet):**
+  * Effects of density-only changes.
+  * Job changes at block level.
+  * Accessibility and runoff effects of a change; they are not validated.
+* **Local error:** aggregate totals agree much better than individual buildings or blocks. Parcel-level estimates carry substantial error, shown in VALIDATION.md.
+* **Recommendations depend on the baseline:** synthetic error in the observed baseline changes some of them. See VALIDATION.md, section C.
+
+**Pattern-consistency models** (spatial cross-validation):
+
+<!-- BEGIN GENERATED: gnn_cv -->
+Spatial-block cross-validation, 5 folds of 600 m tiles. The task is reconstructing each parcel's current use from its context, which describes pattern consistency, not suitability.
+
+Parcels evaluated: 41,942 of 42,075; the 133 parcels with no recorded land use have no label and are excluded.
+
+| Task | GNN | LightGBM | Simple baseline |
+|---|---|---|---|
+| Current use, accuracy | 0.671 ± 0.016 | 0.689 ± 0.013 | 0.593 ± 0.020 (zoning majority) |
+| Current use, macro F1 | 0.380 ± 0.008 | 0.465 ± 0.013 | 0.246 ± 0.023 |
+| Current use, log loss | 0.918 ± 0.031 | 0.912 ± 0.051 | 1.192 ± 0.057 |
+| Value, R² | 0.621 ± 0.075 | 0.702 ± 0.048 | 0.540 ± 0.069 (median by use and district) |
+
+LightGBM has higher current-use accuracy than the GNN in 5 of 5 folds.
+
+The GNN cross-validation is transductive: held-out parcels stay in the graph with their use and value masked. See docs/METHODS.md.
+
+**Ablation** (same folds; `results/validation/ablation_gnn.json`):
+
+| Model | Accuracy | Macro F1 | Log loss |
+|---|---|---|---|
+| GNN, transductive (as above) | 0.671 ± 0.016 | 0.380 ± 0.008 | 0.918 ± 0.031 |
+| GNN, inductive (no test-parcel edges in training) | 0.670 ± 0.015 | 0.380 ± 0.008 | 0.922 ± 0.031 |
+| LightGBM | 0.689 ± 0.013 | 0.465 ± 0.013 | 0.912 ± 0.051 |
+| LightGBM + GNN embedding | 0.704 ± 0.016 | 0.475 ± 0.015 | 0.919 ± 0.063 |
+
+Adding the GNN embedding raises LightGBM accuracy in 5 of 5 folds.
+<!-- END GENERATED: gnn_cv -->
+
+## The simulated stakeholder scenario
+
+* **Voters are assumed, not real.**
+  * Five stakeholder agents rank every candidate plan by assumed priority weights (`planarena/agents/stakeholders.py`).
+  * Today's residents are simulated by tax block, from changes in their block's access and in district homes.
+* **Interests not represented:** renters as a separate group, commuters, future residents, small landlords, and people with disabilities.
+* **Rules:** plurality, Borda, instant runoff, Copeland, Schulze (decides), Kemeny–Young (exact ILP), approval, score and majority judgment. They are checked against the textbook Tennessee-capital example.
+* **Candidates:** stakeholder ideals, pairwise compromises, balanced, consensus, a parcel-by-parcel ballot, the current plan and no change.
+  * Most candidates are generated from the same utilities that later score them, which shapes the outcome.
+  * Sensitivity to alternative utilities, candidate generators, indifference thresholds and seat allocations is reported in VALIDATION.md, section F.
+
+<!-- BEGIN GENERATED: vote -->
+Ballots are computed from assumed stakeholder utilities, not elicited preferences. These results describe the simulated scenario, not public support or political feasibility.
+
+| Finding (12 districts, one seat each) | Districts |
+|---|---|
+| A Condorcet winner exists (otherwise the simulated majority preferences cycle) | 7 of 12 |
+| All nine rules agree | 0 of 12 |
+| The council winner beats no change in both simulated electorates | 12 of 12 |
+| The simulated residents' winner is the council's winner | 1 of 12 |
+| The council winner is also the Nash bargaining solution | 0 of 12 |
+| One insincere ballot could change the Schulze result | 8 of 12 |
+| Median robustness of the winner (coefficients and seats varied, 200 draws) | 67.8% |
+<!-- END GENERATED: vote -->
+
+## Honesty rules built in
+* Every reported number is generated from result files (`planarena/report.py`); a test fails if the docs drift from the results.
+* Each coefficient carries a status: verified, derived, calibrated, corroborated, assumption or provisional.
+* Ranges are a sensitivity envelope from low and high coefficient variants. They are not calibrated prediction intervals.
+* Zoning is a simplified rules-as-code version of the NYC Zoning Resolution: advisory in the Studio, a hard constraint in the optimizer.
+* No language model is used.
+* No human-participant data is used.
+* The usability work so far is a developer heuristic review ([docs/USABILITY_REVIEW.md](docs/USABILITY_REVIEW.md)), not a study with planners.
+* The tests check implementation correctness, not scientific validity.
+
+## Known limitations
+1. **Assumed priorities.** Stakeholder priorities and the simulated electorates are assumptions.
+2. **Building coverage.** LL84 covers only buildings of 25,000 sq ft or more; smaller buildings take use-type EUIs.
+3. **Roof share** is estimated as floor area / floors.
+4. **Inwood** is replayed for the whole area only; Mandatory Inclusionary Housing bonus floor area is not modelled.
+5. **Large cities** (over 100,000 parcels) are drawn as points when zoomed out and as vector tiles cut on demand when zoomed in (`planarena/cities/tiles.py`); the first view of each area takes a moment while its tiles are made.
+
+## Licence
+
+The code is released under the [MIT License](LICENSE). The city data it downloads keep their sources' terms; see `results/data_manifest.json` for each source.
