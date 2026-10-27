@@ -29,7 +29,7 @@ What this version changes for the journal:
    - automatic updates on.
 
    Also add "Payami", "ParyaPayami", "ppayami" and "University of Wisconsin" as terms to anonymise, as a second safeguard.
-2. **Title page.** Fill in the ORCID, the acknowledgements and the funding statement.
+2. **Title page.** Complete: ORCID, funding (none received), no acknowledgements. Check the competing-interests statement (none) is still true at submission.
 3. **Archive.** Archive the release on Zenodo and add its DOI to the title page.
 4. **Submission system.** Choose "Original Paper", and the collection "Human-Centered Urban Digital Twins and Policy Insights" if you want it (deadline November 20, 2026). Enter the competing-interest and author-contribution statements in the interface as well.
 5. **Fee.** Ask the UWM Libraries about the article processing charge, and request any waiver at submission.
