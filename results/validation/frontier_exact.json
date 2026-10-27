@@ -1,0 +1,268 @@
+{
+ "test": "* Blocks: the 20 tax blocks of planarena.validate.optimizer (same seed and filters), every plan with up to two   changes enumerated; the exact optimizer must return the exhaustive optimum and a bound at least as high. * Areas: random areas like a lasso selection in the Studio (150-300 m around a random parcel, a budget of 5% of   eligible parcels): how often the optimum is certified, how long it takes, and how the first-order search with   and without exact polishing compares with the optimum. * Districts: every Manhattan district with a budget of ten changes, as in planarena.validate.optimizer_benchmark,   started from the best plan any heuristic there found, with a time limit: the certified bound and gap. * Fronts: exact fronts (a 0.25 weight grid and the balanced plan) of random areas: their size, the share of   certified points, the efficiency gap of today's land use, trade-off rates and robustness to the coefficients;   on small blocks, every front plan is checked against exhaustive enumeration (Pareto-optimal, optimal for its   weights).",
+ "step": 0.25,
+ "areas": [
+  {
+   "parcels": 142,
+   "eligible": 139,
+   "budget": 6,
+   "front_size": 8,
+   "certified_share": 0.9375,
+   "efficiency_gap": 0.21874661819687874,
+   "balanced": {
+    "social": 0.2632902633686429,
+    "economic": 0.3005127462243265,
+    "environmental": 0.21874661819687874
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": 6.61597646189703,
+    "social-environmental": 0.04188826954643372,
+    "economic-environmental": 0.7592325857922273
+   },
+   "robust_share": 1.0,
+   "seconds": 244.4
+  },
+  {
+   "parcels": 351,
+   "eligible": 151,
+   "budget": 7,
+   "front_size": 4,
+   "certified_share": 1.0,
+   "efficiency_gap": 0.004747999676563314,
+   "balanced": {
+    "social": 0.04095427771106386,
+    "economic": 0.010168760502467983,
+    "environmental": 0.004747999676563314
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": 0.11027372989488499,
+    "social-environmental": 0.018315037330362233,
+    "economic-environmental": 0.020819661168346975
+   },
+   "robust_share": 0.75,
+   "seconds": 66.6
+  },
+  {
+   "parcels": 140,
+   "eligible": 78,
+   "budget": 3,
+   "front_size": 6,
+   "certified_share": 1.0,
+   "efficiency_gap": 0.21287349593719848,
+   "balanced": {
+    "social": 0.22989444923642577,
+    "economic": 0.21287349593719848,
+    "environmental": 0.22753718078790455
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": 2.080675084442398,
+    "social-environmental": 1.0658340386447105,
+    "economic-environmental": 2.86685574571993
+   },
+   "robust_share": 1.0,
+   "seconds": 258.4
+  },
+  {
+   "parcels": 307,
+   "eligible": 278,
+   "budget": 13,
+   "front_size": 14,
+   "certified_share": 0.9375,
+   "efficiency_gap": 0.04723854516140158,
+   "balanced": {
+    "social": 0.04723854516140158,
+    "economic": 0.05004094992799462,
+    "environmental": 0.047514603013263955
+   },
+   "balanced_status": "gap",
+   "first_rates": {
+    "social-economic": 49.639689863491995,
+    "social-environmental": 1.0292743641432154,
+    "economic-environmental": 1.6978445922408612
+   },
+   "robust_share": 1.0,
+   "seconds": 189.2
+  },
+  {
+   "parcels": 41,
+   "eligible": 33,
+   "budget": 2,
+   "front_size": 6,
+   "certified_share": 1.0,
+   "efficiency_gap": 0.0023447057684679927,
+   "balanced": {
+    "social": 0.020543437159598055,
+    "economic": 0.015277961324617182,
+    "environmental": 0.0023447057684679927
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": 12.752031238483161,
+    "social-environmental": 0.7429292994230962,
+    "economic-environmental": 0.07994526156879504
+   },
+   "robust_share": 0.5,
+   "seconds": 17.9
+  },
+  {
+   "parcels": 326,
+   "eligible": 303,
+   "budget": 15,
+   "front_size": 12,
+   "certified_share": 0.75,
+   "efficiency_gap": 0.0979569534168346,
+   "balanced": {
+    "social": 0.48880926263288743,
+    "economic": 0.0979569534168346,
+    "environmental": 0.49231951515049527
+   },
+   "balanced_status": "gap",
+   "first_rates": {
+    "social-economic": 3.262879053336546,
+    "social-environmental": 15.60426343148781,
+    "economic-environmental": 14.375193282067197
+   },
+   "robust_share": 0.8333333333333334,
+   "seconds": 468.2
+  },
+  {
+   "parcels": 57,
+   "eligible": 42,
+   "budget": 2,
+   "front_size": 3,
+   "certified_share": 1.0,
+   "efficiency_gap": 0.002554230630101646,
+   "balanced": {
+    "social": 0.0053884605505885586,
+    "economic": 0.16325833229842032,
+    "environmental": 0.002554230630101646
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": null,
+    "social-environmental": 0.0125012704559271,
+    "economic-environmental": 0.011233587283823225
+   },
+   "robust_share": 1.0,
+   "seconds": 38.7
+  },
+  {
+   "parcels": 111,
+   "eligible": 100,
+   "budget": 5,
+   "front_size": 10,
+   "certified_share": 0.875,
+   "efficiency_gap": 0.20643265210626355,
+   "balanced": {
+    "social": 0.23866354456969496,
+    "economic": 0.7833712326825113,
+    "environmental": 0.20643265210626355
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": 1.0445151005762465,
+    "social-environmental": 0.6922740594716159,
+    "economic-environmental": 0.38047277097876603
+   },
+   "robust_share": 1.0,
+   "seconds": 326.2
+  },
+  {
+   "parcels": 208,
+   "eligible": 128,
+   "budget": 6,
+   "front_size": 7,
+   "certified_share": 1.0,
+   "efficiency_gap": 0.17546723848190562,
+   "balanced": {
+    "social": 0.18129319340288996,
+    "economic": 0.17546723848190562,
+    "environmental": 0.32193916522789734
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": 1.3970526927736695,
+    "social-environmental": 0.02797617019178116,
+    "economic-environmental": 8.306878498979525
+   },
+   "robust_share": 0.8571428571428571,
+   "seconds": 97.5
+  },
+  {
+   "parcels": 72,
+   "eligible": 61,
+   "budget": 3,
+   "front_size": 3,
+   "certified_share": 1.0,
+   "efficiency_gap": 0.07636601557598888,
+   "balanced": {
+    "social": 0.13650722285342975,
+    "economic": 0.09230821042463004,
+    "environmental": 0.07636601557598888
+   },
+   "balanced_status": "optimal",
+   "first_rates": {
+    "social-economic": null,
+    "social-environmental": 0.691850823383164,
+    "economic-environmental": 0.49620139109821315
+   },
+   "robust_share": 1.0,
+   "seconds": 15.0
+  }
+ ],
+ "blocks": [
+  {
+   "cd": 108,
+   "block": 1455,
+   "plans": 178,
+   "pareto_plans": 34,
+   "front_plans": 4,
+   "front_plans_dominated": 0,
+   "pareto_plans_found": 4
+  },
+  {
+   "cd": 103,
+   "block": 461,
+   "plans": 79,
+   "pareto_plans": 37,
+   "front_plans": 4,
+   "front_plans_dominated": 0,
+   "pareto_plans_found": 4
+  },
+  {
+   "cd": 105,
+   "block": 848,
+   "plans": 56,
+   "pareto_plans": 5,
+   "front_plans": 5,
+   "front_plans_dominated": 0,
+   "pareto_plans_found": 5
+  },
+  {
+   "cd": 101,
+   "block": 31,
+   "plans": 84,
+   "pareto_plans": 26,
+   "front_plans": 6,
+   "front_plans_dominated": 0,
+   "pareto_plans_found": 6
+  },
+  {
+   "cd": 105,
+   "block": 875,
+   "plans": 16,
+   "pareto_plans": 1,
+   "front_plans": 1,
+   "front_plans_dominated": 0,
+   "pareto_plans_found": 1
+  }
+ ],
+ "median_front_size": 6.5,
+ "median_certified_share": 1.0,
+ "median_efficiency_gap": 0.08716148449641173,
+ "median_seconds": 143.35,
+ "median_robust_share": 1.0
+}

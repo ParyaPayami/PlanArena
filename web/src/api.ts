@@ -54,6 +54,30 @@ export interface ZoningSummary {
 }
 export interface CityEntry { id: string; label: string; built?: boolean; status?: string; tier?: string; source?: string; parcels?: number }
 
+/** The exact optimizer's certificate: the plan's score, an upper bound on any feasible plan's score, and the gap. */
+export interface Certificate {
+  status: "optimal" | "gap" | "not certified";
+  objective?: number;
+  bound?: number;
+  gap?: number;
+  rel_gap?: number;
+  seconds?: number;
+  reason?: string;
+  /** the exact score of the fast plan shown first, for "the preview reached x% of the optimum" */
+  fast_objective?: number;
+}
+
+/** The exact trade-off front: optimal plans for a grid of pillar weights, the balanced plan and trade-off rates. */
+export interface ExactFront {
+  front: { pillars: Record<string, number>; n_changed: number; balanced: boolean; changes: Changes }[];
+  balanced: { pillars: Record<string, number>; status: string; rel_gap: number; efficiency_gap: number };
+  rates: Record<string, Record<string, number | Record<string, number>>[]>;
+  certified_share: number;
+  robust_share?: number;
+  seconds: number;
+  grid_points: number;
+}
+
 export const api = {
   cities: () => get<CityEntry[]>("/api/cities"),
   zoningSummary: (parcels: number[]) => post<ZoningSummary>("/api/zoning-summary", { parcels }),
@@ -78,14 +102,19 @@ export const api = {
   suggest: (body: {
     scope: string;
     mode: string;
+    pillar_weights?: Record<string, number>;
     changes?: Changes;
     parcels?: number[];
     max_change_share?: number;
     respect_zoning?: boolean;
-  }) => post<{ changes: Changes; evaluation: Evaluation; history: unknown[]; budget: number; ms: number }>(
-    "/api/suggest",
-    body,
-  ),
+    method?: "fast" | "exact";
+    time_limit?: number;
+    polish?: number;
+  }) =>
+    post<{ changes: Changes; evaluation: Evaluation; history: unknown[]; budget: number; ms: number; certificate?: Certificate | null }>(
+      "/api/suggest",
+      body,
+    ),
   negotiate: (body: { scope: string; changes?: Changes; parcels?: number[]; max_change_share?: number }) =>
     post<Negotiation>("/api/negotiate", body),
   vote: (body: {
@@ -123,6 +152,10 @@ export const api = {
       { parcels, feet },
     ),
   pareto: (parcels: number[], changes: Changes, seed = 42) => post<ParetoResult>("/api/pareto", { parcels, changes, seed }),
+  policy: (parcels: number[], pillar_weights: Record<string, number>, max_change_share = 0.05) =>
+    post<{ changes: Changes; evaluation: Evaluation; ms: number }>("/api/policy", { parcels, pillar_weights, max_change_share }),
+  frontier: (parcels: number[], changes: Changes, max_change_share = 0.05) =>
+    post<ExactFront>("/api/frontier", { parcels, changes, max_change_share }),
   studies: () => get<Study[]>("/api/scenarios"),
   createStudy: (body: { name: string; description: string; study_area: string; changes: Changes }) =>
     send<Study>("POST", "/api/scenarios", body),

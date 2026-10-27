@@ -1,0 +1,13 @@
+{
+ "district": 105,
+ "eligible": 2179,
+ "budget": 10,
+ "status": "gap",
+ "objective": 4.2218034440893,
+ "bound": 5.704249958341381,
+ "rel_gap": 0.3511405810063393,
+ "seconds": 10426.57,
+ "time_limit_seconds": 10800.0,
+ "best_heuristic_benchmark": 4.2218034440893,
+ "intervals": 10
+}

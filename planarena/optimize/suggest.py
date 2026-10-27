@@ -47,6 +47,7 @@ class SuggestConfig:
     w_fit: float = 0.002  # weight on GNN log-odds fit, in overall-score units
     min_gain: float = 1e-6
     candidate_parcels: np.ndarray | None = None  # restrict to these parcel indices
+    mask: np.ndarray | None = None  # a fixed scope (e.g. a selection's study area) instead of cfg.scope
     unanimity_weights: list | None = None  # consensus mode: list of agent indicator-weight dicts
     polish: int = 0  # exact re-scoring of the top-K first-order moves after the rounds (0 = off)
     polish_passes: int = 2
@@ -202,7 +203,7 @@ class Suggester:
     def feasible(self, cfg: SuggestConfig, use: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """(scope mask, eligible parcels, allowed uses per parcel) under the plan's protections."""
         e = self.e
-        mask = e.scope_mask(use, cfg.scope)
+        mask = cfg.mask.copy() if cfg.mask is not None else e.scope_mask(use, cfg.scope)
         eligible = mask.copy()
         if cfg.candidate_parcels is not None:
             sel = np.zeros(e.n, bool)
@@ -276,7 +277,8 @@ class Suggester:
             history.append({"round": rnd + 1, "changed": int(len(take)), "est_gain": float(bgain[take].sum())})
         if cfg.polish and not cfg.unanimity_weights and "gain" in locals():
             use = self._polish(cfg, use, start, gain, budget)
-        ev = e.evaluate(use, scope=cfg.scope, pillar_weights=cfg.pillar_weights)
+        ev = (e.evaluate(use, mask=cfg.mask, pillar_weights=cfg.pillar_weights) if cfg.mask is not None
+              else e.evaluate(use, scope=cfg.scope, pillar_weights=cfg.pillar_weights))
         changed = np.nonzero(use != start)[0]
         return {"use": use, "changed": changed, "evaluation": ev, "history": history,
                 "budget": budget, "eligible": int(eligible.sum())}
@@ -296,7 +298,8 @@ class Suggester:
         moves = [(int(i // N_USES), int(i % N_USES)) for i in flat if np.isfinite(g.flat[i])]
 
         def J(u: np.ndarray) -> float:
-            ev = e.evaluate(u, scope=cfg.scope, pillar_weights=cfg.pillar_weights)
+            ev = (e.evaluate(u, mask=cfg.mask, pillar_weights=cfg.pillar_weights) if cfg.mask is not None
+                  else e.evaluate(u, scope=cfg.scope, pillar_weights=cfg.pillar_weights))
             if cfg.indicator_weights is not None:
                 val = sum(cfg.indicator_weights.get(r["key"], 0.0) * r["score"] for r in ev["indicators"])
             else:

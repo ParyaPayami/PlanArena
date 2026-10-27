@@ -26,7 +26,7 @@
 \renewcommand{\bibfont}{\small}
 \graphicspath{{figures/}}
 
-\title{\large\textbf{PlanArena: an integrated land-use optimizer with empirical evaluation}}
+\title{\large\textbf{PlanArena: an exact, learning-assisted land-use optimizer with empirical evaluation}}
 \author{}
 \date{}
 
@@ -37,21 +37,23 @@
 \begin{abstract}
 \noindent Deciding which land uses go where is a location-allocation problem with multidimensional effects: a change
 alters homes, jobs, access to services, the tax base, emissions and runoff, interacts with neighbouring parcels, and
-may never be built. US cities decide such changes at public hearings, where residents testify but do not vote.
-PlanArena is an open land-use optimizer that measures these effects and represents stakeholder interests as votes. It
-scores any parcel-level change on 11 indicators with sensitivity ranges in 46 ms
-(Manhattan) to 0.58 s (New York City), estimates how likely a change is, recommends plans within zoning and
-precedent, and compares nine voting rules over simulated stakeholders, on official data for 4{,}995{,}208 parcels
-in ten US cities. On held-out Manhattan lots, given what was built, predicted changes correlated with recorded homes
-($r = 0.79$) and emissions ($r = 0.60$), above a gradient-boosted baseline, but overstated total homes
-1.47-fold and had no skill for jobs. Redevelopment was ranked out of time with an area under the receiver
-operating characteristic curve (AUC) of 0.851--0.902, but observed-to-predicted event ratios ranged 0.07--1.70 across years.
-Likelihood weighting brought housing projections from 76--193 to 0.80--2.60 times what was
-built; a five-year trend ranked districts better than build-out projections. Searches were checked against exhaustive enumeration; the
-votes are illustrative.
+may never be built. PlanArena is an open land-use optimizer on official data for 4{,}995{,}208 parcels in ten US
+cities. It scores any parcel-level change on 11 indicators in 46 ms (Manhattan) to
+0.58 s (New York City), estimates how likely a change is, finds the best plan within zoning and precedent,
+and compares nine voting rules over simulated stakeholders. A mixed-integer formulation of the
+score certifies the optimum: it matched exhaustive search on 20 blocks and proved the optimal plan of
+29 of 30 areas of up to 411 parcels (median 3.2 s) and of
+nine of 12 districts. A graph neural network trained on certified optima proposes plans in 80 ms,
+as close to the optimum as first-order search. On held-out Manhattan lots, given what was built, predicted changes
+correlated with recorded homes ($r = 0.79$) and emissions ($r = 0.60$) but overstated total homes
+1.47-fold and had no skill for jobs; a learned correction cut the error in homes by 15\%,
+and conformal intervals covered 85\%--98\% of changes, against 19\%--66\% for
+sensitivity ranges. Redevelopment was ranked out of time with an area under the receiver operating characteristic
+curve (AUC) of 0.851--0.902, and likelihood weighting brought housing projections from
+76--193 to 0.80--2.60 times what was built. The votes are illustrative.
 
-\smallskip\noindent\textbf{Keywords:} Land-use optimization $\cdot$ Urban digital twin $\cdot$ Impact assessment
-$\cdot$ Planning support systems $\cdot$ Computational social choice $\cdot$ Model validation
+\smallskip\noindent\textbf{Keywords:} Land-use optimization $\cdot$ Mixed-integer programming $\cdot$ Graph neural
+networks $\cdot$ Urban digital twin $\cdot$ Planning support systems $\cdot$ Model validation
 \end{abstract}
 
 \section{Introduction}
@@ -87,6 +89,8 @@ are rarely weighed together.
 \item \textbf{supervised learning on parcel histories}, tested out of time, which estimates how likely a change is
 \citep{tepe2020,carruthers2024};
 \item \textbf{graph neural networks} over parcel adjacency, which represent spatial dependence;
+\item \textbf{mixed-integer programming}, which can prove a land-use allocation optimal \citep{aerts2003}, and
+machine learning that speeds exact search without losing its guarantee \citep{gasse2019,nair2020};
 \item \textbf{many-objective evolutionary search} \citep{deb2014}, which explores the combinatorial space of plans;
 \item \textbf{computational social choice and bargaining} \citep{nash1950,brandt2016}, which turn stakeholder
 preferences into a decision. Game-theoretic simulation has been applied to collective land-use decisions
@@ -97,8 +101,8 @@ Planning support systems (PSS) and urban digital twins aim to combine such tools
 \begin{itemize}
 \item \textbf{Untested outputs.} Their outputs are seldom tested against outcomes \citep{vonk2005,lei2023,azadi2025,
 kruse2026}.
-\item \textbf{Optimization.} It rarely asks whether recommended changes are plausible, or how the choice depends on the
-decision rule \citep{zheng2023,feng2024,lin2025}.
+\item \textbf{Optimization.} It rarely asks whether recommended changes are optimal or plausible, or how the choice
+depends on the decision rule \citep{zheng2023,feng2024,lin2025}.
 \item \textbf{Fragmented data.} The data are spread across agencies and schemas, some only as documents:
 Philadelphia's land-use plan exists only as maps in 17 PDF district plans.
 \end{itemize}
@@ -108,14 +112,18 @@ and makes stakeholder interests part of the decision. It contributes:
 \begin{enumerate}
 \item \textbf{Measurement.} Any edit is scored on 11 indicators in three pillars, with sensitivity
 ranges, at interactive speed. Each edit also shows what exists, what zoning permits, what the plan intends and how
-likely the change is.
-\item \textbf{Optimization and decision.} The optimizer recommends plans within zoning and precedent. Resident,
-environmental, business, developer and fiscal interests vote on candidate plans under nine rules, and residents also
-vote block by block.
+likely the change is, and a learned correction of homes and value with calibrated intervals.
+\item \textbf{Optimization and decision.} The optimizer finds the plan that maximizes the score within zoning and
+precedent and certifies it: optimal for areas of up to a few hundred parcels and for most districts, with a proven
+gap otherwise. Exact
+trade-off fronts show what each pillar costs in the others and how far today's land use lies inside the frontier, and
+a graph neural network trained on certified optima proposes plans at once. Resident, environmental, business,
+developer and fiscal interests vote on candidate plans under nine rules, and residents also vote block by block.
 \item \textbf{Official data for ten cities.} Existing use, plan and zoning for 4{,}995{,}208 parcels are on one
 schema, with a validated method to digitise plans published as vector PDF maps.
 \item \textbf{Empirical evaluation where data allow} (Sect.~\ref{sec:validation}): held-out and out-of-time tests of
-impacts, likelihood and projections, exhaustive checks of the searches, and the type of evidence behind each claim,
+impacts, likelihood and projections, exhaustive checks and certificates of the searches, and the type of evidence
+behind each claim,
 with design guidance drawn from the results.
 \end{enumerate}
 \textbf{Scope.} Impacts are evaluated in Manhattan only; elsewhere coefficients are national or regional. Zoning is
@@ -134,8 +142,11 @@ PlanArena attaches a test against observed data to each output.
 
 \paragraph{Optimization and collective decisions.} Location-allocation models site facilities and uses
 \citep{church1974,revelle2005}; multicriteria analysis and multi-objective optimization generate and rank land-use
-alternatives \citep{malczewski2006,rahman2021}. Recent work uses deep reinforcement learning
-\citep{zheng2023} and explicit stakeholder interests \citep{feng2024,lin2025}. Planning problems have no single correct
+alternatives \citep{malczewski2006,rahman2021}; integer programming solves allocation problems to proven optimality
+\citep{aerts2003}, and efficiency frontiers show what one objective costs in another \citep{polasky2008}. Recent work
+uses deep reinforcement learning \citep{zheng2023}, which offers no certificate, and explicit stakeholder interests
+\citep{feng2024,lin2025}. In exact optimization, learned models choose branches or propose partial solutions while the
+solver keeps its guarantee \citep{gasse2019,nair2020}. Planning problems have no single correct
 solution \citep{rittel1973}, so the rule that turns preferences into a choice matters. Bargaining \citep{nash1950} and
 voting rules \citep{schulze2011,brandt2016} have different properties, and bargaining has been combined with land
 reallocation \citep{hashemi2026}. Simulated votes are not participation \citep{arnstein1969}; PlanArena uses them
@@ -255,6 +266,10 @@ Runoff follows from surface coefficients, and value from the difference between 
 800 m, not along walking routes.
 \item \textbf{Ranges.} Every coefficient has a source and a status, and low and high variants give each indicator a
 sensitivity range. A range has no probability attached and is not a prediction interval.
+\item \textbf{Learned correction.} For homes and value, a gradient-boosted model of the engine's error, trained on
+observed changes, and conformalized quantile regression \citep{romano2019} give a corrected yield and a 90\%
+prediction interval for each parcel and use, shown beside the engine's in the parcel inspector; the engine's scores
+are unchanged (Sect.~\ref{sec:r-change}).
 \end{itemize}
 Indicator scores are per cent changes (totals) or percentage points (shares) against the scope's baseline, clipped to
 $\pm 100$; a pillar is the mean of its indicators, and the overall score a weighted mean of pillars with weights the
@@ -313,13 +328,28 @@ new use would yield in homes, jobs and assessed value}
 
 \paragraph{Optimizer.} The optimizer maximizes the overall score minus a penalty per conversion, under a budget of
 changes. The uses zoning permits are a hard constraint, existing homes and protected sites are kept, conversions
-without precedent are skipped, and candidates can be restricted to the parcels most likely to be redeveloped. Two
-searches are offered:
+without precedent are skipped, and candidates can be restricted to the parcels most likely to be redeveloped.
 \begin{itemize}
-\item iterated best response over first-order move estimates, with exact re-scoring of the best moves;
-\item NSGA-III \citep{deb2014}, which returns a Pareto set across the three pillars, re-scored exactly.
+\item \textbf{Fast search.} Iterated best response over first-order move estimates, with exact re-scoring of the best
+moves, gives a plan at once.
+\item \textbf{Exact search.} The score is stated as a mixed-integer linear program and solved by branch-and-bound
+\citep{huangfu2018}. Totals are linear in the choices. The five resident-weighted shares become one weighted mean
+whose numerator and denominator are linear after exact products of binary choices and bounded quantities
+\citep{mccormick1976}. Park access within a walk is a covering constraint \citep{church1974}, and land-use mix enters
+through tangents of the entropy. Every relaxation over-estimates the score, so the solver's bound is a certificate: no
+feasible plan scores higher. The plan is re-scored by the engine, and the model is tightened at the plan until bound
+and score agree (Online Resource 1, Sect.~S6).
+\item \textbf{Trade-offs.} Optimal plans for a grid of pillar weights, the plan that maximizes the weakest pillar and
+the $\varepsilon$-constraint method \citep{mavrotas2013} give the efficiency frontier \citep{polasky2008}, trade-off
+rates between pillars, and how far today's land use lies inside the frontier. NSGA-III \citep{deb2014} remains for
+fast exploration of a selection.
+\item \textbf{GNN policy.} A graph neural network (GraphSAGE; \citealt{hamilton2017}) trained on certified optima
+proposes a plan in milliseconds while a planner drags the trade-off, and starts the exact search
+\citep{nair2020}. Its plan is a preview; the plan reported is the exact one.
 \end{itemize}
-Both report the best plan found, not a proven optimum (Online Resource 1, Sect.~S6).
+In the Studio a click returns the fast plan, then the certified one; dragging a handle on a triangle of pillar weights
+moves the map along the trade-off; and a lasso around any area returns its optimal plan. A divider swiped across the
+map compares today's land use with the plan.
 
 \paragraph{Decision module.} Choices are contested \citep{rittel1973}, so the module shows how the chosen plan depends
 on the decision rule.
@@ -339,9 +369,10 @@ public support \citep{arnstein1969} (Figure~\ref{fig:optvote}).
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{Fig4}
-\caption{Optimizer and decision module for one Manhattan district. Left: the recommended plan, its change in each
-pillar and its conversions. Right: the simulated council's decision under Schulze's rule, whether the winner is a
-Condorcet winner with a double majority, and how many of the nine rules it wins}
+\caption{Optimizer and decision module in Manhattan. Left: the certified optimal plan of an area in East Harlem
+selected on the map, the trade-off triangle, the plan's change in each pillar and its conversions. Right: the
+simulated council's decision under Schulze's rule, whether the winner is a Condorcet winner with a double majority,
+and how many of the nine rules it wins}
 \label{fig:optvote}
 \end{figure}
 
@@ -363,7 +394,7 @@ module, which has no observed counterpart.
 \begin{itemize}
 \item \textbf{Time.} Predictions are trained on one period and tested on a later one; uncertainty comes from
 resampling spatial tiles \citep{kunsch1989}, never from random splits \citep{roberts2017}. The cross-city test uses
-seven cities with parcel histories (Table S12 in Online Resource 1).
+seven cities with parcel histories (Table S13 in Online Resource 1).
 \item \textbf{Development} is defined as each source records it: a new building or large floor-area increase (Los
 Angeles, Dallas, New York), a new building (Milwaukee), a change of use class between land-use inventories (Phoenix,
 San Diego), or a new-construction permit (Chicago). A building already on the starting record is never counted as new.
@@ -397,11 +428,13 @@ Component & Question & Data & Evidence & Section \\
 Existing conditions & Does the twin reproduce what is there? & LL84 energy, LEHD jobs, recorded homes & accounting & \ref{sec:r-existing} \\
 Planning calculations & Does it reproduce a review's projection from the review's own inputs? & Environmental impact statements (two rezonings) & accounting & \ref{sec:r-existing} \\
 Effects of change & Given an observed change, does it predict the effect? & MapPLUTO 2015 vs 2025, held-out folds & empirical & \ref{sec:r-change} \\
+Learned correction & Does learning lower the engine's error, and are its intervals calibrated? & The same held-out folds & empirical & \ref{sec:r-change} \\
 Likelihood & Does it rank lots that redevelop, and how many, forward in time? & Rolling origins 2016--2025 & empirical & \ref{sec:r-likely} \\
 Official layers & What do zoning and plans add, in other cities? & Seven city panels & empirical & \ref{sec:r-layers} \\
 Housing projections & Are projected homes close to what was built? & Four cities; three rezonings & empirical & \ref{sec:r-homes} \\
-Optimizer & How close is the best plan found to the best plan? & Exhaustive search; 12 districts & algorithmic & \ref{sec:r-opt} \\
-Pareto explorer & Does NSGA-III find the trade-off front? & Exhaustive enumeration of blocks & algorithmic & \ref{sec:r-opt} \\
+Exact optimizer & Is the plan optimal, or how far can it be from the optimum? & Exhaustive search of blocks; areas; 12 districts & algorithmic & \ref{sec:r-opt} \\
+Trade-off front & Are front plans Pareto-optimal, and what does each pillar cost? & Exhaustive enumeration of blocks; areas & algorithmic & \ref{sec:r-opt} \\
+GNN policy & How close is an instant plan to the optimum? & Certified optima of held-out areas & empirical & \ref{sec:r-opt} \\
 Realism & Are recommended changes plausible? & 2020 plans vs 2025 outcomes & empirical & \ref{sec:r-opt} \\
 Decision module & How does the choice depend on rule, seats and candidates? & Assumed utilities & illustrative & \ref{sec:r-dec} \\
 \bottomrule
@@ -447,6 +480,12 @@ Conversions to mixed use account for 70\% of the excess; commercial-to-mixed con
 28 homes per lot.
 \item \textbf{Jobs.} By census block, predicted job change does not correlate with the change in LEHD counts
 ($r = 0.05$): the engine has no skill for job change at this scale.
+\item \textbf{Learned correction} (Online Resource 1, Table~S7). On the same held-out lots, a
+gradient-boosted model of the engine's error, fitted on the selection lots, lowered the mean absolute error from
+12.5 to 10.6 homes per lot (total 1.47 to 1.32 times recorded) and lowered the
+error in value; for emissions it did not, and is not used. Conformal intervals with a nominal 90\% coverage contained
+the recorded change for 88\% of lots (homes), 85\% (value) and 98\% (emissions); the
+sensitivity ranges contained it for 66\%, 19\% and 38\%.
 \end{itemize}
 Access, mix, green cover and runoff have no after-change data, and the Studio marks them as not validated.
 
@@ -498,8 +537,8 @@ as forecasts of how many lots will redevelop.
 \subsection{What zoning and plans add, across seven cities}\label{sec:r-layers}
 
 Existing conditions alone rank developed lots with out-of-time AUC 0.824--0.911 in six cities, and
-0.571 in San Diego, whose one-year window recorded few changes (Table S13 in Online Resource 1;
-average precision in Table S15). Adding blocks:
+0.571 in San Diego, whose one-year window recorded few changes (Table S14 in Online Resource 1;
+average precision in Table S16). Adding blocks:
 \begin{itemize}
 \item \textbf{Context} adds the most: +0.021 to +0.116, significant in five cities
 (Table~\ref{tab:gains}, Figure~\ref{fig:gains}). Phoenix is the exception: its land-use series starts in 2022, so
@@ -525,7 +564,7 @@ is a change of class by definition, so the existing use is never right at class 
 \item \textbf{Plan class.} In Dallas it is right for 80\% of developed lots, against 61\%
 for zoning.
 \item \textbf{Transfer.} Models fitted on other cities predict worse than the city's own in four of five cities
-(Table S14 in Online Resource 1).
+(Table S15 in Online Resource 1).
 \end{itemize}
 
 \begin{table}[t]
@@ -643,7 +682,7 @@ SoHo/NoHo (2021) & 77 & 3 & 1{,}447 & 579 & 132 (8--296) & 134 (0--801) \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-\begin{minipage}{0.95\linewidth}\footnotesize Capacity is full build-out by the review's build year; pro-rated scales it linearly to 2025. The probability comes from a redevelopment model trained only on outcomes known by the adoption year; yield is the mean share of capacity homes that soft sites redeveloped in those training years added. Ranges are conditional on the probabilities (Supplement S5).\end{minipage}
+\begin{minipage}{0.95\linewidth}\footnotesize Capacity is full build-out by the review's build year; pro-rated scales it linearly to 2025. The probability comes from a redevelopment model trained only on outcomes known by the adoption year; yield is the mean share of capacity homes that soft sites redeveloped in those training years added. Ranges are conditional on the probabilities (Online Resource 1, Sect.~S5).\end{minipage}
 \end{table}
 
 \begin{figure}[t]
@@ -656,22 +695,47 @@ probability $\times$ capacity (with its 95\% range, conditional on the probabili
 
 \subsection{Optimizer and plausibility}\label{sec:r-opt}
 
-\paragraph{Optimality} (algorithmic verification). In 20 small areas (one tax block each) every plan with up
-to two changes was enumerated, and 15 had a plan better than no change. First-order search found the optimum
-in 14 of 15 of these, and with exact re-scoring in all 15 (median 0.51 s). At district
-scale no method guarantees an optimum, so methods are compared with the best plan any of them found
-(Table~\ref{tab:opt}): exact greedy search found it in all 12 districts but took a median 36.15 s;
-first-order search with re-scoring reached a median 95.7\% of it in 1.88 s, the speed used in
-the Studio.
+\paragraph{Optimality} (algorithmic verification).
+\begin{itemize}
+\item \textbf{Small areas.} In 20 tax blocks every plan with up to two changes was enumerated. The exact
+search returned the exhaustive optimum in all 20, with a bound never below it (median
+0.6 s); first-order search found it in 14 of 15 of the blocks with a plan better than no change,
+and with exact re-scoring in all 15.
+\item \textbf{Areas the size of a lasso selection.} In 30 random areas of 28--411
+parcels (27--323 eligible, a budget of 5\%), the exact search certified the optimum in
+29 within 120 s (median 3.2 s, at most 30 s). First-order
+search reached a median 100.0\% of the optimum and found it in 19 of 29
+areas; with re-scoring, 100.0\% and 21.
+\item \textbf{Districts.} With ten changes in each of the 12 districts and a limit of 3 hours,
+started from the best plan of the heuristics (Table~\ref{tab:opt}), the exact search certified the optimum in
+nine districts, in 5--35 minutes (Table~\ref{tab:exact-d}). In the other
+three the proven gap was 0.08\% (district 104), 12.4\% (district 101), 35.1\% (district 105). Where it certified, the exact greedy plan was usually already
+optimal, which only the certificate shows; it found a better plan than every heuristic in one district.
+Where gaps remain, a few conversions add tens of thousands of residents, whose dilution of access across the district
+weakens the relaxation.
+\end{itemize}
 
-\paragraph{Trade-off front.} On 10 tax blocks with 24{,}576--327{,}680 possible plans each, the NSGA-III
-explorer's front covered a median 100.0\% (minimum 98.6\%) of the hypervolume of the exhaustive
-front, against 96.4\% for random search with as many evaluations; on 10 smaller blocks scored
-exactly, it recovered the exact front. The test exposed terms missing from the first-order model, since added
-(Online Resource 1, Sect.~S6).
+\paragraph{Trade-off front.} In 10 random areas the exact front (pillar weights on a grid of step 0.25,
+and the balanced plan) had a median of 6 Pareto plans, with 100\% of its points certified, in
+143 s. On five small blocks enumerated exhaustively, 0 of its 20
+plans were dominated by any plan, and it found 19\% of the Pareto plans (weighted optima reach only the
+supported ones). The balanced plan raised every pillar by a median of 0.09 points at once: today's land use lies
+that far inside the frontier. 100\% of the front stayed non-dominated under the low and high coefficient
+variants. NSGA-III covered a median 100.0\% of the exhaustive front's hypervolume on 10 blocks with
+24{,}576--327{,}680 plans each (Online Resource 1, Sect.~S6).
 
-\paragraph{Plausibility} (Table~\ref{tab:realism}). Plans were recommended on the 2020 snapshot and compared with 2025,
-with the same number of recommended parcels in each setting and one objective.
+\paragraph{GNN policy} (held-out areas). On 80 areas in districts the network never saw, its plan (the
+network's most likely changes, scored exactly against the top first-order changes) reached a mean 98.8\% of
+the certified optimum, and the optimum itself in 68\% of areas, in 80 ms. First-order search reached
+98.7\% (75\%) in 220 ms, and with exact re-scoring 99.6\% (77\%) in
+945 ms. The network alone, without exact scoring, reached a median 97.8\% (mean
+85.7\%) in 11 ms. Started from the network's plan, the exact search took a median
+4.7 s, against 4.7 s from the first-order plan (20 areas): the network is a
+fast preview, not a faster route to the certificate.
+
+\paragraph{Plausibility} (Table~\ref{tab:realism}). Plans were recommended by the fast search on the 2020 snapshot of
+every district and compared with 2025, with the same number of recommended parcels in each setting and one objective.
+An optimal plan for the score is no more a forecast than these.
 \begin{itemize}
 \item \textbf{Precedent.} Without realism layers, 17\% of recommended changes had no precedent.
 \item \textbf{Redevelopment.} Recommended parcels were redeveloped by 2025 at 11\% without realism layers,
@@ -681,6 +745,10 @@ and 5.0\% of the likeliest fifth.
 \item \textbf{The cost.} The objective fell by 3\% with the precedent filter and 48\% with the
 likelihood layer: the filter removes implausible conversions at little cost, while restricting candidates to likely
 sites trades much of the objective for plausibility.
+\item \textbf{The cost, exactly.} In 11 random areas, requiring the changed parcels' mean five-year redevelopment
+probability to reach the 50th, 80th or 95th percentile of the area's eligible parcels bound in 1,
+3 and 6 areas and lowered the certified optimum by a mean 0.9\%, 1.7\% and
+7.0\% (at most 35\%; 92\% of the solves certified): a plausibility--benefit frontier.
 \end{itemize}
 
 \begin{table}[t]
@@ -701,6 +769,34 @@ simulated annealing & 93.6\% & 0 & 10.65 \\
 random restarts 50 & 65.5\% & 0 & 1.31 \\
 \bottomrule
 \end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Exact search at district scale (ten changes): the best plan's score, the proven upper bound on any plan's score and the gap, after a time limit, started from the best heuristic plan.}
+\label{tab:exact-d}
+\begin{tabular}{rrrrrrr}
+\toprule
+District & Eligible & Best $J$ & Bound & Gap & Certified & Seconds \\
+\midrule
+101 & 645 & 6.664 & 7.487 & 12.4\% & no & 10{,}767 \\
+102 & 1{,}179 & 9.819 & 9.819 & 0.01\% & yes & 1{,}256 \\
+103 & 3{,}382 & 3.760 & 3.761 & 0.01\% & yes & 2{,}076 \\
+104 & 2{,}782 & 10.823 & 10.831 & 0.08\% & no & 10{,}812 \\
+105 & 2{,}179 & 4.222 & 5.704 & 35.1\% & no & 10{,}427 \\
+106 & 2{,}217 & 6.015 & 6.016 & 0.01\% & yes & 1{,}355 \\
+107 & 1{,}159 & 19.022 & 19.022 & 0.00\% & yes & 291 \\
+108 & 3{,}486 & 4.483 & 4.484 & 0.01\% & yes & 446 \\
+109 & 1{,}567 & 2.579 & 2.579 & 0.00\% & yes & 895 \\
+110 & 2{,}867 & 4.406 & 4.407 & 0.01\% & yes & 1{,}606 \\
+111 & 2{,}663 & 3.120 & 3.120 & 0.01\% & yes & 578 \\
+112 & 2{,}348 & 5.255 & 5.256 & 0.00\% & yes & 906 \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize $J$: overall score minus the conversion penalty. Gap: (bound $-$ best)/best.\end{minipage}
 \end{table}
 
 \begin{table}[t]
@@ -748,7 +844,7 @@ candidates and how it changes under others.
 \begin{itemize}
 \item its effects on 11 indicators, with ranges;
 \item whether zoning and the plan allow it, and how likely it is;
-\item what the optimizer would recommend instead;
+\item the optimal plan for an area, with a certificate, and what each pillar costs in the others;
 \item how the choice depends on the decision rule.
 \end{itemize}
 Each output has a stated test and type of evidence (Table~\ref{tab:design}), and untested indicators are
@@ -764,8 +860,12 @@ upzoning's varying short-run effects \citep{freemark2020,dong2024,greenaway2023}
 \citep{laurian2004,berke2006}.
 \item \textbf{Report a trend first, and likelihood-weighted projections beside capacity.} Capacity overstates
 near-term housing by orders of magnitude. A trend ranked districts better than build-out-based projections in all four cities, and likelihood $\times$ yield as well as the trend in three of four. Close totals can hide large errors by area.
-\item \textbf{Constrain optimization by plausibility and show the cost.} Realism layers change recommendations and
-lower the objective; recommended sites that redevelop rarely become the recommended use.
+\item \textbf{Certify recommendations, and keep optimal and likely apart.} For areas of a few hundred parcels the
+optimum can be proven in seconds to minutes. First-order search found it in 19 of 29
+areas, but only the certificate says which ones; it makes a recommendation checkable. But optimal for the score is not likely: realism layers change recommendations and lower the
+objective, and recommended sites that redevelop rarely become the recommended use.
+\item \textbf{Measure trade-offs on the frontier.} Today's land use lay inside the frontier on every pillar at once,
+and the rates between pillars change along it; a single weighted score hides both.
 \item \textbf{Report decisions with their rule.} No rule agreed with all the others in any district of the simulated scenario.
 \end{enumerate}
 
@@ -781,11 +881,12 @@ against recent rates.
 Dallas's undated layers may include post-decision information.
 \item \textbf{Representation.} Zoning is reduced to use permissions and maximum floor-area ratios (no height, bulk,
 parking or bonus rules), access to straight-line distance, and uncertainty to sensitivity ranges, which are not
-prediction intervals.
+prediction intervals; calibrated intervals exist only for homes and value, from Manhattan changes.
 \item \textbf{Distribution.} Indicators are averages over a scope. Who gains and who loses within it (by income,
 tenure or race), displacement and the effects on future residents are not measured.
-\item \textbf{Decisions.} The optimizer is heuristic, and the votes rest on assumed utilities and one seat per
-interest, not on elicited preferences or representation.
+\item \textbf{Decisions.} Optimality is certified for the model's score, for areas of up to a few hundred parcels
+and nine of 12 districts; for the others the exact search proves a gap, not an optimum. The GNN policy has no guarantee of its own. The votes rest
+on assumed utilities and one seat per interest, not on elicited preferences or representation.
 \item \textbf{Not studied.} Usability with planners is not evaluated, and causal effects of zoning or plans are not
 estimated.
 \end{itemize}
@@ -795,15 +896,18 @@ estimated.
 Land-use and location decisions have multidimensional, spatially interacting and uncertain effects, yet they are
 decided at hearings where those effects are summarised in a few indicators and residents do not vote. PlanArena, a
 land-use optimizer, measures the effects of any parcel-level change on social, economic and environmental
-indicators, with what is permitted, planned, likely and recommended, and turns stakeholder interests into votes. It runs on official data for ten large US cities
-at interactive speed, and each component has a stated test, empirical where data allow. The tests also shape the
+indicators, with what is permitted, planned and likely, finds and certifies the optimal plan of an area, measures
+the trade-offs between pillars on the exact frontier, and turns stakeholder interests into votes. Machine learning
+corrects the engine's yields with calibrated intervals and proposes optimal plans at once. It runs on official data
+for ten large US cities at interactive speed, and each component has a stated test, empirical where data allow. The tests also shape the
 design:
 \begin{itemize}
 \item once existing conditions and context are known, regulatory layers mainly inform what development becomes and
 how much it could hold;
 \item a five-year trend ranked districts better than build-out projections, and likelihood-weighted totals were far
 closer to what was built than capacity, partly through errors that cancel;
-\item recommendations change when they must be plausible, at a measured cost, and the chosen plan changes with the
+\item an exact search proves the optimal plan of an area in seconds where heuristics fall short, but optimal is not
+likely: recommendations change when they must be plausible, at a measured cost, and the chosen plan changes with the
 rule and the candidates.
 \end{itemize}
 Code, data manifest and results are released with the paper, so the system and its tests extend to other cities.
@@ -868,6 +972,8 @@ be read directly.
 Abolhasani, S., Eudave, R. R., \& Hersperger, A. M. (2026). Toward policy-informed 3D urban land-use simulations by leveraging urban planning regulations: Case studies in Zurich and Copenhagen. {\itshape Land Use Policy}, {\itshape 170}, 108189. \url{https://doi.org/10.1016/j.landusepol.2026.108189}
 \bibitem[{Abolhasani et~al.}(2022){Abolhasani, Taleai, Lakes}]{abolhasani2022}
 Abolhasani, S., Taleai, M., \& Lakes, T. (2022). A collective decision-making framework for simulating urban land-use planning: An application of game theory with event-driven actors. {\itshape Computers, Environment and Urban Systems}, {\itshape 94}, 101795. \url{https://doi.org/10.1016/j.compenvurbsys.2022.101795}
+\bibitem[{Aerts et~al.}(2003){Aerts, Eisinger, Heuvelink, Stewart}]{aerts2003}
+Aerts, J. C. J. H., Eisinger, E., Heuvelink, G. B. M., \& Stewart, T. J. (2003). Using linear integer programming for multi-site land-use allocation. {\itshape Geographical Analysis}, {\itshape 35}(2), 148–169. \url{https://doi.org/10.1353/geo.2003.0001}
 \bibitem[{Arnstein}(1969){Arnstein}]{arnstein1969}
 Arnstein, S. R. (1969). A Ladder Of Citizen Participation. {\itshape Journal of the American Institute of Planners}, {\itshape 35}(4), 216–224. \url{https://doi.org/10.1080/01944366908977225}
 \bibitem[{Azadi et~al.}(2025){Azadi, Kasraian, Nourian, van Wesemael}]{azadi2025}
@@ -928,14 +1034,20 @@ Freemark, Y. (2020). Upzoning Chicago: Impacts of a Zoning Reform on Property Va
 Fung, A. (2006). Varieties of Participation in Complex Governance. {\itshape Public Administration Review}, {\itshape 66}(s1), 66–75. \url{https://doi.org/10.1111/j.1540-6210.2006.00667.x}
 \bibitem[{Gabbe}(2018){Gabbe}]{gabbe2018}
 Gabbe, C. J. (2018). Why Are Regulations Changed? A Parcel Analysis of Upzoning in Los Angeles. {\itshape Journal of Planning Education and Research}, {\itshape 38}(3), 289–300. \url{https://doi.org/10.1177/0739456x17696034}
+\bibitem[{Gasse et~al.}(2019){Gasse, Ch\'etelat, Ferroni, Charlin, Lodi}]{gasse2019}
+Gasse, M., Ch\'etelat, D., Ferroni, N., Charlin, L., \& Lodi, A. (2019). Exact combinatorial optimization with graph convolutional neural networks. In {\itshape Advances in Neural Information Processing Systems} (Vol. 32). \url{https://arxiv.org/abs/1906.01629}
 \bibitem[{Geertman \& Stillwell}(2020){Geertman, Stillwell}]{geertman2020}
 Geertman, S., \& Stillwell, J. (2020). Planning support science: Developments and challenges. {\itshape Environment and Planning B: Urban Analytics and City Science}, {\itshape 47}(8), 1326–1342. \url{https://doi.org/10.1177/2399808320936277}
 \bibitem[{Greenaway-McGrevy \& Phillips}(2023){Greenaway-McGrevy, Phillips}]{greenaway2023}
 Greenaway-McGrevy, R., \& Phillips, P. C. B. (2023). The impact of upzoning on housing construction in Auckland. {\itshape Journal of Urban Economics}, {\itshape 136}, 103555. \url{https://doi.org/10.1016/j.jue.2023.103555}
+\bibitem[{Hamilton et~al.}(2017){Hamilton, Ying, Leskovec}]{hamilton2017}
+Hamilton, W. L., Ying, R., \& Leskovec, J. (2017). Inductive representation learning on large graphs. In {\itshape Advances in Neural Information Processing Systems} (Vol. 30). \url{https://arxiv.org/abs/1706.02216}
 \bibitem[{Hashemi et~al.}(2026){Hashemi, Taleai, Abolhasani}]{hashemi2026}
 Hashemi, V., Taleai, M., \& Abolhasani, S. (2026). Negotiation‐Aware Optimization Approach for Multi‐Stakeholder Agricultural Land Reallocation: A Case Study in Iran. {\itshape Transactions in GIS}, {\itshape 30}(5). \url{https://doi.org/10.1111/tgis.70331}
 \bibitem[{Hersperger et~al.}(2018){Hersperger, Oliveira, Pagliarin, Palka, Verburg, Bolliger}]{hersperger2018}
 Hersperger, A. M., Oliveira, E., Pagliarin, S., Palka, G., Verburg, P., Bolliger, J., \& Grădinaru, S. (2018). Urban land-use change: The role of strategic spatial planning. {\itshape Global Environmental Change}, {\itshape 51}, 32–42. \url{https://doi.org/10.1016/j.gloenvcha.2018.05.001}
+\bibitem[{Huangfu \& Hall}(2018){Huangfu, Hall}]{huangfu2018}
+Huangfu, Q., \& Hall, J. A. J. (2018). Parallelizing the dual revised simplex method. {\itshape Mathematical Programming Computation}, {\itshape 10}(1), 119–142. \url{https://doi.org/10.1007/s12532-017-0130-5}
 \bibitem[{Innes \& Booher}(2004){Innes, Booher}]{innes2004}
 Innes, J. E., \& Booher, D. E. (2004). Reframing public participation: strategies for the 21st century. {\itshape Planning Theory \& Practice}, {\itshape 5}(4), 419–436. \url{https://doi.org/10.1080/1464935042000293170}
 \bibitem[{Klosterman}(1999){Klosterman}]{klosterman1999}
@@ -964,10 +1076,16 @@ Luo, J., Liu, P., Kong, X., Shen, J., Wu, Q., \& Da Xu. (2025). Urban digital tw
 Malczewski, J. (2006). GIS‐based multicriteria decision analysis: a survey of the literature. {\itshape International Journal of Geographical Information Science}, {\itshape 20}(7), 703–726. \url{https://doi.org/10.1080/13658810600661508}
 \bibitem[{Maricopa County Assessor}(n.d.){Maricopa County Assessor}]{data_maricopa}
 Maricopa County Assessor. (n.d.). {\itshape Parcels (property use codes); with MAG Existing Land Use 2026 and City of Phoenix General Plan and zoning} [Data set]. Retrieved October 2026, from \url{https://maps.phoenix.gov/pub/rest/services/Public/COUNTY_PARCELS/MapServer/3}
+\bibitem[{Mavrotas \& Florios}(2013){Mavrotas, Florios}]{mavrotas2013}
+Mavrotas, G., \& Florios, K. (2013). An improved version of the augmented ε-constraint method (AUGMECON2) for finding the exact Pareto set in multi-objective integer programming problems. {\itshape Applied Mathematics and Computation}, {\itshape 219}(18), 9652–9669. \url{https://doi.org/10.1016/j.amc.2013.03.002}
+\bibitem[{McCormick}(1976){McCormick}]{mccormick1976}
+McCormick, G. P. (1976). Computability of global solutions to factorable nonconvex programs: Part I --- Convex underestimating problems. {\itshape Mathematical Programming}, {\itshape 10}(1), 147–175. \url{https://doi.org/10.1007/BF01580665}
 \bibitem[{Meyer \& Pebesma}(2021){Meyer, Pebesma}]{meyer2021}
 Meyer, H., \& Pebesma, E. (2021). Predicting into unknown space? Estimating the area of applicability of spatial prediction models. {\itshape Methods in Ecology and Evolution}, {\itshape 12}(9), 1620–1633. \url{https://doi.org/10.1111/2041-210x.13650}
 \bibitem[{Milleville et~al.}(2022){Milleville, Verstockt, Van de Weghe}]{milleville2022}
 Milleville, K., Verstockt, S., \& Van de Weghe, N. (2022). Automatic Georeferencing of Topographic Raster Maps. {\itshape ISPRS International Journal of Geo-Information}, {\itshape 11}(7), 387. \url{https://doi.org/10.3390/ijgi11070387}
+\bibitem[{Nair et~al.}(2020){Nair, Bartunov, Gimeno, von Glehn, Lichocki, Lobov}]{nair2020}
+Nair, V., Bartunov, S., Gimeno, F., von Glehn, I., Lichocki, P., Lobov, I., O'Donoghue, B., Sonnerat, N., Tjandraatmadja, C., Wang, P., Addanki, R., Hapuarachchi, T., Keck, T., Keeling, J., Kohli, P., Ktena, I., Li, Y., Vinyals, O., \& Zwols, Y. (2020). Solving mixed integer programs using neural networks [Preprint]. arXiv. \url{https://arxiv.org/abs/2012.13349}
 \bibitem[{Nash}(1950){Nash}]{nash1950}
 Nash, J. F. (1950). The Bargaining Problem. {\itshape Econometrica}, {\itshape 18}(2), 155. \url{https://doi.org/10.2307/1907266}
 \bibitem[{New York City Department of Buildings}(2016){New York City Department of Buildings}]{data_ll84_2015}
@@ -988,6 +1106,8 @@ Pelzer, P. (2017). Usefulness of planning support systems: A conceptual framewor
 Philadelphia City Planning Commission. (n.d.). {\itshape Philadelphia2035 district plans} [Data set]. Retrieved October 2026, from \url{https://www.phila2035.org/plan}
 \bibitem[{Ploton et~al.}(2020){Ploton, Mortier, Réjou-Méchain, Barbier, Picard, Rossi}]{ploton2020}
 Ploton, P., Mortier, F., Réjou-Méchain, M., Barbier, N., Picard, N., Rossi, V., Dormann, C., Cornu, G., Viennois, G., Bayol, N., Lyapustin, A., Gourlet-Fleury, S., \& Pélissier, R. (2020). Spatial validation reveals poor predictive performance of large-scale ecological mapping models. {\itshape Nature Communications}, {\itshape 11}(1). \url{https://doi.org/10.1038/s41467-020-18321-y}
+\bibitem[{Polasky et~al.}(2008){Polasky, Nelson, Camm, Csuti, Fackler, Lonsdorf}]{polasky2008}
+Polasky, S., Nelson, E., Camm, J., Csuti, B., Fackler, P., Lonsdorf, E., Montgomery, C., White, D., Arthur, J., Garber-Yonts, B., Haight, R., Kagan, J., Starfield, A., \& Tobalske, C. (2008). Where to put things? Spatial land management to sustain biodiversity and economic returns. {\itshape Biological Conservation}, {\itshape 141}(6), 1505–1524. \url{https://doi.org/10.1016/j.biocon.2008.03.022}
 \bibitem[{Pontius et~al.}(2008){Pontius, Boersma, Castella, Clarke, de Nijs, Dietzel}]{pontius2008}
 Pontius, R. G., Boersma, W., Castella, J.-C., Clarke, K., de Nijs, T., Dietzel, C., Duan, Z., Fotsing, E., Goldstein, N., Kok, K., Koomen, E., Lippitt, C. D., McConnell, W., Mohd Sood, A., Pijanowski, B., Pithadia, S., Sweeney, S., Trung, T. N., Veldkamp, A. T., \& Verburg, P. H. (2008). Comparing the input, output, and validation maps for several models of land change. {\itshape The Annals of Regional Science}, {\itshape 42}(1), 11–37. \url{https://doi.org/10.1007/s00168-007-0138-2}
 \bibitem[{Pontius \& Millones}(2011){Pontius, Millones}]{pontius2011}
@@ -1002,6 +1122,8 @@ ReVelle, C. S., \& Eiselt, H. A. (2005). Location analysis: A synthesis and surv
 Rittel, H. W. J., \& Webber, M. M. (1973). Dilemmas in a general theory of planning. {\itshape Policy Sciences}, {\itshape 4}(2), 155–169. \url{https://doi.org/10.1007/bf01405730}
 \bibitem[{Roberts et~al.}(2017){Roberts, Bahn, Ciuti, Boyce, Elith, Guillera‐Arroita}]{roberts2017}
 Roberts, D. R., Bahn, V., Ciuti, S., Boyce, M. S., Elith, J., Guillera‐Arroita, G., Hauenstein, S., Lahoz‐Monfort, J. J., Schröder, B., Thuiller, W., Warton, D. I., Wintle, B. A., Hartig, F., \& Dormann, C. F. (2017). Cross‐validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure. {\itshape Ecography}, {\itshape 40}(8), 913–929. \url{https://doi.org/10.1111/ecog.02881}
+\bibitem[{Romano et~al.}(2019){Romano, Patterson, Cand\`es}]{romano2019}
+Romano, Y., Patterson, E., \& Cand\`es, E. J. (2019). Conformalized quantile regression. In {\itshape Advances in Neural Information Processing Systems} (Vol. 32). \url{https://arxiv.org/abs/1905.03222}
 \bibitem[{Rosenthal \& Helsley}(1994){Rosenthal, Helsley}]{rosenthal1994}
 Rosenthal, S. S., \& Helsley, R. W. (1994). Redevelopment and the Urban Land Price Gradient. {\itshape Journal of Urban Economics}, {\itshape 35}(2), 182–200. \url{https://doi.org/10.1006/juec.1994.1012}
 \bibitem[{Saltelli et~al.}(2019){Saltelli, Aleksankina, Becker, Fennell, Ferretti, Holst}]{saltelli2019}

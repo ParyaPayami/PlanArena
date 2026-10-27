@@ -151,9 +151,14 @@ def entry(e: dict) -> tuple[list, str, str, str]:
         body = f"{_end(title)} {src}.{link}"
     elif typ == "book":
         body = f"{{\\itshape {_end(title)}}} {_end(_strip_braces(_clean(e.get('publisher', ''))))}{link}"
+    elif typ == "misc" and e.get("eprint"):  # a preprint
+        body = f"{title.rstrip('.')} [Preprint]. arXiv.{link}"
     else:  # inproceedings / incollection
-        where = f"In {{\\itshape {_strip_braces(_clean(e.get('booktitle', '')))}}}" + (f" (pp. {pages})" if pages else "")
-        body = f"{_end(title)} {where}. {_end(_strip_braces(_clean(e.get('publisher', ''))))}{link}"
+        vol = _clean(e.get("volume", ""))
+        paren = ", ".join(x for x in ((f"Vol. {vol}" if vol else ""), (f"pp. {pages}" if pages else "")) if x)
+        where = f"In {{\\itshape {_strip_braces(_clean(e.get('booktitle', '')))}}}" + (f" ({paren})" if paren else "")
+        pub = _strip_braces(_clean(e.get("publisher", "")))
+        body = f"{_end(title)} {where}." + (f" {_end(pub)}" if pub else "") + link
     return ns, year, title, body, *([who] if who else [])
 
 

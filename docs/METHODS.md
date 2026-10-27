@@ -130,7 +130,42 @@ The form with the smaller bias and error on observed change is the default. Its 
 
 **Realism at equal counts** (`planarena/models/ablate_recs.py`). The three realism settings are rerun with, in each district, the smallest count any setting recommended there, and scored with one objective.
 
-**What none of this shows.** A global optimum at district or city scale. Results are "best plan found".
+**What none of this shows.** A global optimum. The heuristics report the best plan found; the exact search below
+certifies it or bounds the gap.
+
+**Exact search** (`planarena/optimize/exact.py`, tests in `planarena/optimize/exact_test.py`). The same J as a
+mixed-integer linear program solved by HiGHS, in changes from the start plan:
+- **Totals** are linear in the choices, and the ±100 clip is exact.
+- **Shares.** The five resident-weighted shares become one weighted mean (or one per pillar) with an exact
+  `delta x D = N'` relation, using McCormick products with binaries. Residents are split into intervals of ratio 1.05.
+- **Access per 50 m cell:**
+  - park access is a covering constraint plus a cover inequality;
+  - services and facility adequacy use a product of the access change and the residents change within the radius;
+  - green cover is a ratio constraint;
+  - land-use mix uses Gibbs-inequality tangents of the entropy.
+- **Products** are exact for the largest and the active pairs, with sign-split McCormick envelopes for the rest.
+- **Tightening:** interval-aware caps on access and Fannes–Audenaert ranges for mix.
+
+Every relaxation over-estimates J, so the solver's bound is a certificate. With a plan fixed, the model equals the
+engine's score (`tests/test_exact.py`).
+
+**Exact trade-offs** (`planarena/optimize/frontier.py`):
+- weighted optima on a simplex grid;
+- the max-min (balanced) plan, whose weakest pillar is the efficiency gap of today's land use;
+- AUGMECON2 ε-constraint plans;
+- trade-off rates along each edge of the weight simplex;
+- robustness under the low/high coefficient variants.
+
+**Plausibility floor.** The changed parcels' mean five-year redevelopment probability is at least a set value. It is a
+linear constraint in the exact search, and the plausibility–benefit frontier comes from it.
+
+**GNN policy** (`planarena/models/policy.py`). GraphSAGE trained on certified optima of random areas, tested on
+held-out districts. Its plan is the best, by exact score, of the network's likely changes and the top first-order
+changes.
+
+**Learned correction** (`planarena/models/yield_ml.py`). LightGBM of the engine's error in homes and value with
+conformal 90% intervals, tested on the held-out lots of the impact test. It is adopted where it lowers held-out error
+and bias, and shown in the parcel inspector.
 
 ## 6. Cost of fragmented control (heuristic, not a formal price of anarchy)
 

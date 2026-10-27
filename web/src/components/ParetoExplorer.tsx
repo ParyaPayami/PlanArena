@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { api } from "../api";
+import { useRef, useState } from "react";
+import { api, type ExactFront } from "../api";
 import { useStore } from "../store";
 import { fmtScore, PILLAR_COLOR } from "../format";
 import type { ParetoResult } from "../types";
@@ -14,6 +14,37 @@ export default function ParetoExplorer() {
   const [pick, setPick] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [seed, setSeed] = useState(42);
+  const [exact, setExact] = useState<ExactFront | null>(null);
+  const [busyExact, setBusyExact] = useState(false);
+  const dragging = useRef(false);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const runExact = async () => {
+    if (!selected.size) return notify("Select up to 300 parcels first", "bad");
+    if (selected.size > 300) return notify("The exact front handles up to 300 parcels", "bad");
+    setBusyExact(true);
+    try {
+      const x = await api.frontier([...selected], useStore.getState().changes());
+      setExact(x);
+      // show the exact front in the same plot, with the balanced plan and each pillar's best plan as presets
+      const front = x.front.map((f) => ({ ...f, changes: f.changes }));
+      const best = (p: string) => front.reduce((bi, f, i) => (f.pillars[p] > front[bi].pillars[p] ? i : bi), 0);
+      const bal = Math.max(0, front.findIndex((f) => f.balanced));
+      const presets = [
+        { name: "Balanced (knee)", weights: {}, index: bal },
+        { name: "Best social", weights: {}, index: best("social") },
+        { name: "Best economic", weights: {}, index: best("economic") },
+        { name: "Best environmental", weights: {}, index: best("environmental") },
+      ];
+      setRes({ algorithm: "exact", seed: 0, generations: 0, n_parcels: selected.size, n_free: 0, front: front as never, presets,
+               note: `Exact: ${Math.round(100 * x.certified_share)}% of the optimal plans certified, ${x.seconds.toFixed(0)} s.` });
+      setPick(bal);
+      if (front.length) setPreview({ label: "Balanced plan (exact)", changes: front[bal].changes });
+    } catch (e) {
+      notify(String(e), "bad");
+    } finally {
+      setBusyExact(false);
+    }
+  };
 
   const run = async () => {
     if (!selected.size) return notify("Select up to 300 parcels first", "bad");
@@ -21,6 +52,7 @@ export default function ParetoExplorer() {
     setBusy(true);
     try {
       const r = await api.pareto([...selected], useStore.getState().changes(), seed);
+      setExact(null);
       setRes(r);
       setPick(r.presets[0]?.index ?? 0);
       if (r.front.length) setPreview({ label: "Pareto plan", changes: r.front[r.presets[0]?.index ?? 0].changes });
@@ -49,7 +81,27 @@ export default function ParetoExplorer() {
     const sx = (v: number) => P + ((v - x0) / (x1 - x0 || 1)) * (W - P * 1.5);
     const sy = (v: number) => H - P - ((v - y0) / (y1 - y0 || 1)) * (H - P * 1.6);
     plot = (
-      <svg viewBox={`0 0 ${W} ${H}`} className="pareto-plot" role="img" aria-label="Pareto front">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="pareto-plot"
+        role="img"
+        aria-label="Pareto front: drag across it to move between optimal plans"
+        onPointerDown={() => (dragging.current = true)}
+        onPointerUp={() => (dragging.current = false)}
+        onPointerLeave={() => (dragging.current = false)}
+        onPointerMove={(ev) => {
+          if (!dragging.current || !svgRef.current) return;
+          const r = svgRef.current.getBoundingClientRect();
+          const mx = ((ev.clientX - r.left) / r.width) * W, my = ((ev.clientY - r.top) / r.height) * H;
+          let bk = 0, bd = Infinity;
+          res.front.forEach((f, k) => {
+            const dx = sx(f.pillars.social) - mx, dy = sy(f.pillars.environmental) - my;
+            if (dx * dx + dy * dy < bd) { bd = dx * dx + dy * dy; bk = k; }
+          });
+          if (bk !== pick) choose(bk);
+        }}
+      >
         <line x1={sx(0)} x2={sx(0)} y1={P / 2} y2={H - P} className="axis0" />
         <line y1={sy(0)} y2={sy(0)} x1={P} x2={W - P / 2} className="axis0" />
         <text x={W / 2} y={H - 6} className="axis-label" fill={PILLAR_COLOR.social}>Social score →</text>
@@ -78,10 +130,11 @@ export default function ParetoExplorer() {
   const sel = res && pick !== null ? res.front[pick] : null;
   return (
     <div className="card mt">
-      <div className="eyebrow">Trade-off explorer (NSGA-III)</div>
+      <div className="eyebrow">Trade-off explorer {res?.algorithm === "exact" ? "(exact)" : "(NSGA-III)"}</div>
       <div className="muted small">
-        Finds the Pareto front of plans for the selected parcels: no plan on it can improve one pillar without losing
-        another. Every point is re-scored with the full engine.
+        The Pareto front of plans for the selected parcels: no plan on it can improve one pillar without losing
+        another. NSGA-III explores it in seconds; the exact front solves each point to a certified optimum. Drag
+        across the chart to move between plans.
       </div>
       <div className="row gap">
         <button className="primary" disabled={busy || !selected.size} onClick={run}>
@@ -91,6 +144,34 @@ export default function ParetoExplorer() {
           seed <input className="seed" type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value))} />
         </label>
       </div>
+      <button className="wide mt" disabled={busyExact || !selected.size} onClick={runExact}>
+        {busyExact ? "Solving each point exactly…" : "Exact front and trade-off rates (about a minute)"}
+      </button>
+      {exact && (
+        <div className="small mt">
+          {exact.balanced.efficiency_gap > 0.005 ? (
+            <>
+              Every pillar can rise by <b>{exact.balanced.efficiency_gap.toFixed(2)}</b> points at once over today’s land
+              use (the balanced plan: how far today sits inside the front).
+            </>
+          ) : (
+            <>No plan raises every pillar at once here: today’s land use is already on the front for at least one pillar.</>
+          )}{" "}
+          {Object.entries(exact.rates).map(([k, steps]) => {
+            if (!steps.length) return null;
+            const [a, b] = k.split("-");
+            const v = Number(Object.entries(steps[0]).find(([kk]) => kk.includes("_per_"))?.[1] ?? NaN);
+            return Number.isFinite(v) ? (
+              <span key={k} className="muted">
+                {" "}· from the best {a} plan, giving up one {a} point gains {Math.abs(v).toFixed(2)} {b}
+              </span>
+            ) : null;
+          })}
+          {exact.robust_share !== undefined && (
+            <span className="muted"> · {Math.round(100 * exact.robust_share)}% of the front stays non-dominated under the low and high coefficients.</span>
+          )}
+        </div>
+      )}
       {res?.note && <div className="muted small">{res.note}</div>}
       {plot}
       {res && res.front.length > 0 && (

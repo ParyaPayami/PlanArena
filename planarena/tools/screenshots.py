@@ -7,7 +7,7 @@ saves PNGs at twice screen resolution to docs/figures/:
                     impact scoreboard
   ui_layers.png     Dallas: the adopted plan layer and the inspector of a vacant or parking lot the plan designates
                     for homes or mixed use (existing use, plan, zoning, what each new use would yield)
-  ui_optimizer.png  Manhattan: the optimizer's recommended plan for a district
+  ui_optimizer.png  Manhattan: the certified optimal plan of an area in East Harlem, with the trade-off triangle
   ui_vote.png       Manhattan: the simulated stakeholders' vote on the candidate plans
 and three crops that stay legible in print: ui_impact_crop.png (map and scoreboard), ui_inspector.png (map and
 inspector) and ui_optimizer_vote.png (the optimizer and vote panels side by side).
@@ -135,14 +135,26 @@ async def run(base: str, chrome_port: int) -> None:
         await p.settle(8)
         await p.shot("ui_impact.png")
 
-        # 3. Manhattan: the optimizer's recommendation for the default district
+        # 3. Manhattan: the certified optimal plan of an area in East Harlem (the parcels within 250 m of the
+        #    centre of the scene-1 lots), from "Optimize this area"
         await p.js(f"{S}.reset(); {S}.clearSelection(); {S}.setTab('ai');")
         await asyncio.sleep(1)
-        await p.click("Find a recommended plan")
-        await p.until(f"{S}.preview", 300, "optimizer result")
-        await p.js(f"""(() => {{ const s = {S}, d = s.data; let x = 0, y = 0, m = 0;
-            for (let i = 0; i < d.n; i++) if (d.cd[i] === 103) {{ x += d.lon[i]; y += d.lat[i]; m++; }}
-            s.flyTo(x / m, y / m, 14.6); }})()""")
+        await p.js(f"""(() => {{ const s = {S}, d = s.data, k = s.useKeys, prk = k.indexOf('prk'), vac = k.indexOf('vac');
+            const lots = [];
+            for (let i = 0; i < d.n; i++) if (d.cd[i] === 111 && (d.baseUse[i] === prk || d.baseUse[i] === vac)) lots.push(i);
+            let x = 0, y = 0; for (const i of lots.slice(0, 30)) {{ x += d.lon[i]; y += d.lat[i]; }}
+            x /= Math.min(30, lots.length); y /= Math.min(30, lots.length);
+            const m = 111320, area = [];
+            for (let i = 0; i < d.n; i++) {{
+              const dx = (d.lon[i] - x) * m * Math.cos(y * Math.PI / 180), dy = (d.lat[i] - y) * m;
+              if (dx * dx + dy * dy <= 250 * 250) area.push(i); }}
+            s.selectMany(area, false);
+            s.flyTo(x, y, 15.6);
+            s.requestOptimize();
+            return area.length; }})()""")
+        await p.until("document.querySelector('.cert') && /^(✓|Within)/.test(document.querySelector('.cert').textContent)",
+                      600, "certified optimum")
+        await p.js("document.querySelector('.cert').scrollIntoView({block: 'center'})")
         await p.settle(8)
         await p.shot("ui_optimizer.png")
 

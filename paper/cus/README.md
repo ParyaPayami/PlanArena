@@ -1,4 +1,4 @@
-# Computational Urban Science submission (version 1.2)
+# Computational Urban Science submission (version 1.3)
 
 Built by `python -I -m planarena.paper` from `results/` and the `.tex.in` templates here. Do not edit the `.tex` files; edit the templates. The original paper (`paper/paper.tex.in`, v1.1) is unchanged.
 
@@ -10,7 +10,17 @@ Built by `python -I -m planarena.paper` from `results/` and the `.tex.in` templa
 | Figures | `figures/Fig1.pdf` (architecture), `Fig2–4.png` (Studio), `Fig5–6.eps`/`.pdf` (charts); `ESM_Fig1–2` belong to Online Resource 1 |
 | Cover letter | `cover_letter.md` (draft) |
 
-What this version changes for the journal:
+Version 1.3 adds the exact, learning-assisted optimizer:
+- **Exact search** (`planarena/optimize/exact.py`): the engine's score as a mixed-integer program with a certificate.
+  It is optimal for areas of a few hundred parcels; districts get a proven gap.
+- **Exact trade-offs** (`frontier.py`): the efficiency frontier, trade-off rates and the efficiency gap.
+- **GNN policy** (`planarena/models/policy.py`) trained on certified optima.
+- **Learned correction with conformal intervals** (`planarena/models/yield_ml.py`).
+- **Studio:** a certificate badge, a trade-off triangle, swipe-to-compare, "Optimize this area" and the exact front.
+- **Paper:** a new title, abstract, optimizer methods and results, Online Resource 1 Sect. S4 and S6, and ten new
+  references.
+
+What version 1.2 changed for the journal:
 - **Double-blind:** no author in the manuscript or Online Resource 1, and the code linked through an anonymised mirror.
 - **Citations:** author–year in the text, with an alphabetical APA 7 reference list and DOI links (`planarena/apa.py`).
 - **Datasets:** cited in the references (`data_refs.yaml`).
@@ -23,6 +33,9 @@ What this version changes for the journal:
 - **Links:** the online Studio and game.
 
 **Before submitting (author):**
+0. **New references.** Read the ten references added in version 1.3 and fill `read_by` and `date_read` in
+   `docs/citation_log.csv`: aerts2003, mccormick1976, mavrotas2013, polasky2008, huangfu2018, audenaert2007,
+   romano2019, hamilton2017, gasse2019 and nair2020. Each passes `check_refs` (DOI or arXiv record).
 1. **Anonymised mirror.** The branch `cus-review` is the anonymised copy for reviewers. It has no PDFs, no title page or cover letter, and no name, affiliation or user name. It is built by `python -I -m planarena.tools.review_copy`; after any change on main, rerun it and push with `git push origin cus-review`. At https://anonymous.4open.science, sign in with GitHub and choose:
    - repository `ParyaPayami/PlanArena`, branch `cus-review`;
    - repository ID `planarena-cus` (the manuscript links `https://anonymous.4open.science/r/planarena-cus`);

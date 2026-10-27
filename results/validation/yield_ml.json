@@ -1,0 +1,123 @@
+{
+ "test": "Learned correction of the engine's homes, value and emissions estimates, and calibrated prediction intervals.",
+ "events": 3350,
+ "selection_events": 1314,
+ "evaluation_events": 2036,
+ "alpha": 0.1,
+ "indicators": {
+  "homes": {
+   "loss_chosen": "huber",
+   "selection_cv_mae": {
+    "l2": 11.451227889707987,
+    "huber": 9.67841125402384
+   },
+   "engine": {
+    "n": 2036,
+    "pearson_r": 0.794661856128596,
+    "spearman": 0.6583597157416168,
+    "mae": 12.5137770866832,
+    "median_ae": 1.552098667582728,
+    "bias": 5.620864671574331,
+    "total_ratio": 1.4662109614749395,
+    "mean_abs_observed": 16.538801571709232
+   },
+   "engine_plus_residual_model": {
+    "n": 2036,
+    "pearson_r": 0.7975733205979878,
+    "spearman": 0.6332974759049559,
+    "mae": 10.63430692354804,
+    "median_ae": 1.2538943483797829,
+    "bias": 3.8782652762630523,
+    "total_ratio": 1.3216746691030095,
+    "mean_abs_observed": 16.538801571709232
+   },
+   "adopted": true,
+   "conformal": {
+    "calibration_events": 766,
+    "quantile_of_scores": 0.5021553793946885,
+    "coverage_heldout": 0.8796660117878192,
+    "target": 0.9,
+    "median_width": 9.034391482422134,
+    "median_abs_observed": 0.0
+   },
+   "sensitivity_range_coverage_heldout": 0.6581532416502947,
+   "sensitivity_range_median_width": 3.731107916314663
+  },
+  "value": {
+   "loss_chosen": "huber",
+   "selection_cv_mae": {
+    "l2": 3142877.5494478797,
+    "huber": 2554532.9839073913
+   },
+   "engine": {
+    "n": 2036,
+    "pearson_r": 0.7376152786255005,
+    "spearman": 0.315454077695813,
+    "mae": 2994325.6549281375,
+    "median_ae": 587988.3146712516,
+    "bias": -682264.712589,
+    "total_ratio": 0.6992784785942822,
+    "mean_abs_observed": 3683454.470452021
+   },
+   "engine_plus_residual_model": {
+    "n": 2036,
+    "pearson_r": 0.7458247727682612,
+    "spearman": 0.5614627707786405,
+    "mae": 2642824.3352318383,
+    "median_ae": 438423.6942286859,
+    "bias": -292978.0949910054,
+    "total_ratio": 0.8708641721628669,
+    "mean_abs_observed": 3683454.470452021
+   },
+   "adopted": true,
+   "conformal": {
+    "calibration_events": 766,
+    "quantile_of_scores": 305187.749481236,
+    "coverage_heldout": 0.8516699410609038,
+    "target": 0.9,
+    "median_width": 2503906.3178902753,
+    "median_abs_observed": 533099.8172402169
+   },
+   "sensitivity_range_coverage_heldout": 0.18762278978389,
+   "sensitivity_range_median_width": 363220.00752013025
+  },
+  "ghg": {
+   "loss_chosen": "huber",
+   "selection_cv_mae": {
+    "l2": 806.660936369133,
+    "huber": 796.3554701132254
+   },
+   "engine": {
+    "n": 115,
+    "pearson_r": 0.5964272044937514,
+    "spearman": 0.7812435887319498,
+    "mae": 519.46712469597,
+    "median_ae": 175.89742713132796,
+    "bias": 122.51296933658797,
+    "total_ratio": 1.2442962889757996,
+    "mean_abs_observed": 760.8656448410153
+   },
+   "engine_plus_residual_model": {
+    "n": 115,
+    "pearson_r": 0.6081978177772482,
+    "spearman": 0.7206265288408428,
+    "mae": 531.0544524382461,
+    "median_ae": 201.95786920579434,
+    "bias": -63.281864326260504,
+    "total_ratio": 0.8738131587366684,
+    "mean_abs_observed": 760.8656448410153
+   },
+   "adopted": false,
+   "conformal": {
+    "calibration_events": 34,
+    "quantile_of_scores": 3264.800772857529,
+    "coverage_heldout": 0.9826086956521739,
+    "target": 0.9,
+    "median_width": 7205.352054625981,
+    "median_abs_observed": 311.7052311112192
+   },
+   "sensitivity_range_coverage_heldout": 0.3826086956521739,
+   "sensitivity_range_median_width": 186.93559071298154
+  }
+ }
+}
