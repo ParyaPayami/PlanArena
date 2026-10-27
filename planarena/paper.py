@@ -1036,8 +1036,10 @@ def render_cus() -> dict:
     for name in ("panels", "auc", "transfer", "ap"):
         fill[f"esm_tab_{name}"] = num[f"tab:{name}"]
     man = _with_bibliography(_fill(CUS / "manuscript.tex.in", fill))
-    return {CUS / "manuscript.tex": man, CUS / "online_resource_1.tex": esm,
-            CUS / "title_page.tex": _fill(CUS / "title_page.tex.in", fill)}
+    out = {CUS / "manuscript.tex": man, CUS / "online_resource_1.tex": esm}
+    if (CUS / "title_page.tex.in").exists():  # left out of the anonymised review copy
+        out[CUS / "title_page.tex"] = _fill(CUS / "title_page.tex.in", fill)
+    return out
 
 
 def cus_figures() -> None:
@@ -1093,7 +1095,7 @@ def main() -> None:
             r = subprocess.run(["tectonic", "--keep-logs", f.name], cwd=PAPER, capture_output=True, text=True)
             print(f.with_suffix(".pdf").name if r.returncode == 0 else r.stderr[-3000:])
         cus_figures()
-        for name in CUS_DOCS:
+        for name in (n for n in CUS_DOCS if (CUS / f"{n}.tex").exists()):
             r = subprocess.run(["tectonic", "--keep-logs", f"{name}.tex"], cwd=CUS, capture_output=True, text=True)
             print(f"cus/{name}.pdf" if r.returncode == 0 else r.stderr[-3000:])
 

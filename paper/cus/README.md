@@ -23,7 +23,12 @@ What this version changes for the journal:
 - **Links:** the online Studio and game.
 
 **Before submitting (author):**
-1. **Anonymised mirror.** Create it at https://anonymous.4open.science from `github.com/ParyaPayami/PlanArena`, with the repository ID `planarena-cus` (the manuscript links `https://anonymous.4open.science/r/planarena-cus`). Add "Payami", "ParyaPayami", "ppayami" and "University of Wisconsin" as terms to anonymise. PDFs in the repository (`paper/*.pdf`) still name the author, so exclude them or ask before relying on the mirror.
+1. **Anonymised mirror.** The branch `cus-review` is the anonymised copy for reviewers. It has no PDFs, no title page or cover letter, and no name, affiliation or user name. It is built by `python -I -m planarena.tools.review_copy`; after any change on main, rerun it and push with `git push origin cus-review`. At https://anonymous.4open.science, sign in with GitHub and choose:
+   - repository `ParyaPayami/PlanArena`, branch `cus-review`;
+   - repository ID `planarena-cus` (the manuscript links `https://anonymous.4open.science/r/planarena-cus`);
+   - automatic updates on.
+
+   Also add "Payami", "ParyaPayami", "ppayami" and "University of Wisconsin" as terms to anonymise, as a second safeguard.
 2. **Title page.** Fill in the ORCID, the acknowledgements and the funding statement.
 3. **Archive.** Archive the release on Zenodo and add its DOI to the title page.
 4. **Submission system.** Choose "Original Paper", and the collection "Human-Centered Urban Digital Twins and Policy Insights" if you want it (deadline November 20, 2026). Enter the competing-interest and author-contribution statements in the interface as well.

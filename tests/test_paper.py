@@ -1,4 +1,5 @@
 """The paper's numbers come from the result files and its citations from the verified bibliography."""
+import hashlib
 import re
 
 from planarena import paper
@@ -33,7 +34,21 @@ def test_supplement_is_current():
     assert paper.citations(paper.SUPP_TEMPLATE.read_text()) <= keys
 
 
-IDENTIFYING = ("payami", "ppayami", "wisconsin", "uwm", "schermer", "github.com/parya")
+# SHA-256 of the lower-case words that would identify the author (name, user name, university, advisor), kept as
+# hashes so that this file, too, names no one in the anonymised review copy (planarena.tools.review_copy)
+IDENTIFYING = {
+    "09f0b20c30a9bcf6e1786cf34465d44f69d811844f454dac89deb5f52a6df1cc",
+    "0a47ddc57674d83ca6d220f83e5e86143f1824b6ffa0b3db13605776e0985022",
+    "4426272a72f4b4cae28d4263409cbcc495c3545ba3c17e8d293e8644e94dbdc2",
+    "e21019b5be0d917b55d9a3b8900ab3be66569f00bce3991b5f158a63900aa3a3",
+    "701392d6e9b9065cd6b1a0bdce93e0e5b6c07bf28349560408cd07f2510143ce",
+    "d0c400eec55a51590683f87204bc1b5e2e6fceef8ebac262cc750601b366ad19",
+    "e33e6c094a4ae25d044f54b846eca56f3c1a4686759e6d4b433ef984664de5d5",
+}
+
+
+def _identifying(text: str) -> set[str]:
+    return {w for w in set(re.findall(r"[a-z]+", text.lower())) if hashlib.sha256(w.encode()).hexdigest() in IDENTIFYING}
 
 
 def test_cus_version_is_current_and_anonymous():
@@ -43,7 +58,7 @@ def test_cus_version_is_current_and_anonymous():
         assert "@@" not in text
         assert path.read_text() == text, f"run: python -I -m planarena.paper ({path.name})"
         if path.name != "title_page.tex":
-            assert not [w for w in IDENTIFYING if w in text.lower()], path.name
+            assert not _identifying(text), path.name
 
 
 def test_cus_tables_and_figures_are_cited_in_order():
