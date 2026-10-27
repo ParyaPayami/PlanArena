@@ -28,7 +28,7 @@
 \renewcommand{\theequation}{S\arabic{equation}}
 
 \title{\large\textbf{Online Resource 1}\\[0.3em]
-\normalsize PlanArena: an integrated land-use optimizer with empirical evaluation\\
+\normalsize PlanArena: an exact, learning-assisted land-use optimizer with empirical evaluation\\
 \small \textit{Computational Urban Science}. Model specification, test protocols and additional results.\\
 Author details are withheld for double-blind review.}
 \author{}
@@ -333,6 +333,36 @@ direction of the value change is unreliable.
 blocks with no selection-fold lot: $r = 0.05$ over 837 blocks. The engine has no skill for job
 change at this scale, and the Studio marks job change as not validated.
 
+\paragraph{Learned correction and calibrated intervals.} On the same events, folds and pre-period coefficients, a
+gradient-boosted model (LightGBM) of the engine's error uses the engine's prediction and the baselines' lot
+information. Its loss (squared or Huber) is chosen by cross-fitting between the two selection folds; it is trained on
+the selection folds and evaluated on the held-out folds, and it is adopted only if it lowers the held-out mean absolute
+error and absolute bias without lowering the correlation. Prediction intervals come from conformalized quantile
+regression of the error \citep{romano2019}: quantile models (5th and 95th percentiles) fitted on one selection fold
+and calibrated on the other, for a nominal 90\% coverage. Table~\ref{tab:s-yield} compares them with the engine and
+with how often the engine's sensitivity range contains the observed change. The Studio's parcel inspector shows
+the adopted corrections and their intervals (refitted on all events, calibrated on the held-out folds) beside the
+engine's yields; the engine's own scores are unchanged.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\caption{Learned correction of the engine and calibrated intervals on the held-out lots (2015--2025 changes; engine with pre-period coefficients).}
+\label{tab:s-yield}
+\begin{tabular}{lrrrrrrrrrrrr}
+\toprule
+ & Lots & MAE & MAE+ & Bias & Bias+ & $r$ & $r$+ & Total & Total+ & Adopted & 90\% int. & Range \\
+\midrule
+Homes & 2{,}036 & 12.5 & 10.6 & 5.6 & 3.9 & 0.79 & 0.80 & 1.47 & 1.32 & yes & 88\% & 66\% \\
+Value (USD 1,000) & 2{,}036 & 2{,}994 & 2{,}643 & $-$682 & $-$293 & 0.74 & 0.75 & 0.70 & 0.87 & yes & 85\% & 19\% \\
+Emissions (tCO$_2$e) & 115 & 519 & 531 & 123 & $-$63 & 0.60 & 0.61 & 1.24 & 0.87 & no & 98\% & 38\% \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{minipage}{0.95\linewidth}\footnotesize +: engine plus the learned correction. Total: predicted over observed total. 90\% int.: share of held-out lots whose observed change lies in the conformal interval (nominal 90\%). Range: share inside the engine's low--high sensitivity range.\end{minipage}
+\end{table}
+
 \section{Likelihood, yield and calibration}\label{s:likely}
 
 \paragraph{Outcome.} A lot is developed in $(t_0, t_1]$ if a new building appears on it (Section~\ref{s:leakage}) or
@@ -486,6 +516,64 @@ for votes do not. The result is the best plan found, not a proven optimum.
 
 \paragraph{Likelihood layer.} When on, candidates are restricted to the fifth of parcels with the highest five-year
 probability of redevelopment. Probabilities restrict the candidate set; they do not weight moves.
+
+\paragraph{Exact search.} The same objective $J$ is stated as a mixed-integer linear program over binary choices
+$x_q$, one per pair $q = (i, u)$ of an eligible parcel and a new use, with $\sum_u x_{iu} \le 1$ and
+$\sum_q x_q \le B$, and solved by branch-and-bound with HiGHS \citep{huangfu2018}. Every term is written as a change
+from the start plan.
+\begin{itemize}
+\item \textbf{Totals} are linear in $x$; their $\pm 100$ score clip needs one binary where the lower clip can bind.
+\item \textbf{Shares.} The five shares are resident-weighted means with one denominator, the scope's residents $D$,
+and lie in $[0, 1]$, so their scores never reach the clip. They enter as one weighted mean $\tau = Q/D$ of the cells'
+composite access $A_c = \sum_k 100\,\omega_k a_{kc}$, or one per pillar for trade-offs. With $\tau = \tau_0 + \delta$
+and $A_c = A^0_c + \alpha_c$,
+\begin{equation}
+\delta D = N' = \sum_c R^0_c\,\alpha_c + \sum_q \Delta r_q\, x_q\,(A^0_{c(q)} - \tau_0) + \sum_q \Delta r_q\, x_q\, \alpha_{c(q)},
+\end{equation}
+where $R^0_c$ are a cell's residents and $\Delta r_q$ the residents pair $q$ adds. Products of a binary and a
+bounded variable are replaced by McCormick envelopes \citep{mccormick1976}, which are exact at binary points. $D$ is
+split into intervals of ratio 1.05; within $[D_l, D_h]$, $\delta \le N'/D_l$ when $\delta \ge 0$ and
+$\delta \le N'/D_h$ otherwise (one binary).
+\item \textbf{Access per 50 m cell}, from sums within the radius (row prefix sums):
+\begin{itemize}
+\item park access is a binary $y_c$ with open area within the walk at least the park minimum times $y_c$, a covering
+constraint \citep{church1974}, and a cover inequality that links $y_c$ to the open space added nearby;
+\item services and facilities satisfy $(a^0 + \alpha)\,t\,(R^0 + \Delta R) \le F^0 + \Delta F$ and
+$a^0 + \alpha \le 1$, with residents $R$ and floor area $F$ within the radius;
+\item green cover satisfies $g\,T \le L_\mathrm{open}$, for grouped land $T$ and open land $L_\mathrm{open}$;
+\item land-use mix satisfies Gibbs' inequality, $H\,T\log 5 \le \sum_g L_g\,(-\log \bar s_g)$ for any shares $\bar s$:
+a tangent of the entropy, exact when $\bar s$ are the cell's shares.
+\end{itemize}
+\item \textbf{Products} of an access change and the resident or land change within its radius are exact for the
+pairs with the largest changes near the cell and the pairs a solution uses, and bounded by McCormick envelopes, split
+by sign, for the rest. Ranges come from budget-limited extremes and the residents interval; for mix, from the
+Fannes--Audenaert continuity bound of entropy \citep{audenaert2007}.
+\end{itemize}
+Every relaxation over-estimates $J$, so the solver's bound is an upper bound on $J$ over all feasible plans. After each
+solve the plan is re-scored by the engine, exact products and entropy tangents are added at the plan, and the loop stops
+when the bound and the best exact score agree within a relative $10^{-4}$ (certified optimal) or at the time limit
+(a certified gap). With a plan fixed, the model's value equals the engine's score (a test of the formulation).
+
+\paragraph{Exact trade-offs.} Optimal plans for pillar weights on a simplex grid (step 0.25), the plan that
+maximises the weakest pillar, and the augmented $\varepsilon$-constraint method AUGMECON2 \citep{mavrotas2013} give
+the efficiency frontier \citep{polasky2008}. Weighted optima are supported Pareto plans; the $\varepsilon$-constraint
+plans add unsupported ones. Pillar scores are real-valued, so the $\varepsilon$-constraint plans are a representation
+of the front, not a guaranteed complete Pareto set (AUGMECON2 is exact for integer objective values with unit steps). Trade-off rates are
+the change in one pillar per point of another between neighbouring optimal plans along each edge of the weight
+simplex. Today's land use scores zero on every pillar, so the weakest pillar of the balanced plan is how much every
+pillar can rise at once: the efficiency gap, a distance to the frontier in the direction of equal improvement. Robustness is the share of frontier plans that stay non-dominated when
+re-scored under the low and high coefficient variants.
+
+\paragraph{GNN policy.} A graph neural network proposes a plan at once and starts the exact search, in the manner of
+neural diving \citep{nair2020}. It has 3 GraphSAGE layers \citep{hamilton2017} (hidden size
+64) over the parcel graph (adjacent, near and same-zoning edges) of an area's study area. Each parcel's
+inputs are its lot and floor area, residents, current use, the redevelopment model's probability and likely new use,
+the pattern model's use fit, and, for the area, whether it is selected, which uses are allowed, the pillar weights, the
+budget share and the first-order gain of each use under those weights. Its output is logits over ``stay'' and the nine
+uses. It was trained by cross-entropy (changes weighted five times) on the certified optima of 180 random
+areas in districts 101--108 (150--300 m around a random parcel, a budget of 5--15\% of eligible parcels, pillar
+weights uniform on the simplex) and tested on 80 areas in districts 109--112. A plan is the most likely
+changes up to the budget.
 
 \paragraph{NSGA-III explorer.} For a selection of parcels, three objectives (the first-order social, economic and
 environmental gains) are searched by NSGA-III \citep{deb2014} in pymoo: 45 Das--Dennis reference
@@ -712,8 +800,26 @@ from the result files.
 
 \begin{thebibliography}{}
 \setlength{\itemsep}{1pt}
+\bibitem[{Audenaert}(2007){Audenaert}]{audenaert2007}
+Audenaert, K. M. R. (2007). A sharp continuity estimate for the von Neumann entropy. {\itshape Journal of Physics A: Mathematical and Theoretical}, {\itshape 40}(28), 8127–8136. \url{https://doi.org/10.1088/1751-8113/40/28/S18}
+\bibitem[{Church \& ReVelle}(1974){Church, ReVelle}]{church1974}
+Church, R., \& ReVelle, C. (1974). The maximal covering location problem. {\itshape Papers of the Regional Science Association}, {\itshape 32}(1), 101–118. \url{https://doi.org/10.1007/bf01942293}
 \bibitem[{Deb \& Jain}(2014){Deb, Jain}]{deb2014}
 Deb, K., \& Jain, H. (2014). An Evolutionary Many-Objective Optimization Algorithm Using Reference-Point-Based Nondominated Sorting Approach, Part I: Solving Problems With Box Constraints. {\itshape IEEE Transactions on Evolutionary Computation}, {\itshape 18}(4), 577–601. \url{https://doi.org/10.1109/tevc.2013.2281535}
+\bibitem[{Hamilton et~al.}(2017){Hamilton, Ying, Leskovec}]{hamilton2017}
+Hamilton, W. L., Ying, R., \& Leskovec, J. (2017). Inductive representation learning on large graphs. In {\itshape Advances in Neural Information Processing Systems} (Vol. 30). \url{https://arxiv.org/abs/1706.02216}
+\bibitem[{Huangfu \& Hall}(2018){Huangfu, Hall}]{huangfu2018}
+Huangfu, Q., \& Hall, J. A. J. (2018). Parallelizing the dual revised simplex method. {\itshape Mathematical Programming Computation}, {\itshape 10}(1), 119–142. \url{https://doi.org/10.1007/s12532-017-0130-5}
+\bibitem[{Mavrotas \& Florios}(2013){Mavrotas, Florios}]{mavrotas2013}
+Mavrotas, G., \& Florios, K. (2013). An improved version of the augmented ε-constraint method (AUGMECON2) for finding the exact Pareto set in multi-objective integer programming problems. {\itshape Applied Mathematics and Computation}, {\itshape 219}(18), 9652–9669. \url{https://doi.org/10.1016/j.amc.2013.03.002}
+\bibitem[{McCormick}(1976){McCormick}]{mccormick1976}
+McCormick, G. P. (1976). Computability of global solutions to factorable nonconvex programs: Part I --- Convex underestimating problems. {\itshape Mathematical Programming}, {\itshape 10}(1), 147–175. \url{https://doi.org/10.1007/BF01580665}
+\bibitem[{Nair et~al.}(2020){Nair, Bartunov, Gimeno, von Glehn, Lichocki, Lobov}]{nair2020}
+Nair, V., Bartunov, S., Gimeno, F., von Glehn, I., Lichocki, P., Lobov, I., O'Donoghue, B., Sonnerat, N., Tjandraatmadja, C., Wang, P., Addanki, R., Hapuarachchi, T., Keck, T., Keeling, J., Kohli, P., Ktena, I., Li, Y., Vinyals, O., \& Zwols, Y. (2020). Solving mixed integer programs using neural networks [Preprint]. arXiv. \url{https://arxiv.org/abs/2012.13349}
+\bibitem[{Polasky et~al.}(2008){Polasky, Nelson, Camm, Csuti, Fackler, Lonsdorf}]{polasky2008}
+Polasky, S., Nelson, E., Camm, J., Csuti, B., Fackler, P., Lonsdorf, E., Montgomery, C., White, D., Arthur, J., Garber-Yonts, B., Haight, R., Kagan, J., Starfield, A., \& Tobalske, C. (2008). Where to put things? Spatial land management to sustain biodiversity and economic returns. {\itshape Biological Conservation}, {\itshape 141}(6), 1505–1524. \url{https://doi.org/10.1016/j.biocon.2008.03.022}
+\bibitem[{Romano et~al.}(2019){Romano, Patterson, Cand\`es}]{romano2019}
+Romano, Y., Patterson, E., \& Cand\`es, E. J. (2019). Conformalized quantile regression. In {\itshape Advances in Neural Information Processing Systems} (Vol. 32). \url{https://arxiv.org/abs/1905.03222}
 \end{thebibliography}
 
 \end{document}

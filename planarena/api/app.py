@@ -28,9 +28,11 @@ from planarena.agents.voting import hold_vote
 from planarena.agents.stakeholders import DEFAULT_STAKEHOLDERS
 from planarena.api import planio, store
 from planarena.cities import registry, tiles
-from planarena.config import LAND_USES, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
+from planarena.config import LAND_USES, PROCESSED, ROOT, USE_INDEX, USE_KEYS, WEB_DATA
 from planarena.taxonomy import CLASSES
 from planarena.indicators.engine import INDICATORS, ImpactEngine, load_engine
+from planarena.optimize.exact import ExactOptimizer
+from planarena.optimize.frontier import frontier as exact_frontier
 from planarena.optimize.pareto import pareto as run_pareto
 from planarena.optimize.suggest import SuggestConfig, Suggester
 
@@ -104,13 +106,19 @@ def _load_runtime(city: str) -> dict:
         model_info["redevelopment"] = json.loads((d / "redevelopment_meta.json").read_text())
     sug = Suggester(engine, suit)
     sug.per_use_values()
+    yield_models = None
+    if city == registry.DEFAULT:  # the learned correction was trained and tested on Manhattan only
+        from planarena.models.yield_ml import load_deployed
+
+        yield_models = load_deployed()
     engine.evaluate(engine.base_use, ranges=True)  # warms the sensitivity-variant caches
     with store.connect() as db:
         store.audit(db, "city_loaded", {"engine_version": ENGINE_VERSION, "city": city,
                                         "source_sha256": engine.meta.get("source_sha256")})
-    return {"city": city, "engine": engine, "suggester": sug, "suitability": suit, "model_info": model_info,
+    return {"city": city, "engine": engine, "suggester": sug, "exact": ExactOptimizer(sug), "suitability": suit,
+            "model_info": model_info,
             "soft_sites": engine.soft_site_mask(), "startup_seconds": round(time.time() - t0, 2), "geoms": None,
-            "redevelopment": redev}
+            "redevelopment": redev, "yield_models": yield_models}
 
 
 def _geoms():
@@ -198,6 +206,9 @@ class SuggestRequest(Strict):
     parcels: list[int] | None = None
     changes: dict[str, Change] = Field(default_factory=dict)
     polish: int = Field(30, ge=0, le=200, description="exact re-scoring of the top-K moves (0 = first order only)")
+    method: Literal["fast", "exact"] = Field("fast", description="fast: first-order search; exact: branch-and-bound "
+                                             "from the fast plan, returning a certified bound on the optimum")
+    time_limit: float = Field(20.0, ge=1, le=600, description="exact: seconds before the best plan is returned")
 
 
 class NegotiateRequest(Strict):
@@ -222,6 +233,15 @@ class VoteRequest(Strict):
     parcel_ballot: bool = True
     samples: int = Field(200, ge=0, le=2000)
     plans: dict[str, PlanIn] | None = Field(None, description="explicit candidates; skips plan generation")
+
+
+class FrontierRequest(Strict):
+    parcels: list[int] = Field(min_length=1, max_length=300)
+    changes: dict[str, Change] = Field(default_factory=dict)
+    max_change_share: float = Field(0.05, gt=0, le=0.5)
+    respect_zoning: bool = True
+    step: float = Field(0.5, ge=0.2, le=1.0, description="spacing of the pillar-weight grid")
+    time_per_point: float = Field(15.0, ge=1, le=120)
 
 
 class ParetoRequest(Strict):
@@ -342,6 +362,10 @@ def parcel(i: int):
     }
     if r["suitability"] is not None:
         out["suitability"] = {USE_KEYS[u]: float(r["suitability"][i, u]) for u in range(len(USE_KEYS))}
+    if r.get("yield_models"):
+        from planarena.models.yield_ml import predict as learned_yield
+
+        out["learned"] = learned_yield(e, r["yield_models"], i)
     if r["redevelopment"] is not None:
         rd = r["redevelopment"]
         pct = float((rd["p"] < rd["p"][i]).mean())
@@ -467,9 +491,31 @@ async def suggest(req: SuggestRequest):
     r = runtime()
     t0 = time.time()
     use, _ = _arrays(req.changes)
-    out = await run_in_threadpool(r["suggester"].suggest, _suggest_config(req), use)
+    cfg = _suggest_config(req)
+    if req.parcels:  # a selection is optimised and scored over its study area, as the exact search does
+        cfg.mask = r["engine"].study_area(req.parcels)
+    out = await run_in_threadpool(r["suggester"].suggest, cfg, use)
+    cert = None
+    if req.method == "exact":
+        if cfg.unanimity_weights or (req.scope == "city" and not req.parcels):
+            cert = {"status": "not certified",
+                    "reason": "consensus mode" if cfg.unanimity_weights else "the whole city is too large to certify"}
+        else:
+            fast_J = r["exact"].objective(out["use"], use, cfg, cfg.mask if cfg.mask is not None
+                                          else r["engine"].scope_mask(use, cfg.scope))
+            sol = await run_in_threadpool(r["exact"].solve, cfg, use, cfg.mask, None, req.time_limit,
+                                          incumbent=out["use"])
+            out = {**out, "use": sol["use"], "evaluation": sol["evaluation"]}
+            cert = {k: (float(sol[k]) if isinstance(sol[k], (float, np.floating)) and np.isfinite(sol[k]) else
+                        (None if isinstance(sol[k], (float, np.floating)) else sol[k]))
+                    for k in ("status", "objective", "bound", "gap", "rel_gap", "seconds")}
+            cert["fast_objective"] = float(fast_J)
+            if cert["bound"] is None:
+                cert.update(status="not certified", reason=f"no bound proven within {req.time_limit:g} s. Select an "
+                                                           "area of up to a few hundred parcels for a certified optimum")
     res = {"changes": _changes_of(out["use"]), "evaluation": out["evaluation"], "history": out["history"],
-           "budget": out["budget"], "eligible": out["eligible"], "ms": round(1000 * (time.time() - t0), 1)}
+           "budget": out["budget"], "eligible": out["eligible"], "ms": round(1000 * (time.time() - t0), 1),
+           "certificate": cert}
     _audit("optimizer_run", {"mode": req.mode, "scope": req.scope, "n_changes": len(res["changes"]),
                              "overall": out["evaluation"]["overall"]})
     return res
@@ -487,6 +533,54 @@ async def pareto_route(req: ParetoRequest):
     _audit("pareto_run", {"n_parcels": len(req.parcels), "seed": req.seed, "generations": req.generations,
                           "front_size": len(res["front"])})
     return res
+
+
+class PolicyRequest(Strict):
+    parcels: list[int] = Field(min_length=2, max_length=2000)
+    pillar_weights: dict[str, float]
+    max_change_share: float = Field(0.05, gt=0, le=0.5)
+
+
+_POLICY: dict = {}
+
+
+@app.post("/api/policy")
+async def policy_route(req: PolicyRequest):
+    """The GNN policy's plan for the selected parcels (milliseconds; a preview while the trade-off is dragged).
+    The Studio then runs the exact search on release."""
+    r = runtime()
+    if r["city"] != registry.DEFAULT:
+        raise HTTPException(404, "the policy is trained on Manhattan only")
+    if "net" not in _POLICY:
+        from planarena.models import policy as pol
+
+        if not (pol.DIR / "policy.pt").exists():
+            raise HTTPException(404, "no trained policy")
+        _POLICY.update(net=pol.load_policy(), static=pol._static(r["engine"]),
+                       graph=dict(np.load(PROCESSED / "graph.npz")), mod=pol)
+    P = _POLICY
+    use, sec = await run_in_threadpool(P["mod"].propose, r["engine"], r["suggester"], P["net"], P["static"], P["graph"],
+                                       req.parcels, req.pillar_weights, req.max_change_share)
+    ev = r["engine"].evaluate(use, mask=r["engine"].study_area(req.parcels))
+    return {"changes": _changes_of(use), "evaluation": ev, "ms": round(1000 * sec, 1)}
+
+
+@app.post("/api/frontier")
+async def frontier_route(req: FrontierRequest):
+    """Exact trade-off front of the selected parcels: optimal plans for a grid of pillar weights, the balanced plan
+    (the weakest pillar as high as possible), trade-off rates between pillars, and robustness to the coefficients."""
+    r = runtime()
+    use, _ = _arrays(req.changes)
+    cfg = SuggestConfig(scope="affected", max_change_share=req.max_change_share, respect_zoning=req.respect_zoning,
+                        candidate_parcels=np.array(req.parcels), w_fit=0.0)
+    mask = r["engine"].study_area(req.parcels)
+    res = await run_in_threadpool(exact_frontier, r["exact"], cfg, mask, None, use, req.step, req.time_per_point)
+    out = {"front": [{"pillars": f["pillars"], "n_changed": f["n_changed"], "balanced": f["balanced"],
+                      "changes": _changes_of(f["use"])} for f in res["front"]],
+           "balanced": res["balanced"], "rates": res["rates"], "certified_share": res["certified_share"],
+           "robust_share": res.get("robust_share"), "seconds": res["seconds"], "grid_points": res["grid_points"]}
+    _audit("frontier_run", {"n_parcels": len(req.parcels), "front_size": len(out["front"]), "seconds": res["seconds"]})
+    return out
 
 
 @app.post("/api/negotiate")

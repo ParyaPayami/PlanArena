@@ -137,19 +137,41 @@ export default function ParcelInspector() {
                 <tbody>
                   {meta.land_uses.map((u) => {
                     const v = info.per_use[u.key];
+                    const l = info.learned?.[u.key];
+                    const cur = info.per_use[curKey];
                     return (
                       <tr key={u.key} className={u.key === curKey ? "cur" : ""}>
                         <td>
                           <span className="swatch" style={{ background: u.color }} /> {u.label.split(" ")[0]}
                         </td>
-                        <td>{Math.round(v.homes).toLocaleString()}</td>
+                        <td>
+                          {Math.round(v.homes).toLocaleString()}
+                          {l?.homes && (
+                            <div className="learned" title="Learned correction of the engine, with a 90% conformal interval (held-out tested)">
+                              {Math.max(0, Math.round(cur.homes + l.homes.learned)).toLocaleString()} ({Math.max(0, Math.round(cur.homes + l.homes.lo)).toLocaleString()}–{Math.max(0, Math.round(cur.homes + l.homes.hi)).toLocaleString()})
+                            </div>
+                          )}
+                        </td>
                         <td>{Math.round(v.jobs).toLocaleString()}</td>
-                        <td>${compact(v.value)}</td>
+                        <td>
+                          ${compact(v.value)}
+                          {l?.value && (
+                            <div className="learned" title="Learned correction of the engine, with a 90% conformal interval (held-out tested)">
+                              ${compact(Math.max(0, cur.value + l.value.learned))} (${compact(Math.max(0, cur.value + l.value.lo))}–${compact(Math.max(0, cur.value + l.value.hi))})
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+              {info.learned && (
+                <div className="muted small">
+                  Second line: a learned correction of the engine (gradient boosting on observed Manhattan changes) and
+                  its 90% interval (conformalized quantile regression), both tested on held-out lots (Methods).
+                </div>
+              )}
             </>
           )}
         </>

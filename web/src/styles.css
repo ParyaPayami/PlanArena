@@ -333,3 +333,26 @@ button.danger { border-color: #6a2531; color: #ff9aa5; }
 .class-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: 520px; font-size: 11px; border-radius: 12px; }
 .class-legend b { width: 100%; }
 .class-legend .legend-item { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Exact optimizer: certificate, trade-off triangle, swipe comparison, map action */
+.cert { margin: 6px 0; padding: 6px 9px; border-radius: 8px; font-size: 12.5px; border: 1px solid var(--line); }
+.cert.good { background: rgba(46, 160, 90, .16); border-color: rgba(46, 160, 90, .55); }
+.cert.info { background: rgba(91, 140, 255, .14); border-color: rgba(91, 140, 255, .5); }
+.cert.muted { color: var(--muted); }
+.tradeoff { margin-top: 6px; touch-action: none; user-select: none; }
+.tradeoff svg { width: 100%; max-width: 190px; display: block; margin: 0 auto; cursor: grab; }
+.tradeoff svg:active { cursor: grabbing; }
+.tradeoff.disabled { opacity: .45; pointer-events: none; }
+.tradeoff .tri { fill: rgba(91, 140, 255, .08); stroke: var(--line); stroke-width: 1.2; }
+.tradeoff .tri-centre { fill: var(--muted); }
+.tradeoff .tri-label { font-size: 10.5px; font-weight: 600; }
+.tradeoff .tri-handle { fill: #fff; stroke: #5b8cff; stroke-width: 3; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+.swipe { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid #fff; z-index: 5; cursor: ew-resize; touch-action: none; }
+.swipe::before { content: ""; position: absolute; top: 0; bottom: 0; left: -12px; width: 24px; }
+.swipe-handle { position: absolute; top: 50%; left: -16px; width: 32px; height: 32px; margin-top: -16px; border-radius: 50%; background: #fff; color: #111a2c; display: grid; place-items: center; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+.swipe-label { position: absolute; top: 12px; padding: 3px 8px; border-radius: 12px; background: rgba(17,26,44,.92); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+.swipe-label.left { right: 10px; }
+.swipe-label.right { left: 10px; }
+.map-action { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 6; border-radius: 22px; padding: 9px 16px; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+
+.whatif .learned { font-size: 10.5px; color: var(--muted); white-space: nowrap; }

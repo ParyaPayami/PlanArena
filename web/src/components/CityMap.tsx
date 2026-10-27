@@ -53,6 +53,9 @@ interface Props {
   tileZoom?: [number, number];
   /** colour by an official layer (16-class index per parcel) instead of the plan being edited */
   classView?: { cls: Int16Array; classes: LandClass[]; name: string } | null;
+  /** swipe comparison: the plan being edited left of a draggable divider, the previewed plan right of it */
+  compare?: boolean;
+  onCloseCompare?: () => void;
 }
 
 export default function CityMap(props: Props) {
@@ -69,6 +72,22 @@ export default function CityMap(props: Props) {
   const [viewState, setViewState] = useState<MapViewState>(props.initialViewState);
   const features = props.features ?? data.features;
   const base = data.baseUse;
+  const [split, setSplit] = useState(0.5);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const comparing = !!(props.compare && preview && preview.size);
+  // Previewed parcels whose centre lies right of the divider show the plan; the others show today's map.
+  const rightSide = useMemo(() => {
+    const out = new Set<number>();
+    const vp = deckRef.current?.deck?.getViewports()[0];
+    const wpx = wrapRef.current?.clientWidth ?? 0;
+    if (!comparing || !vp || !wpx) return out;
+    for (const i of preview!.keys()) {
+      const [sx] = vp.project([data.lon[i], data.lat[i]]);
+      if (sx >= split * wpx) out.add(i);
+    }
+    return out;
+  }, [comparing, preview, split, viewState]);
+  const shownPreview = (i: number) => preview?.has(i) && (!comparing || rightSide.has(i));
 
   useEffect(() => {
     setViewState((v) => ({
@@ -104,7 +123,7 @@ export default function CityMap(props: Props) {
       const c = classColors[k];
       return [c[0], c[1], c[2], 215];
     }
-    const pv = preview?.get(i);
+    const pv = shownPreview(i) ? preview!.get(i) : undefined;
     if (pv !== undefined) {
       const c = colors[pv];
       return [c[0], c[1], c[2], 245];
@@ -117,9 +136,9 @@ export default function CityMap(props: Props) {
     const u = use[i];
     if (u < 0) return [90, 96, 110, 120];
     const c = colors[u];
-    return [c[0], c[1], c[2], changedAt(i) ? 250 : preview || highlight ? 80 : 190];
+    return [c[0], c[1], c[2], changedAt(i) ? 250 : (preview && !comparing) || highlight ? 80 : 190];
   };
-  const fillTriggers = [version, preview, props.suggestionOverlay, highlight?.key, classView?.name];
+  const fillTriggers = [version, preview, props.suggestionOverlay, highlight?.key, classView?.name, comparing, rightSide];
   const polygonProps = {
     id: "parcels",
     data: features as unknown as GeoJSON.FeatureCollection["features"],
@@ -136,7 +155,7 @@ export default function CityMap(props: Props) {
       const i = (f.properties as { i: number }).i;
       if (selected.has(i)) return [255, 255, 255, 255];
       if (highlight?.parcels.has(i)) return [highlight.color[0], highlight.color[1], highlight.color[2], 255];
-      if (preview?.has(i)) return [255, 255, 255, 220];
+      if (shownPreview(i)) return [255, 255, 255, 220];
       if (changedAt(i)) return [255, 240, 200, 230];
       return [10, 14, 24, 160];
     },
@@ -144,15 +163,15 @@ export default function CityMap(props: Props) {
       const i = (f.properties as { i: number }).i;
       if (selected.has(i)) return selW;
       if (highlight?.parcels.has(i)) return 2.2;
-      if (preview?.has(i) || changedAt(i)) return 1.4;
+      if (shownPreview(i) || changedAt(i)) return 1.4;
       return baseW;
     },
     getElevation: (f: GeoJSON.Feature) => {
       const p = f.properties as { i: number; h: number };
       const i = p.i;
-      const u = preview?.get(i) ?? use[i];
+      const u = (shownPreview(i) ? preview!.get(i) : undefined) ?? use[i];
       if (u >= 0 && !landUses[u].built) return 0.5;
-      if (far && !Number.isNaN(far[i]) && preview?.get(i) === undefined)
+      if (far && !Number.isNaN(far[i]) && !shownPreview(i))
         return Math.max(1, (far[i] / ASSUMED_COVERAGE) * FLOOR_M);
       if (u !== base[i] && (p.h || 0) < 3) return 20; // new building on a formerly unbuilt lot
       return Math.max(p.h || 0, 1);
@@ -160,9 +179,9 @@ export default function CityMap(props: Props) {
     material: { ambient: 0.35, diffuse: 0.55, shininess: 18, specularColor: [40, 44, 50] },
     updateTriggers: {
       getFillColor: fillTriggers,
-      getLineColor: [version, selVersion, preview, highlight?.key],
-      getLineWidth: [version, selVersion, preview, highlight?.key, selW, baseW],
-      getElevation: [version, preview],
+      getLineColor: [version, selVersion, preview, highlight?.key, comparing, rightSide],
+      getLineWidth: [version, selVersion, preview, highlight?.key, selW, baseW, comparing, rightSide],
+      getElevation: [version, preview, comparing, rightSide],
     },
     transitions: { getFillColor: 220, getElevation: 400 },
     };
@@ -230,7 +249,7 @@ export default function CityMap(props: Props) {
   const controller = dragModes ? { dragPan: false, touchRotate: false, dragRotate: false } : true;
 
   return (
-    <div className="map-wrap">
+    <div className="map-wrap" ref={wrapRef}>
       <DeckGL
         ref={deckRef}
         viewState={viewState}
@@ -323,6 +342,30 @@ export default function CityMap(props: Props) {
             height: Math.abs(box.y1 - box.y0),
           }}
         />
+      )}
+      {comparing && (
+        <div
+          className="swipe"
+          style={{ left: `${split * 100}%` }}
+          role="slider"
+          aria-label="Swipe between today's map and the previewed plan"
+          aria-valuenow={Math.round(split * 100)}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") setSplit((v) => Math.max(0.02, v - 0.05));
+            if (e.key === "ArrowRight") setSplit((v) => Math.min(0.98, v + 0.05));
+          }}
+          onPointerDown={(e) => (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)}
+          onPointerMove={(e) => {
+            if (!(e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) return;
+            const r = wrapRef.current!.getBoundingClientRect();
+            setSplit(Math.min(0.98, Math.max(0.02, (e.clientX - r.left) / r.width)));
+          }}
+        >
+          <span className="swipe-label left">Today</span>
+          <span className="swipe-handle">⇆</span>
+          <span className="swipe-label right">Plan · {preview!.size.toLocaleString()} parcels change</span>
+        </div>
       )}
       {lasso && (
         <svg className="lasso-svg">

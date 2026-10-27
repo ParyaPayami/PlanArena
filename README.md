@@ -72,7 +72,11 @@ cd web && npm install && npx vite build      # web app -> web/dist (served by th
 | Density edits | Each parcel can take a proposed FAR as well as a use. Capacity, soft sites and added zoning capacity are reported |
 | Redevelopment likelihood | `planarena/models/transition.py`: five-year likelihood and likely new use for every lot, from a model tested on a later period |
 | Rezoning test | `planarena/indicators/rwcds.py`: the development-site screen city environmental reviews use, applied to the FAR values in a plan |
-| Recommended plans | `planarena/optimize/suggest.py` (iterated best response with exact re-scoring of the top moves) and `pareto.py` (NSGA-III). The best plan found, not a proven optimum |
+| Recommended plans (fast) | `planarena/optimize/suggest.py` (iterated best response with exact re-scoring of the top moves) and `pareto.py` (NSGA-III). The best plan found |
+| Optimal plans (exact) | `planarena/optimize/exact.py`: the engine's score as a mixed-integer program (HiGHS), with a certificate: optimal, or a proven gap. Certifies areas of a few hundred parcels in seconds; districts get a bound. Tests: `planarena/optimize/exact_test.py` |
+| Trade-offs | `planarena/optimize/frontier.py`: exact efficiency frontier (weighted optima, the balanced plan, AUGMECON2), trade-off rates between pillars, how far today's land use lies inside the frontier, robustness to the coefficients |
+| GNN policy | `planarena/models/policy.py`: a GraphSAGE network trained on certified optima proposes a plan in milliseconds (the Studio's preview while the trade-off is dragged) and starts the exact search |
+| Learned correction | `planarena/models/yield_ml.py`: gradient boosting of the engine's error in homes and value, and conformal 90% intervals, tested on held-out lots; shown in the parcel inspector |
 | Pattern consistency | `planarena/models`: LightGBM with a GraphSAGE embedding (the best model in the ablation below), cross-fitted so no parcel sees its own use. It describes existing patterns, not what is desirable |
 | Simulated stakeholder scenario | `planarena/agents/voting.py`: ballots computed from assumed utilities, nine voting rules, compared with bargaining solutions. Not elicited preferences |
 | Realism | Conversions of existing buildings never observed at that size are flagged, and the optimizer skips them |

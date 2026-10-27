@@ -58,6 +58,12 @@ interface State {
   mapLayer: MapLayer;
   classLayers?: { existing: Int16Array; plan: Int16Array; zoning: Int16Array };
   tab: Tab;
+  /** incremented by "Optimize this area" on the map; the Optimize tab runs on the selection */
+  optimizeRequest: number;
+  requestOptimize: () => void;
+  /** swipe comparison of the plan being edited and the previewed plan */
+  compare: boolean;
+  setCompare: (b: boolean) => void;
   methodsOpen: boolean;
   toast?: { text: string; tone: "good" | "bad" | "info"; id: number };
   init: (meta: Meta, data: CityData) => void;
@@ -102,6 +108,8 @@ export const useStore = create<State>((set, get) => ({
   view3d: false,
   mapLayer: "edit",
   tab: "impact",
+  optimizeRequest: 0,
+  compare: false,
   methodsOpen: false,
 
   init: (meta, data) =>
@@ -199,12 +207,15 @@ export const useStore = create<State>((set, get) => ({
   },
 
   setScope: (scope) => set({ scope }),
-  setPreview: (preview) => set((s) => ({ preview, version: s.version + 1, overlay: preview ? null : s.overlay })),
+  setPreview: (preview) =>
+    set((s) => ({ preview, version: s.version + 1, overlay: preview ? null : s.overlay, compare: preview ? s.compare : false })),
   setVote: (vote) => set({ vote }),
   setOverlay: (overlay) => set((s) => ({ overlay, preview: overlay ? undefined : s.preview, version: s.version + 1 })),
   setHighlight: (highlight) => set((s) => ({ highlight, selVersion: s.selVersion + 1 })),
   flyTo: (lon, lat, zoom = 17) => set({ focus: { lon, lat, zoom, id: Date.now() } }),
   setTab: (tab) => set({ tab }),
+  requestOptimize: () => set((s) => ({ tab: "ai", optimizeRequest: s.optimizeRequest + 1 })),
+  setCompare: (compare) => set({ compare }),
   toggle3d: () => set((s) => ({ view3d: !s.view3d })),
   setMapLayer: async (l) => {
     if (l !== "edit" && !get().classLayers) set({ classLayers: await api.layers() });

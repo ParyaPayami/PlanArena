@@ -1,9 +1,23 @@
-import { useState } from "react";
-import { api } from "../api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api, type Certificate } from "../api";
 import { useStore } from "../store";
 import { PillarCards } from "./Scoreboard";
 import ParetoExplorer from "./ParetoExplorer";
+import TradeoffTriangle, { type PillarWeights } from "./TradeoffTriangle";
 import type { ChangeValue, Evaluation } from "../types";
+
+const EQUAL: PillarWeights = { social: 1 / 3, economic: 1 / 3, environmental: 1 / 3 };
+
+function certificateText(c: Certificate | null | undefined): { text: string; tone: string } | null {
+  if (!c) return null;
+  const fast = c.fast_objective !== undefined && c.objective && c.objective > 1e-9
+    ? ` The fast plan shown first reached ${Math.round((100 * Math.max(0, c.fast_objective)) / c.objective)}% of it.`
+    : "";
+  if (c.status === "optimal") return { text: `✓ Optimal: certified, no feasible plan scores higher.${fast}`, tone: "good" };
+  if (c.status === "gap" && c.rel_gap !== undefined && Number.isFinite(c.rel_gap))
+    return { text: `Within ${(100 * c.rel_gap).toFixed(1)}% of the optimum (certified bound).${fast}`, tone: "info" };
+  return { text: `Best plan found, not certified${c.reason ? `: ${c.reason}` : ""}`, tone: "muted" };
+}
 
 interface Props {
   suitOverlay: boolean;
@@ -22,29 +36,108 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
   const [budget, setBudget] = useState(5);
   const [zoning, setZoning] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ changes: Record<string, ChangeValue>; evaluation: Evaluation; ms: number } | null>(null);
+  const [certifying, setCertifying] = useState(false);
+  const [result, setResult] = useState<{ changes: Record<string, ChangeValue>; evaluation: Evaluation; ms: number; certificate?: Certificate | null } | null>(null);
   const [startPlan, setStartPlan] = useState<Record<string, ChangeValue>>({});
+  const [custom, setCustom] = useState<PillarWeights | null>(null);
+  const seq = useRef(0);
+  const dragBusy = useRef(false);
+  const dragNext = useRef<PillarWeights | null>(null);
+  const optimizeRequest = useStore((s) => s.optimizeRequest);
 
-  const run = async () => {
+  // The triangle shows the weights in use: the custom trade-off, or each stakeholder's pillar mix.
+  const shown = useMemo<PillarWeights>(() => {
+    if (custom) return custom;
+    const sh = meta.stakeholders.find((x) => x.key === mode);
+    if (!sh) return EQUAL;
+    const pw: PillarWeights = { social: 0, economic: 0, environmental: 0 };
+    for (const ind of meta.indicators) pw[ind.pillar as keyof PillarWeights] += sh.weights[ind.key] ?? 0;
+    return pw;
+  }, [custom, mode, meta]);
+
+  const request = (areaKey: string, w: PillarWeights | null) => {
+    const sel = areaKey === "selection" ? [...useStore.getState().selected] : undefined;
+    const start = useStore.getState().changes();
+    return {
+      start,
+      body: {
+        scope: areaKey === "selection" ? "affected" : areaKey, mode: w ? "balanced" : mode,
+        pillar_weights: w ?? undefined, changes: start, parcels: sel,
+        max_change_share: budget / 100, respect_zoning: zoning,
+      },
+    };
+  };
+
+  /** Fast plan first (shown at once), then the exact search, which certifies it or finds a better one. */
+  const run = async (areaKey = area, w: PillarWeights | null = custom) => {
+    const id = ++seq.current;
     setBusy(true);
     try {
-      const sel = area === "selection" ? [...selected] : undefined;
-      const scope = area === "selection" ? "affected" : area;
-      const start = useStore.getState().changes();
+      const { start, body } = request(areaKey, w);
       setStartPlan(start);
-      const r = await api.suggest({
-        scope, mode, changes: start, parcels: sel,
-        max_change_share: budget / 100, respect_zoning: zoning,
-      });
-      setResult(r);
+      const r = await api.suggest({ ...body, method: "fast" });
+      if (id !== seq.current) return;
+      setResult({ ...r, certificate: undefined });
       setPreview({ label: "Recommended plan", changes: r.changes, evaluation: r.evaluation });
-      notify(`AI suggests ${Object.keys(r.changes).filter((k) => JSON.stringify(start[k]) !== JSON.stringify(r.changes[k])).length} changes`, "good");
+      setBusy(false);
+      if (areaKey === "city" || mode === "consensus") {
+        setResult({ ...r, certificate: { status: "not certified", reason: areaKey === "city" ? "the whole city is too large to certify" : "consensus mode" } });
+        return;
+      }
+      setCertifying(true);
+      const x = await api.suggest({ ...body, method: "exact", time_limit: 20 });
+      if (id !== seq.current) return;
+      setResult(x);
+      setPreview({ label: x.certificate?.status === "optimal" ? "Optimal plan" : "Recommended plan", changes: x.changes, evaluation: x.evaluation });
+      const n = Object.keys(x.changes).filter((k) => JSON.stringify(start[k]) !== JSON.stringify(x.changes[k])).length;
+      notify(`${x.certificate?.status === "optimal" ? "Optimal plan" : "Recommended plan"}: ${n} changes`, "good");
+    } catch (e) {
+      if (id === seq.current) notify(String(e), "bad");
+    } finally {
+      if (id === seq.current) {
+        setBusy(false);
+        setCertifying(false);
+      }
+    }
+  };
+
+  /** While the handle is dragged: fast plans only, newest weights first; a release runs the exact search. */
+  const drag = async (w: PillarWeights) => {
+    setCustom(w);
+    if (dragBusy.current) {
+      dragNext.current = w;
+      return;
+    }
+    dragBusy.current = true;
+    const id = ++seq.current;
+    try {
+      let cur: PillarWeights | null = w;
+      while (cur) {
+        dragNext.current = null;
+        const { start, body } = request(area, cur);
+        // a selection: the GNN policy's plan (milliseconds); otherwise the fast search without polishing
+        const r = area === "selection" && !Object.keys(start).length
+          ? await api.policy(body.parcels ?? [], cur, body.max_change_share).catch(() => api.suggest({ ...body, method: "fast", polish: 0 }))
+          : await api.suggest({ ...body, method: "fast", polish: 0 });
+        if (id !== seq.current) break;
+        setStartPlan(start);
+        setResult({ ...r, certificate: undefined });
+        setPreview({ label: "Trade-off preview", changes: r.changes, evaluation: r.evaluation });
+        cur = dragNext.current;
+      }
     } catch (e) {
       notify(String(e), "bad");
     } finally {
-      setBusy(false);
+      dragBusy.current = false;
     }
   };
+
+  // "Optimize this area" on the map: optimize the selected parcels
+  useEffect(() => {
+    if (!optimizeRequest || !selected.size) return;
+    setArea("selection");
+    run("selection");
+  }, [optimizeRequest]);
 
   // The optimizer starts from the current plan, so its result includes the planner's own edits.
   const userChanges = result ? startPlan : {};
@@ -83,9 +176,10 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
     <div className="panel-pad">
       <h3>Recommended plan</h3>
       <p className="muted small">
-        A search over land-use changes that scores each candidate with the impact engine and returns the best plan it
-        finds. It is a recommendation for discussion, not a proven optimum. Zoning, landmarks, parks, public facilities
-        and existing homes are protected, and conversions with no precedent are skipped.
+        A fast search shows a plan at once; an exact search (branch-and-bound) then proves it optimal for the impact
+        engine’s score, or bounds how far it can be from the optimum. Optimal for the score is not a forecast: the
+        score’s untested indicators are marked in the Impact tab. Zoning, landmarks, parks, public facilities and
+        existing homes are protected, and conversions with no precedent are skipped.
       </p>
       <label className="field">
         <span>Area</span>
@@ -103,7 +197,8 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
       </label>
       <label className="field">
         <span>Priorities</span>
-        <select value={mode} onChange={(e) => setMode(e.target.value)}>
+        <select value={custom ? "custom" : mode} onChange={(e) => { setCustom(null); setMode(e.target.value === "custom" ? "balanced" : e.target.value); }}>
+          {custom && <option value="custom">Custom trade-off (drag the triangle)</option>}
           <option value="balanced">Balanced: equal social, economic and environmental weight</option>
           <option value="consensus">Consensus: only changes every stakeholder gains from</option>
           {meta.stakeholders.map((s) => (
@@ -113,6 +208,15 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
           ))}
         </select>
       </label>
+      <div className="field">
+        <span>Trade-off: drag the handle; the map follows, and releasing it finds the optimum</span>
+        <TradeoffTriangle
+          weights={shown}
+          disabled={mode === "consensus"}
+          onDrag={drag}
+          onRelease={(w) => { setCustom(w); run(area, w); }}
+        />
+      </div>
       <label className="field">
         <span>Change up to {budget}% of parcels</span>
         <input type="range" min={1} max={15} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
@@ -120,8 +224,8 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
       <label className="check">
         <input type="checkbox" checked={zoning} onChange={(e) => setZoning(e.target.checked)} /> Respect current zoning
       </label>
-      <button className="primary wide" onClick={run} disabled={busy}>
-        {busy ? "Searching…" : "✨ Find a recommended plan"}
+      <button className="primary wide" onClick={() => run()} disabled={busy || certifying}>
+        {busy ? "Searching…" : certifying ? "Certifying the optimum…" : "✨ Find the optimal plan"}
       </button>
 
       {result && (
@@ -131,6 +235,10 @@ export default function AIPanel({ suitOverlay, setSuitOverlay }: Props) {
             {Object.keys(userChanges).length ? ` on top of your ${Object.keys(userChanges).length}` : ""} ·{" "}
             {(result.ms / 1000).toFixed(1)} s
           </div>
+          {certifying && <div className="cert info">Proving optimality…</div>}
+          {!certifying && certificateText(result.certificate) && (
+            <div className={`cert ${certificateText(result.certificate)!.tone}`}>{certificateText(result.certificate)!.text}</div>
+          )}
           <PillarCards ev={result.evaluation} />
           <div className="transitions">
             {transitions.map(([k, n]) => {

@@ -996,11 +996,134 @@ def cus_values() -> dict[str, str]:
     V["park_ha"] = _f(_code_settings()["park_sqft"] * SQFT_M2 / 1e4, 1)
     V.update(demo_url=DEMO_URL, game_url=DEMO_URL + "/play", demo_release=DEMO_RELEASE, anon_repo=ANON_REPO,
              public_repo=PUBLIC_REPO)
+    V.update(exact_values())
     return V
+
+
+def exact_values() -> dict[str, str]:
+    """Numbers of the exact optimizer, the exact trade-offs, the learned correction and the GNN policy."""
+    from planarena.optimize.frontier import _pillar_cfg  # noqa: F401  (the module the numbers describe)
+
+    V = {}
+    ox = _load("optimizer_exact")
+    b = ox["blocks"]
+    V["ex_blocks_n"], V["ex_blocks_match"] = str(b["areas"]), str(b["exact_equals_exhaustive"])
+    V["ex_blocks_sec"] = _f(b["median_seconds"], 1)
+    a = ox["areas"]
+    V["ex_areas_n"], V["ex_areas_cert"] = str(a["areas"]), str(a["certified"])
+    V["ex_areas_par_lo"], V["ex_areas_par_hi"] = str(a["parcels_range"][0]), str(a["parcels_range"][1])
+    V["ex_areas_el_lo"], V["ex_areas_el_hi"] = str(a["eligible_range"][0]), str(a["eligible_range"][1])
+    V["ex_areas_med_s"], V["ex_areas_max_s"] = _f(a["median_seconds_certified"], 1), _f(a["max_seconds_certified"], 0)
+    V["ex_areas_tl"] = _f(a["time_limit_seconds"], 0)
+    V["ex_areas_fo_share"], V["ex_areas_pol_share"] = _pct(a["first_order_share_of_optimum_median"], 1), _pct(a["polished_share_of_optimum_median"], 1)
+    V["ex_areas_fo_opt"], V["ex_areas_pol_opt"], V["ex_areas_pos"] = str(a["first_order_optimal"]), str(a["polished_optimal"]), str(a["positive_optimum"])
+    d = ox["districts"]
+    rows = d["rows"]
+    V["ex_d_n"] = _w(len(rows))
+    V["ex_d_cert"] = _w(sum(r["status"] == "optimal" for r in rows))
+    V["ex_d_tl"] = _f(d["time_limit_seconds"] / 3600, 0)
+    gaps = [r["rel_gap"] for r in rows]
+    V["ex_d_gap_med"], V["ex_d_gap_max"] = _pct(float(np.median(gaps)), 1), _pct(max(gaps), 1)
+    V["ex_d_better"] = _w(sum(r["objective"] > r["best_heuristic_benchmark"] + 1e-6 for r in rows))
+    rest = sorted((r for r in rows if r["status"] != "optimal"), key=lambda r: r["rel_gap"])
+    V["ex_d_open"] = _w(len(rest))
+    V["ex_d_open_gaps"] = ", ".join(f"{_pct(r['rel_gap'], 2 if r['rel_gap'] < 0.01 else 1)} (district {r['district']})"
+                                    for r in rest) or "none"
+    V["ex_d_cert_max_min"] = _f(max(r["seconds"] for r in rows if r["status"] == "optimal") / 60, 0)
+    V["ex_d_cert_min_min"] = _f(min(r["seconds"] for r in rows if r["status"] == "optimal") / 60, 0)
+    V["ex_dratio"], V["ex_gaptol"] = "1.05", "$10^{-4}$"
+    pl = ox["plausibility"]
+    for k, key in ((1, "50"), (2, "80"), (3, "95")):
+        rel = [1 - r["levels"][k]["objective"] / r["levels"][0]["objective"] for r in pl["areas"]
+               if r["levels"][0]["objective"] > 1e-9 and r["levels"][k]["status"] == "optimal"]
+        V[f"pl_cost_{key}"] = _pct(float(np.mean(rel)), 1)
+        V[f"pl_bind_{key}"] = str(sum(x > 1e-6 for x in rel))
+        V[f"pl_max_{key}"] = _pct(max(rel))
+        V["pl_n"] = str(len(rel))
+    V["pl_cert"] = _pct(pl["certified_share"])
+    fr = _load("frontier_exact")
+    V["fr_step"] = _f(fr["step"], 2)
+    V["fr_n"] = str(len(fr["areas"]))
+    V["fr_size"], V["fr_cert"] = _f(fr["median_front_size"], 0), _pct(fr["median_certified_share"])
+    V["fr_gap"], V["fr_sec"] = _f(fr["median_efficiency_gap"], 2), _f(fr["median_seconds"], 0)
+    V["fr_robust"] = _pct(fr["median_robust_share"])
+    bl = fr["blocks"]
+    V["fr_blocks_n"] = _w(len(bl))
+    V["fr_blocks_dom"] = str(sum(x["front_plans_dominated"] for x in bl))
+    V["fr_blocks_plans"] = str(sum(x["front_plans"] for x in bl))
+    V["fr_blocks_found"] = _pct(sum(x["pareto_plans_found"] for x in bl) / max(sum(x["pareto_plans"] for x in bl), 1))
+    ym = _load("yield_ml")["indicators"]
+    for k, key in (("homes", "h"), ("value", "v"), ("ghg", "g")):
+        e_, c_ = ym[k]["engine"], ym[k]["engine_plus_residual_model"]
+        V[f"ym_{key}_mae_e"], V[f"ym_{key}_mae_c"] = _f(e_["mae"], 1), _f(c_["mae"], 1)
+        V[f"ym_{key}_mae_drop"] = _pct(1 - c_["mae"] / e_["mae"])
+        V[f"ym_{key}_tot_e"], V[f"ym_{key}_tot_c"] = _f(e_["total_ratio"], 2), _f(c_["total_ratio"], 2)
+        V[f"ym_{key}_cov"] = _pct(ym[k]["conformal"]["coverage_heldout"])
+        V[f"ym_{key}_rng"] = _pct(ym[k]["sensitivity_range_coverage_heldout"])
+        V[f"ym_{key}_adopt"] = "adopted" if ym[k]["adopted"] else "not adopted"
+    covs = [ym[k]["conformal"]["coverage_heldout"] for k in ym]
+    rngs = [ym[k]["sensitivity_range_coverage_heldout"] for k in ym]
+    V["ym_cov_lo"], V["ym_cov_hi"] = _pct(min(covs)), _pct(max(covs))
+    V["ym_rng_lo"], V["ym_rng_hi"] = _pct(min(rngs)), _pct(max(rngs))
+    pt = _load("policy_test")
+    V["pol_test"], V["pol_train"] = str(pt["test_instances"]), str(pt["train_instances"])
+    V["pol_layers"], V["pol_hidden"] = str(pt["layers"]), str(pt["hidden"])
+    sh = pt["share_of_optimum"]["mean"]
+    V["pol_share"], V["pol_fo_share"], V["pol_pol_share"] = _pct(sh["network"], 1), _pct(sh["first_order"], 1), _pct(sh["first_order_polished"], 1)
+    na = pt["network_alone"]
+    V["pol_alone_share"], V["pol_alone_mean"] = _pct(na["median_share"], 1), _pct(na["mean_share"], 1)
+    V["pol_alone_opt"], V["pol_alone_ms"] = _pct(na["optimum_reached"]), _f(1000 * na["median_seconds"], 0)
+    rch = pt["optimum_reached"]
+    V["pol_opt"], V["pol_fo_opt"], V["pol_pol_opt"] = _pct(rch["network"]), _pct(rch["first_order"]), _pct(rch["first_order_polished"])
+    ms = pt["median_seconds"]
+    V["pol_ms"], V["pol_fo_ms"], V["pol_pol_ms"] = _f(1000 * ms["network"], 0), _f(1000 * ms["first_order"], 0), _f(1000 * ms["first_order_polished"], 0)
+    w = pt["warm_start"]
+    V["pol_warm_n"] = str(w["instances"])
+    V["pol_warm_net"], V["pol_warm_fo"] = _f(w["median_exact_seconds_from_network"], 1), _f(w["median_exact_seconds_from_first_order"], 1)
+    return V
+
+
+def exact_tables() -> dict[str, str]:
+    out = {}
+    ym = _load("yield_ml")["indicators"]
+    unit = {"homes": ("Homes", 1, 1.0), "value": ("Value (USD 1,000)", 0, 1e-3), "ghg": ("Emissions (tCO$_2$e)", 0, 1.0)}
+    rows = []
+    for k, (lab, dg, sc) in unit.items():
+        e_, c_ = ym[k]["engine"], ym[k]["engine_plus_residual_model"]
+        rows.append([lab, _n(e_["n"]), _f(e_["mae"] * sc, dg) if dg else _n(e_["mae"] * sc),
+                     _f(c_["mae"] * sc, dg) if dg else _n(c_["mae"] * sc), _num(e_["bias"] * sc, dg) if dg else _num(e_["bias"] * sc, 0),
+                     _num(c_["bias"] * sc, dg) if dg else _num(c_["bias"] * sc, 0), _f(e_["pearson_r"], 2), _f(c_["pearson_r"], 2),
+                     _f(e_["total_ratio"], 2), _f(c_["total_ratio"], 2), "yes" if ym[k]["adopted"] else "no",
+                     _pct(ym[k]["conformal"]["coverage_heldout"]), _pct(ym[k]["sensitivity_range_coverage_heldout"])])
+    out["table_yield"] = _tab(
+        "Learned correction of the engine and calibrated intervals on the held-out lots (2015--2025 changes; engine "
+        "with pre-period coefficients).", "tab:s-yield", "lrrrrrrrrrrrr",
+        ["", "Lots", "MAE", "MAE+", "Bias", "Bias+", "$r$", "$r$+", "Total", "Total+", "Adopted", "90\\% int.", "Range"],
+        rows, "+: engine plus the learned correction. Total: predicted over observed total. 90\\% int.: share of "
+        "held-out lots whose observed change lies in the conformal interval (nominal 90\\%). Range: share inside the "
+        "engine's low--high sensitivity range.", size="\\scriptsize", sep="2.5pt")
+    ox = _load("optimizer_exact")
+    ob = _load("optimizer_benchmark")["summary"]
+    rows = [[k.replace("_", " "), _pct(x["median_share_of_best_found"], 1), str(x["districts_where_best"]), str(x["median_seconds"])]
+            for k, x in ob.items()]
+    out["table_opt_bench"] = rows
+    rows = []
+    for r in ox["districts"]["rows"]:
+        rows.append([str(r["district"]), _n(r["eligible"]), _f(r["objective"], 3), _f(r["bound"], 3),
+                     _pct(r["rel_gap"], 2 if r["rel_gap"] < 0.01 else 1),
+                     "yes" if r["status"] == "optimal" else "no", _n(r["seconds"])])
+    out["table_exact_districts"] = _tab(
+        "Exact search at district scale (ten changes): the best plan's score, the proven upper bound on any plan's "
+        "score and the gap, after a time limit, started from the best heuristic plan.", "tab:exact-d", "rrrrrrr",
+        ["District", "Eligible", "Best $J$", "Bound", "Gap", "Certified", "Seconds"], rows,
+        "$J$: overall score minus the conversion penalty. Gap: (bound $-$ best)/best.", size="\\small")
+    return out
 
 
 def cus_tables() -> dict[str, str]:
     T = {**tables(), **supplement_tables()}
+    ex = exact_tables()
+    T.update({k: v for k, v in ex.items() if isinstance(v, str)})
     for k in T:
         for a, b in SI_TEXT:
             T[k] = T[k].replace(a, b)
@@ -1010,6 +1133,27 @@ def cus_tables() -> dict[str, str]:
     T["table_design"] = (T["table_design"].replace("FEIS site tables (two rezonings)",
                                                    "Environmental impact statements (two rezonings)")
                          .replace("LL84 energy, LODES jobs, recorded homes", "LL84 energy, LEHD jobs, recorded homes"))
+    # the exact optimizer, its trade-offs and the learned components
+    rep = [
+        ("MapPLUTO 2015 vs 2025, held-out folds & empirical & \\ref{sec:r-change} \\\\",
+         "MapPLUTO 2015 vs 2025, held-out folds & empirical & \\ref{sec:r-change} \\\\\n"
+         "Learned correction & Does learning lower the engine's error, and are its intervals calibrated? & "
+         "The same held-out folds & empirical & \\ref{sec:r-change} \\\\"),
+        ("Optimizer & How close is the best plan found to the best plan? & Exhaustive search; 12 districts & algorithmic",
+         "Exact optimizer & Is the plan optimal, or how far can it be from the optimum? & Exhaustive search of blocks; "
+         "areas; 12 districts & algorithmic"),
+        ("Pareto explorer & Does NSGA-III find the trade-off front? & Exhaustive enumeration of blocks & algorithmic",
+         "Trade-off front & Are front plans Pareto-optimal, and what does each pillar cost? & Exhaustive enumeration "
+         "of blocks; areas & algorithmic"),
+        ("Realism & Are recommended changes plausible?",
+         "GNN policy & How close is an instant plan to the optimum? & Certified optima of held-out areas & empirical & "
+         "\\ref{sec:r-opt} \\\\\nRealism & Are recommended changes plausible?"),
+    ]
+    for x, y in rep:
+        assert x in T["table_design"], x
+        T["table_design"] = T["table_design"].replace(x, y)
+    for k in T:
+        T[k] = T[k].replace("(Supplement S5)", "(Online Resource 1, Sect.~S5)")
     src = "; ".join(f"{TEN[g][0]} \\citep{{{k}}}" for g, k in CITY_DATA.items())
     T["table_cities"] = T["table_cities"].replace(
         "could not be downloaded by script.", f"could not be downloaded by script. Sources: {src}.")
@@ -1035,6 +1179,7 @@ def render_cus() -> dict:
     num = _esm_numbers(esm)
     for name in ("panels", "auc", "transfer", "ap"):
         fill[f"esm_tab_{name}"] = num[f"tab:{name}"]
+    fill["esm_tab_yield"] = num["tab:s-yield"]
     man = _with_bibliography(_fill(CUS / "manuscript.tex.in", fill))
     out = {CUS / "manuscript.tex": man, CUS / "online_resource_1.tex": esm}
     if (CUS / "title_page.tex.in").exists():  # left out of the anonymised review copy
@@ -1081,7 +1226,7 @@ def outputs() -> dict:
 
 def citations(text: str) -> set[str]:
     keys = set()
-    for m in re.finditer(r"\\cite[tp]?\*?(?:\[[^\]]*\])*\{([^}]*)\}", text):
+    for m in re.finditer(r"\\cite(?:t|p|alt|alp|author|year)?\*?(?:\[[^\]]*\])*\{([^}]*)\}", text):
         keys |= {k.strip() for k in m.group(1).split(",")}
     return keys
 

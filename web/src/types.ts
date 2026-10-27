@@ -234,6 +234,8 @@ export interface ParcelInfo {
   plan_designation?: string | null;
   plan_consistent?: boolean | null;
   per_use: Record<string, Record<string, number>>;
+  /** learned correction of the engine's change in homes / value for each other use, with a 90% interval */
+  learned?: Record<string, Record<string, { engine: number; learned: number; lo: number; hi: number }>>;
   suitability?: Record<string, number>;
   redevelopment?: { p: number; percentile: number; likely_use: string; q: Record<string, number> };
 }

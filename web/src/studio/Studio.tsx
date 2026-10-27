@@ -172,6 +172,9 @@ export default function Studio() {
         {s.preview && (
           <div className="preview-banner">
             Previewing <b>{s.preview.label}</b>
+            <button className="link" onClick={() => s.setCompare(!s.compare)} title="Drag a divider across the map: today on one side, this plan on the other">
+              {s.compare ? "stop comparing" : "⇆ swipe compare"}
+            </button>
             <button className="link" onClick={() => s.setPreview(undefined)}>
               close
             </button>
@@ -215,6 +218,7 @@ export default function Studio() {
             s.notify(`Tax block ${b.block}: ${b.parcels.length} parcels`, "info");
           }}
           suggestionOverlay={s.overlay ?? (suitOverlay ? suit : null)}
+          compare={s.compare && s.mapLayer === "edit"}
           classView={
             s.mapLayer !== "edit" && s.classLayers && meta.classes
               ? { cls: s.classLayers[s.mapLayer], classes: meta.classes, name: LAYERS.find((l) => l.key === s.mapLayer)!.label }
@@ -231,6 +235,11 @@ export default function Studio() {
             ))}
             <span className="legend-item muted small">Grey: no value. Painting edits the plan you edit.</span>
           </div>
+        )}
+        {s.selected.size >= 2 && s.mapLayer === "edit" && (
+          <button className="map-action primary" onClick={s.requestOptimize} title="Find the optimal plan for the selected parcels">
+            ✨ Optimize this area ({s.selected.size.toLocaleString()} parcels)
+          </button>
         )}
         <ParcelInspector />
       </main>
