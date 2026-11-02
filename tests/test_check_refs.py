@@ -1,4 +1,4 @@
-"""The reference checker must catch the PIMALUOS failure mode: a real DOI attached to an invented paper."""
+"""The reference checker must catch the main failure mode: a real DOI attached to an invented paper."""
 from planarena.tools.check_refs import check_entry, parse_bib
 
 BIB = """

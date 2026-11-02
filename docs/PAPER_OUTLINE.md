@@ -15,7 +15,7 @@ A planning document for the PlanArena systems paper (Phase 3). It contains no re
 
 **Benchmarks:** ArcGIS Urban (scenario planning on zoning and land-use plans) and UrbanSim (predictive simulation). Cite them from official documentation only. PlanArena exports its layers and scenarios to ArcGIS Urban as import files (`planarena/integrations/urban_export.py`). Reading Urban scenarios back needs the Urban API and the author's sign-in, and is not built. PlanArena does not compete with Urban as a design tool. UrbanFootprint and CommunityViz are reviewed with UrbanSim in [RELATED_TOOLS.md](RELATED_TOOLS.md): none publishes a land-use optimizer; the methods PlanArena adopts from them (growth-target allocation, pro forma feasibility, build-out, constraint screens) are listed there.
 
-**Target venue:** a planning-analytics journal (for example *Environment and Planning B*). Not the journal that rejected the earlier PIMALUOS submission.
+**Target venue:** a planning-analytics journal (for example *Environment and Planning B*).
 
 ## Contributions (each must stay true to its evidence)
 

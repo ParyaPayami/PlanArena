@@ -55,9 +55,6 @@ REPLACE = [
      "`python -I -m planarena.paper` builds the manuscript and Online Resource 1 in `paper/cus/`."),
     ("README.md", "| Review response | [docs/REVIEW_RESPONSE.md](docs/REVIEW_RESPONSE.md): each reviewer comment "
      "mapped to the change, its test and the evidence file |\n", ""),
-    ("planarena/tools/check_refs.py", "The PIMALUOS submission was rejected because references had real-looking DOIs "
-     "that resolved to different papers.", "A reference can carry a real-looking DOI that resolves to a different paper."),
-    ("tests/test_check_refs.py", "must catch the PIMALUOS failure mode:", "must catch the main failure mode:"),
     ("planarena/models/integration.py", "The question (PAPER_OUTLINE, contribution 1):",
      "The question (the paper's first contribution):"),
     ("planarena/tools/pack_demo.py", ", for the hosted demo (deploy/huggingface).", ", for the hosted demo."),
@@ -73,7 +70,7 @@ are left out; the manuscript and Online Resource 1 are uploaded to the journal.
 `.tex.in` templates (and their PDFs, when tectonic is installed). The figures are in `figures/`.
 """
 
-WORDS = ("payami", "parya", "wisconsin", "schermer", "pimaluos")  # anywhere, in any file or path
+WORDS = ("payami", "parya", "wisconsin", "schermer")  # anywhere, in any file or path
 TEXT_WORDS = re.compile(r"\buwm\b", re.I)  # whole word, text files only (bytes in binaries can spell it)
 
 

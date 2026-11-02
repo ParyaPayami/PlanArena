@@ -1,6 +1,6 @@
 """Verify every bibliography entry against the record its identifier points to.
 
-The PIMALUOS submission was rejected because references had real-looking DOIs that resolved to different papers.
+A reference can carry a real-looking DOI that resolves to a different paper.
 This check makes that impossible to miss: each entry must carry a DOI, an arXiv ID or an ISBN, and the title,
 first author, year and (for articles) journal must match the record that identifier resolves to.
 
